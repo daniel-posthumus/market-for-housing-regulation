@@ -1,3 +1,7 @@
+# =============================================================================
+# DEPRECATED — superseded by scrape_minutes.py. This date-string -> URL approach
+# (www.sfgov.org/sfplanningarchive/...) no longer reflects the live site.
+# =============================================================================
 import requests
 from bs4 import BeautifulSoup
 import re

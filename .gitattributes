@@ -1,10 +1,4 @@
-# Track all raw data files (csv and dta) using LFS
-data/raw/election_data/*.csv filter=lfs diff=lfs merge=lfs -text
-data/raw/election_data/2020_precinct_state/*.csv filter=lfs diff=lfs merge=lfs -text
-data/raw/2024_CES/*.csv filter=lfs diff=lfs merge=lfs -text
-
-data/clean/election_data/*.csv filter=lfs diff=lfs merge=lfs -text
-data/clean/election_data/2020_precinct_state/*.csv filter=lfs diff=lfs merge=lfs -text
-data/clean/2024_CES/*.csv filter=lfs diff=lfs merge=lfs -text
-
-*.dta filter=lfs diff=lfs merge=lfs -text
+# The data corpus lives on Google Drive (out of this git repo), so the former
+# Git-LFS rules for data/ are no longer needed. See paths.py / environment-notes.md
+# for how code locates the data (MFHR_DATA_ROOT). Re-add LFS rules here only if you
+# start tracking large binaries in the repo again.

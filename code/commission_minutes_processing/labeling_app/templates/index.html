@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minutes Labeler</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <strong>SF Planning Minutes — Labeler</strong>
+    <span id="progress" class="progress"></span>
+    <span class="spacer"></span>
+    <label>prefill:
+      <select id="prefillBackend">
+        <option value="heuristic">heuristic</option>
+        <option value="anthropic">anthropic (LLM)</option>
+      </select>
+    </label>
+    <button id="btnPrefill" title="Re-fill the form from the raw text (overwrites)">Re-prefill (p)</button>
+    <button id="btnExport" title="Write status=done labels to {year}_labeled.json">Export done →</button>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <div class="filters">
+        <select id="fStatus">
+          <option value="">all status</option>
+          <option value="todo">todo</option>
+          <option value="prelabeled">prelabeled</option>
+          <option value="done">done</option>
+          <option value="flagged">flagged</option>
+        </select>
+        <select id="fYear"><option value="">all years</option></select>
+        <input id="fSearch" type="search" placeholder="search case / text">
+      </div>
+      <ul id="itemList"></ul>
+    </aside>
+
+    <main id="main">
+      <section id="rawPane">
+        <div id="rawMeta" class="meta"></div>
+        <pre id="rawText"></pre>
+      </section>
+      <section id="formPane">
+        <div id="formMeta" class="meta"></div>
+        <form id="labelForm" autocomplete="off"></form>
+        <div id="saveRow">
+          <label>status:
+            <select id="status">
+              <option value="todo">todo</option>
+              <option value="done">done</option>
+              <option value="flagged">flagged</option>
+            </select>
+          </label>
+          <label class="chk"><input type="checkbox" id="flagged"> flag uncertain</label>
+          <input id="notes" type="text" placeholder="notes (optional)">
+          <button id="btnSave" class="primary">Save &amp; next (⌘/Ctrl+Enter)</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

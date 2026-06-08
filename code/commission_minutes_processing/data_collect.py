@@ -34,8 +34,10 @@ def jsonl_to_csv(jsonl_path: Path, csv_path: Path):
     return df
 
 # === Usage ===
-home        = Path.home()
-work_dir    = home / "housing_project" / "data" / "meeting_minutes"
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import MEETING_MINUTES
+work_dir    = MEETING_MINUTES
 minutes_clean = work_dir / "processed"
 jsonl_path  = minutes_clean / "structured_data.jsonl"
 csv_path    = minutes_clean / "extracted_results.csv"

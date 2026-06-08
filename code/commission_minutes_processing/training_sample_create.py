@@ -19,12 +19,16 @@ Layout (all in tagged/training/):
 """
 
 from striprtf.striprtf import rtf_to_text
-import json, re
+import json, re, sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from extraction_common import FIELDS, coerce_record
+from autoextract import derive_request_type
+
 # ───────────────────────── paths ─────────────────────────
-home      = Path.home()
-base      = home / "housing_project" / "data" / "meeting_minutes"
+from paths import MEETING_MINUTES
+base      = MEETING_MINUTES
 train_dir = base / "tagged" / "training"
 train_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,12 +46,60 @@ CASE_RE  = re.compile(r"\b((?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?)\b")
 
 YEAR_LABEL_RE = re.compile(r"^(?P<year>\d{4})_labeled\.json$", re.I)
 
-# Keys your model expects; fill missing with "" (lists for ayes/noes/absent)
-REQUIRED = [
-    "case_number","project_address","lot_number","assessor_block","project_descr",
-    "type_district","type_district_descr","speakers","action","modifications",
-    "ayes","noes","absent","vote","action_name"
-]
+# The full set of keys is now defined by the shared SCHEMA (extraction_common.FIELDS).
+REQUIRED = FIELDS
+
+# Obvious orthographic typos / capitalisation variants -> canonical key.
+# These are spelling errors only, NOT semantic merges (e.g. zoning_district vs
+# type_district, or nayes vs noes, are deliberately left alone). normalise_keys()
+# below applies this map so the builder self-heals; the same map is used by the
+# one-off cleanup that rewrote the *_labeled.json source files.
+KEY_ALIASES = {
+    "aciton": "action", "Action": "action",
+    "caes_number": "case_number", "case_+number": "case_number",
+    "case number": "case_number", "case_numer": "case_number",
+    "spekaers": "speakers", "Speakers": "speakers",
+    "speaker_statemetns": "speaker_statements",
+    "tyope_district": "type_district", "tpye_district": "type_district",
+    "type_disrict": "type_district", "type_distrct": "type_district",
+    "type_district_": "type_district", "tpe_district": "type_district",
+    "prjoect_address": "project_address",
+    "porject_descr": "project_descr", "project descr": "project_descr",
+    "project-descr": "project_descr",
+    "asessor_block": "assessor_block",
+    "heigh_and_bulk_district": "height_and_bulk_district",
+    "preliminary_recmomendation": "preliminary_recommendation",
+    "preliminary_recommendaiton": "preliminary_recommendation",
+    "preliminar_recommendation": "preliminary_recommendation",
+    "prleiminary_recommendation": "preliminary_recommendation",
+    "special_ues_district": "special_use_district",
+    "zoninig_district": "zoning_district",
+    "aayes": "ayes",
+    "project_category_": "project_category",
+    # schema renames (old hand-label keys -> new canonical schema keys)
+    "action_name": "resolution_or_motion_no",
+    "zoning_district": "type_district",
+    "zoning_district_descr": "type_district_descr",
+    "district_type": "type_district",
+    "district_type_descr": "type_district_descr",
+    "address": "project_address",
+    "nayes": "noes",
+}
+
+def normalise_keys(rec: dict) -> dict:
+    """Strip whitespace from keys and map obvious typos to canonical names.
+    On collision (canonical already present), prefer a non-empty existing value
+    and drop the typo'd duplicate."""
+    out = {}
+    for k, v in rec.items():
+        ck = KEY_ALIASES.get(k.strip(), k.strip())
+        if ck in out:
+            # keep whichever is non-empty; existing wins ties
+            if not out[ck] and v:
+                out[ck] = v
+        else:
+            out[ck] = v
+    return out
 
 def normalise_case(code: str) -> str:
     return code.replace(" ", "").upper() if code else ""
@@ -112,11 +164,11 @@ def make_block_map(blocks: list[str]) -> dict[str, str]:
     return m
 
 def ensure_required_fields(lbl: dict) -> dict:
-    lab = dict(lbl)  # shallow copy
-    for k in REQUIRED:
-        if k not in lab:
-            lab[k] = "" if k not in {"ayes","noes","absent"} else []
-    return lab
+    lab = normalise_keys(lbl)            # canonicalise typo'd / renamed keys first
+    rec = coerce_record(lab)             # schema-complete, correctly typed
+    if not rec.get("request_type"):      # cheap derivation from the case suffix
+        rec["request_type"] = derive_request_type(rec.get("case_number", ""))
+    return rec
 
 def build_examples_for_year(year: int) -> tuple[list[dict], dict]:
     labels = load_year_labels(year)
@@ -128,14 +180,14 @@ def build_examples_for_year(year: int) -> tuple[list[dict], dict]:
     unmatched_blocks = set(block_map.keys())
 
     for lab in labels:
-        code = normalise_case(lab.get("case_number"))
+        lab_norm = ensure_required_fields(lab)   # canonicalise keys + fill required
+        code = normalise_case(lab_norm.get("case_number"))
         raw = block_map.get(code)
         if raw is None:
             missing.append(code or "<missing case_number>")
             continue
         unmatched_blocks.discard(code)
 
-        lab_norm = ensure_required_fields(lab)
         comp = json.dumps(lab_norm, ensure_ascii=False) + f" {EOJ}"
         examples.append({"prompt": raw + "\n\n", "completion": comp})
 

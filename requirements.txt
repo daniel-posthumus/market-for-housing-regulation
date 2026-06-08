@@ -1,0 +1,65 @@
+# =============================================================================
+# housing_project — Python dependencies (Python 3.12, miniforge)
+# Reproduces both pipelines end-to-end:
+#   (1) code/cleaning_code        — tabular data cleaning & merging
+#   (2) code/commission_minutes_processing — SF Planning Commission minutes NLP
+#
+# Install:
+#   /Users/danpost/miniforge3/bin/python3.12 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# Some packages need system libraries — see environment-notes.md
+#   (geopandas -> GDAL; rpy2 -> a working R install).
+# =============================================================================
+
+# --- Core tabular / scientific ------------------------------------------------
+# NOTE on upper bounds: the cleaning code uses df.applymap() (08a, 20, 21), which
+# is REMOVED in pandas 3.0 — so pandas is pinned <3.0. numpy <2.3 keeps the
+# geopandas/torch stack on tested wheels.
+pandas>=2.1,<3.0
+numpy>=1.26,<2.3
+scipy>=1.11
+matplotlib>=3.8
+seaborn>=0.13
+
+# --- Spreadsheet / file IO ----------------------------------------------------
+openpyxl>=3.1          # .xlsx (election workbooks, notes/*.xlsx)
+xlrd>=2.0              # legacy .xls (data/raw/permits_2024_preliminary.xls)
+
+# --- Geospatial ---------------------------------------------------------------
+geopandas>=0.14        # CBSA shapefiles in 21_exploratory_graphics.py (needs GDAL)
+
+# --- External data APIs -------------------------------------------------------
+requests>=2.31         # Census ACS pull (08_acs_pull.py), scrapers
+fredapi>=0.5           # 30yr mortgage series (08a_housing_affordability_create.py)
+redivis>=0.10          # Corelogic loan-level pull (02_corelogic_loan.py)
+
+# --- R bridge -----------------------------------------------------------------
+rpy2>=3.5              # renders 05b_state_trifectas.Rmd from 05a (needs system R)
+
+# --- Minutes NLP / ML ---------------------------------------------------------
+# train.py / inference.py target the transformers 4.x Seq2SeqTrainer API
+# (Seq2SeqTrainingArguments, evaluation_strategy=...). transformers 5.x renames
+# several of these args, so the stack is pinned <5.0 (datasets/tokenizers follow).
+torch>=2.2             # FLAN-T5 fine-tuning + inference
+transformers>=4.40,<5.0  # T5 tokenizer/model, Seq2SeqTrainer
+datasets>=2.18,<3.0    # train/test split for the trainer
+accelerate>=0.29       # transformers Trainer backend
+sentencepiece>=0.2     # T5 tokenizer dependency
+peft>=0.10,<0.14       # LoRA variant in scratch_code/train.py
+
+# --- Minutes scraping / parsing ----------------------------------------------
+beautifulsoup4>=4.12   # HTML parsing in all scrapers / parse_sf_meeting_minutes.py
+lxml>=5.1              # fast parser backend for bs4
+pdfplumber>=0.11       # PDF text extraction (2015-2025 minutes)
+striprtf>=0.0.26       # .rtf training samples (training_sample_create.py)
+
+# --- Labeling app -------------------------------------------------------------
+flask>=3.0             # local web app for hand-labeling minutes items
+
+# --- Config / secrets ---------------------------------------------------------
+python-dotenv>=1.0     # recommended: move hardcoded Census API key into .env
+
+# --- Optional: few-shot extraction backend (llm_extract.py --backend anthropic)
+# anthropic>=0.40      # uncomment + set ANTHROPIC_API_KEY to use the Claude backend

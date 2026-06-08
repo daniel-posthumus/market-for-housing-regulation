@@ -1,3 +1,34 @@
 .DS_Store
-# ignore everything in the minutes_extractor folder 
+# ignore everything in the minutes_extractor folder
 data/meeting_minutes/processed/minutes_extractor/*
+
+# python environment & secrets
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# labeling app working store (regenerable via ingest.py; durable labels are
+# exported to tagged/training/{year}_labeled.json). Backups too.
+code/commission_minutes_processing/labeling_app/labels.db
+*.preexport.bak
+
+# data lives on Dropbox now (migrated off Google Drive 2026-06-08; see paths.py);
+# ignore any local data/ dir or symlink
+/data
+/data/
+
+# LaTeX build artifacts (regenerable from .tex; keep .tex/.pdf/.bib tracked)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.run.xml
+*.toc
+*.out
+*.lof
+*.lot
+# LaTeX .log only under output/ (avoids catching non-LaTeX logs elsewhere)
+output/**/*.log

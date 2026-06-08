@@ -90,8 +90,10 @@ def clean_block(val: str) -> str:
 # ───────────────────────────────
 # 2) Paths (single-file demo)
 # ───────────────────────────────
-home     = Path.home()
-base_dir = home / "housing_project" / "data" / "meeting_minutes"
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import MEETING_MINUTES
+base_dir = MEETING_MINUTES
 tag_dir  = base_dir / "tagged"
 
 target   = tag_dir / "2004" / "October_14_2004.txt"   # adjust as needed
@@ -129,14 +131,14 @@ print(f"{target.name}: found {len(projects)} agenda blocks")
 
 prompts = [PROMPT_INSTRUCTION + blk for blk in projects]
 enc = tokenizer(prompts, padding=True, truncation=True,
-                max_length=512, return_tensors="pt").to(device)
+                max_length=1024, return_tensors="pt").to(device)   # was 512 (truncated ~21% of blocks)
 
 # ───────────────────────────────
 # 5) Generate predictions
 # ───────────────────────────────
 outs = model.generate(
     **enc,
-    max_new_tokens=600,
+    max_new_tokens=1024,   # was 600; p90 completion ≈ 810 tokens
     num_beams=1,
     eos_token_id=eos_id,
     bad_words_ids=ban_quote,

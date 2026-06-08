@@ -1,3 +1,8 @@
+# =============================================================================
+# DEPRECATED — superseded by scrape_minutes.py. The guessed cpc-hearing-archives
+# URL patterns here were unreliable; scrape_minutes.py instead parses the live
+# archive page for the stable citypln-m-extnl.sfgov.org minutes-PDF links.
+# =============================================================================
 import requests
 from bs4 import BeautifulSoup
 from pathlib import Path

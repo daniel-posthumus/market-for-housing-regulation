@@ -27,10 +27,10 @@ from bs4 import BeautifulSoup, NavigableString
 ###############################################################################
 
 # Where to put everything
-HOME        = Path.home()
-WORK_DIR    = HOME / "housing_project"
-DATA_DIR    = WORK_DIR / "data"
-MINUTES_DIR = DATA_DIR / "meeting_minutes"
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import MEETING_MINUTES
+MINUTES_DIR = MEETING_MINUTES
 RAW_DIR     = MINUTES_DIR / "raw"
 PROC_DIR    = MINUTES_DIR / "processed"
 TAG_DIR     = MINUTES_DIR / "tagged"

@@ -1,71 +1,73 @@
 #!/usr/bin/env python3
 """
-train.py
+train.py — fine-tune a T5 model to extract structured JSON from minutes blocks.
+
+Capacity options (set via environment variables):
+  MINUTES_MODEL    base model      (default: google/flan-t5-base)
+  MINUTES_USE_LORA "1" to fine-tune with LoRA/PEFT (recommended for -base/-large)
+  MINUTES_EPOCHS   training epochs (default: 10)
+
+Schema, prompt, and the scoring metric are imported from extraction_common so
+they stay in sync with llm_extract.py.
 """
 
-import json, numpy as np, torch
+import os, sys, numpy as np
 from pathlib import Path
-from datasets import load_dataset
+from datasets import load_dataset, DatasetDict
 from transformers import (
-    T5Tokenizer, T5ForConditionalGeneration,
+    AutoTokenizer, AutoModelForSeq2SeqLM,
     DataCollatorForSeq2Seq,
     Seq2SeqTrainingArguments, Seq2SeqTrainer
 )
 
-# ───────────────────────────────── prompt ────────────────────────────────
-PROMPT_INSTRUCTION = """You are a strict JSON extractor. Given a block of raw meeting text, extract and return exactly one valid double-quoted JSON object with the keys below (any order). 
-Only output the JSON—no commentary. Missing fields → empty string "".
-
-Required keys:
-- case_number
-- project_address
-- lot_number
-- assessor_block
-- project_descr
-- type_district
-- type_district_descr
-- speakers
-- action
-- modifications
-- ayes
-- noes
-- absent
-- vote
-- action_name
-
-Raw block:
-"""
-
-EOJ_TOKEN = "<extra_id_0>"  
-# ───────────────────────────────── helpers ───────────────────────────────
-def is_valid_json(txt: str) -> bool:
-    try:
-        json.loads(txt)
-        return True
-    except Exception:
-        return False
+# shared schema + metric (sibling module)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from extraction_common import PROMPT_INSTRUCTION, EOJ_TOKEN, score_examples
 
 # ───────────────────────────────── main ──────────────────────────────────
 def main():
     # ── paths ────────────────────────────────────────────────────────────
-    home = Path.home()
-    work = home / "housing_project"
-    data = work / "data" / "meeting_minutes"
-    raw  = data / "tagged"
+    from paths import MEETING_MINUTES
+    data = MEETING_MINUTES
+    # training.txt is written by training_sample_create.py into tagged/training/
+    train_dir = data / "tagged" / "training"
     out  = data / "processed" / "minutes_extractor"
     out.mkdir(parents=True, exist_ok=True)
 
     # ── dataset ──────────────────────────────────────────────────────────
-    ds = load_dataset("json", data_files={"train": str(raw / "training.txt")})["train"]
-    ds = ds.train_test_split(test_size=0.1, seed=42)
+    train_file = train_dir / "training.txt"
+    if not train_file.exists():
+        raise FileNotFoundError(
+            f"{train_file} not found. Run training_sample_create.py first to build it."
+        )
+    ds = load_dataset("json", data_files={"train": str(train_file)})["train"]
+    # Three-way split: 80% train / 10% validation (model selection) / 10% test
+    # (held out, never trained or selected on — reported once at the end).
+    s1 = ds.train_test_split(test_size=0.2, seed=42)
+    s2 = s1["test"].train_test_split(test_size=0.5, seed=42)
+    ds = DatasetDict(train=s1["train"], validation=s2["train"], test=s2["test"])
+    print(f"split sizes: train={len(ds['train'])} val={len(ds['validation'])} test={len(ds['test'])}")
 
     # ── model / tokenizer ────────────────────────────────────────────────
-    MODEL_NAME = "google/flan-t5-small"
-    tokenizer  = T5Tokenizer.from_pretrained(MODEL_NAME)
-    model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
+    # Bigger default base than flan-t5-small; override with MINUTES_MODEL.
+    MODEL_NAME = os.environ.get("MINUTES_MODEL", "google/flan-t5-base")
+    USE_LORA   = os.environ.get("MINUTES_USE_LORA", "0") == "1"
+    tokenizer  = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
     model.gradient_checkpointing_enable()
 
-    max_in, max_out = 512, 256
+    if USE_LORA:
+        from peft import LoraConfig, get_peft_model, TaskType
+        lora = LoraConfig(task_type=TaskType.SEQ_2_SEQ_LM, r=16, lora_alpha=32,
+                          lora_dropout=0.05, target_modules=["q", "v"])
+        model = get_peft_model(model, lora)
+        model.print_trainable_parameters()
+
+    # Token caps. Measured on the consolidated set: ~21% of (prompt+block) inputs
+    # exceed 512 and ~86% of completions exceed 256 — i.e. the old 512/256 caps
+    # truncated most JSON targets mid-object and many blocks before the ACTION/AYES
+    # lines. Raised to cover ~p90 of the distribution.
+    max_in, max_out = 1024, 1024
 
     # ── preprocessing ────────────────────────────────────────────────────
     def preprocess(ex):
@@ -91,43 +93,48 @@ def main():
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=4,
-        num_train_epochs=10,
+        num_train_epochs=int(os.environ.get("MINUTES_EPOCHS", "10")),
         weight_decay=0.01,
         predict_with_generate=True,
         logging_strategy="epoch",
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
-        metric_for_best_model="valid_json_ratio",
+        metric_for_best_model="field_accuracy",   # field-level, not just valid JSON
         greater_is_better=True,
-        generation_max_length=600,
+        generation_max_length=1024,   # match max_out; p90 completion ≈ 810 tokens
         generation_num_beams=1,
         seed=42,
         fp16=False,                              # ignored on M-series
     )
 
     # ── metric fn ────────────────────────────────────────────────────────
+    def _decode(seqs):
+        """Decode token-id arrays, mapping the -100 label-pad to the real pad id
+        and dropping ids outside the vocab."""
+        seqs = np.asarray(seqs)
+        seqs = np.where(seqs < 0, tokenizer.pad_token_id, seqs)
+        vocab = tokenizer.vocab_size
+        cleaned = [[int(t) for t in seq if 0 <= int(t) < vocab] for seq in seqs]
+        return tokenizer.batch_decode(cleaned, skip_special_tokens=True)
+
     def compute_metrics(eval_preds):
-        preds, _ = eval_preds
-        # make sure we have `int32` (some back-ends give int64 or float32)
-        preds = np.asarray(preds, dtype=np.int32)
-        # strip any IDs that are outside the SentencePiece vocab
-        vocab_size = tokenizer.vocab_size
-        cleaned = [[tok for tok in seq if 0 <= tok < vocab_size] for seq in preds]
-        decoded = tokenizer.batch_decode(cleaned, skip_special_tokens=True)        
-        #  ── DEBUG: show one sample every epoch ───────────────────────────────
+        preds, labels = eval_preds
+        dpred = _decode(preds)
+        dref  = _decode(labels)
+        #  ── DEBUG: show one prediction vs reference every epoch ──────────
         print("\n── sample pred ─────────────────────────────────────────")
-        print(decoded[0][:500])
+        print(dpred[0][:500])
+        print("── sample ref  ─────────────────────────────────────────")
+        print(dref[0][:500])
         print("────────────────────────────────────────────────────────\n")
-        decoded = [d.split(EOJ_TOKEN)[0] for d in decoded]   # safety strip
-        valid   = sum(is_valid_json(d) for d in decoded)
-        return {"valid_json_ratio": valid / len(decoded)}
+        return score_examples(dpred, dref)   # shared field-level metric
 
     # ── trainer ──────────────────────────────────────────────────────────
     trainer = Seq2SeqTrainer(
         model=model, args=args,
         train_dataset=tokenized["train"],
-        eval_dataset=tokenized["test"],
+        eval_dataset=tokenized["validation"],   # model selection on validation
         tokenizer=tokenizer, data_collator=collator,
         compute_metrics=compute_metrics,
     )
@@ -136,6 +143,13 @@ def main():
     trainer.save_model(str(out))
     tokenizer.save_pretrained(str(out))
     print("✓ training complete – model saved to", out)
+
+    # ── final, honest evaluation on the held-out test split ───────────────
+    test_metrics = trainer.evaluate(tokenized["test"], metric_key_prefix="test")
+    print("\n=== HELD-OUT TEST METRICS ===")
+    for k, v in test_metrics.items():
+        if k.startswith("test_"):
+            print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
 
 if __name__ == "__main__":
     main()

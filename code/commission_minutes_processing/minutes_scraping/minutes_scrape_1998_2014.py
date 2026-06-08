@@ -1,3 +1,8 @@
+# =============================================================================
+# DEPRECATED — superseded by scrape_minutes.py (consolidated, idempotent scraper).
+# Kept only because it records the verified S3 archive page-IDs for 1998–2014.
+# scrape_minutes.py covers this era (and saves full HTML, not just <p> text).
+# =============================================================================
 import requests
 from bs4 import BeautifulSoup
 import os
