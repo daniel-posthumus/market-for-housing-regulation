@@ -3,7 +3,7 @@
 ingest.py — build / refresh the labeling work-queue (SQLite) from the tagged
 minutes corpus.
 
-For every project block in data/meeting_minutes/tagged/{year}/*.txt it creates an
+For every project block in data/meeting_minutes/<locality>/tagged/{year}/*.txt it creates an
 `items` row (raw block text + parsed meeting date + case number). It then seeds a
 `labels` row as a pre-fill so the human corrects rather than types:
   • if a migrated {year}_labeled.json record matches the case number → that

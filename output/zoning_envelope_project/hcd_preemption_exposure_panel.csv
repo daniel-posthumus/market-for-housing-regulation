@@ -1,0 +1,15 @@
+jurisdiction,county,planning_period,record_type,current_compliance,element_received,hcd_found_compliant_date,br_exposure_months_from_2023-02-01
+OAKLAND,Alameda,6S,Adopted,In,2023-02-13,2023-02-17,0.5
+BERKELEY,Alameda,6S,Adopted,In,2023-01-24,2023-02-28,0.9
+FREMONT,Alameda,6S,Adopted,In,2023-01-23,2023-03-22,1.6
+REDWOOD CITY,San Mateo,6S,Adopted,In,2023-02-22,2023-03-27,1.8
+MOUNTAIN VIEW,Santa Clara,6S,Adopted,In,2023-04-26,2023-05-26,3.8
+RICHMOND,Contra Costa,6S,Adopted,In,2023-09-26,2023-10-02,8.0
+SOUTH SAN FRANCISCO,San Mateo,6S,Adopted,In,2023-10-27,2023-11-20,9.6
+SAN JOSE,Santa Clara,6S,Adopted,In,2023-11-30,2024-01-29,11.9
+SUNNYVALE,Santa Clara,6S,Adopted,In,2024-02-29,2024-03-06,13.1
+BURLINGAME,San Mateo,6S,Adopted,In,2024-03-15,2024-03-20,13.6
+PALO ALTO,Santa Clara,6S,Adopted,In,2024-07-26,2024-08-20,18.6
+SAN BRUNO,San Mateo,6S,Adopted,In,2024-09-25,2024-10-21,20.7
+DALY CITY,San Mateo,6S,Adopted,In,2024-11-13,2024-12-03,22.1
+SAN MATEO,San Mateo,6S,Adopted,In,2026-04-07,2026-06-01,40.0

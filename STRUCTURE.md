@@ -28,7 +28,7 @@ market-for-housing-regulation/
 
 | File | Role |
 |---|---|
-| `paths.py` | **Where the data lives** — `DATA_ROOT`/`MEETING_MINUTES`, env-overridable via `MFHR_DATA_ROOT`. Everything imports paths from here. |
+| `paths.py` | **Where the data lives** — `DATA_ROOT`/`MEETING_MINUTES`, env-overridable via `MFHR_DATA_ROOT`. `MEETING_MINUTES` resolves to the *active locality* (`MFHR_LOCALITY`, default `san_francisco`) so the pipeline scales across the Bay Area. Everything imports paths from here. |
 | `extraction_common.py` | **The 35-field `SCHEMA`** (single source of truth) → `FIELDS`, `PROMPT_INSTRUCTION`, `coerce_record()`, `score_examples()`. |
 | `autoextract.py` | Regex/heuristic best-guess extraction from a raw block (form pre-fill + builder derivations). |
 | `minutes_scraping/scrape_minutes.py` | Consolidated, idempotent scraper (S3 HTML 1998–2014; live archive PDFs 2015–present). Legacy scrapers deprecated alongside. |
@@ -60,12 +60,26 @@ output/
     └── proposal/
 ```
 
-## Data (on Google Drive, not in git)
+## Data (on Dropbox, not in git)
 
-Path: `…/My Drive/market-for-housing-regulation/data/` with the familiar layout
-(`meeting_minutes/{raw,tagged,processed}`, etc.). Code resolves it via `paths.py`
-(`MFHR_DATA_ROOT` to override). The Google Drive `_archive/` folder holds retired
-material: the old tabular pipeline (`code/cleaning_code`), `resources/`, the old
-`prospectus`, `scratch/`, and most research memos. The labeling DB
-(`labeling_app/labels.db`) is a regenerable local cache (gitignored); durable labels are
-exported to `tagged/training/{year}_labeled.json`.
+Path: `…/Dropbox/market-for-housing-regulation/data/`. Code resolves it via `paths.py`
+(`MFHR_DATA_ROOT` to override). The minutes corpus is organized **per locality** so it
+scales to the whole Bay Area:
+
+```
+data/meeting_minutes/
+└── <locality>/                  # e.g. san_francisco (the only one so far)
+    ├── raw/{year}/              # frozen HTML/PDF originals
+    ├── tagged/{year}/           # text with <<Project>> markers
+    │   └── training/            # {year}_labeled.json + samples + training.txt
+    ├── processed/               # structured_data.jsonl, *.csv, minutes_extractor/
+    └── meeting_level_data/
+```
+
+`paths.MEETING_MINUTES` points at the active locality (set `MFHR_LOCALITY=oakland` to
+switch; default `san_francisco`), so all pipeline code is locality-agnostic. To onboard a
+new Bay Area locality: create `meeting_minutes/<locality>/` and run scrape → parse → label
+→ build → train/extract with `MFHR_LOCALITY` set. Region-wide data (`crosswalks/`,
+`shapefiles/`, `clean/`, national `raw/`) is **not** per-locality and stays at the data
+root. The labeling DB (`labeling_app/labels.db`) is a regenerable local cache (gitignored);
+durable labels are exported to `<locality>/tagged/training/{year}_labeled.json`.

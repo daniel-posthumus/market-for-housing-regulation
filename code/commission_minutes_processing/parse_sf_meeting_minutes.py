@@ -5,13 +5,13 @@ scrape_and_parse_sf_pc_minutes.py
 End-to-end scraper + parser for San-Francisco Planning-Commission
 meeting-minutes (1998-2014).
 
-Outputs
+Outputs (under the active locality's subtree, e.g. san_francisco/)
 -------
-data/meeting_minutes/
-    ├── raw_html/<year>/<slug>.html           # frozen originals
+data/meeting_minutes/<locality>/
+    ├── raw/<year>/<slug>.html                # frozen originals
+    ├── tagged/<year>/<YYYY-MM-DD>.txt        # text with <<Project>> tags
     └── processed/
-        ├── all_meetings_metadata.csv         # tidy metadata
-        └── text_with_project_tags/<year>/<YYYY-MM-DD>.txt
+        └── all_meetings_metadata.csv         # tidy metadata
 """
 
 import re

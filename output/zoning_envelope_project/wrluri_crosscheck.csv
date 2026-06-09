@@ -1,0 +1,15 @@
+city,in_nzlud,nzlud_zri,nzlud_mf_per,in_wrluri06,wrluri06,in_wrluri18,wrluri18
+Daly City,False,,,False,,False,
+South San Francisco,False,,,False,,False,
+San Mateo,False,,,False,,False,
+Redwood City,True,2.533,0.6,True,0.552,False,
+San Bruno,False,,,False,,False,
+Burlingame,True,2.925,0.667,True,0.443,False,
+San Jose,True,3.318,0.389,True,0.162,False,
+Palo Alto,False,,,False,,False,
+Mountain View,False,,,False,,False,
+Sunnyvale,False,,,False,,True,0.63
+Oakland,False,,,False,,False,
+Berkeley,False,,,False,,False,
+Fremont,True,2.537,0.467,True,0.499,False,
+Richmond,False,,,False,,False,

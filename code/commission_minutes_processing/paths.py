@@ -6,7 +6,18 @@ The data corpus lives on Dropbox (out of the git repo). Every script imports
 MEETING_MINUTES from here instead of hardcoding a path, so moving the data only
 requires changing this file (or setting the MFHR_DATA_ROOT env var).
 
-Override at runtime:  export MFHR_DATA_ROOT=/some/other/data
+The meeting-minutes corpus is organized per locality so the pipeline can scale
+to the whole Bay Area. Each locality is a self-contained subtree:
+
+    meeting_minutes/<locality>/{raw,tagged,processed,meeting_level_data}
+
+MEETING_MINUTES points at the *active* locality (San Francisco by default), so
+all downstream code stays locality-agnostic. To process another locality, set
+MFHR_LOCALITY (and create its subtree) — e.g. export MFHR_LOCALITY=oakland.
+
+Override at runtime:
+    export MFHR_DATA_ROOT=/some/other/data      # move the whole corpus
+    export MFHR_LOCALITY=oakland                # switch active locality
 """
 from __future__ import annotations
 import os
@@ -19,4 +30,10 @@ _DEFAULT_DATA_ROOT = (
 )
 
 DATA_ROOT = Path(os.environ.get("MFHR_DATA_ROOT", _DEFAULT_DATA_ROOT)).expanduser()
-MEETING_MINUTES = DATA_ROOT / "meeting_minutes"
+
+# Active locality (snake_case, used as a directory name). Default: San Francisco.
+LOCALITY = os.environ.get("MFHR_LOCALITY", "san_francisco")
+
+# Root holding every locality's corpus; MEETING_MINUTES is the active locality's.
+MEETING_MINUTES_ROOT = DATA_ROOT / "meeting_minutes"
+MEETING_MINUTES = MEETING_MINUTES_ROOT / LOCALITY

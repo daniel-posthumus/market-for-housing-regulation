@@ -1,0 +1,26 @@
+locality,fips_geoid,minutes_start_year,preperiod_source_found,source_url,observed_vintage,form,confidence,notes
+San Francisco,0667000,1998,gis_layer,https://data.sfgov.org/ (DataSF historical zoning) + project SF data,~2016,spatial,high,REFERENCE: SF circa-2016 zoning in hand via the project's own SF pipeline + DataSF historical zoning layers (not the SoMa guide the regex first matched).
+Albany,0600674,2009,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Emeryville,0622594,2015,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Fairfax,0623168,2013,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Palo Alto,0655282,2016,none_found,,,,low,No in-window zoning MAP or code capture; earlier 'Symposium.pdf' match rejected (not a zoning map). Code on American Legal LEGACY platform (library.amlegal.com) not Wayback-queried; 2016 use-table likely recoverable from amlegal version history.
+Petaluma,0656784,2010,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Piedmont,0656938,2007,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Santa Rosa,0670098,2016,none_found,,,,low,no in-window Wayback capture of code or zoning PDF found
+Burlingame,0609066,2014,nzlud_proxy,github.com/mtmleczko/nzlud,2019-21,text,low,NZLUD 2019-21 only (POST-SB35 vintage gap)
+Alameda,0600562,2005,ordinance_text,https://library.municode.com/ca/alameda,2017,text,high,Wayback code-page capture 2017 (Municode)
+Clayton,0613882,2016,ordinance_text,https://library.municode.com/ca/clayton/codes/municipal_code?nodeId=TIT17ZO,2018,text,high,Wayback code-page capture 2018 (Municode)
+El Cerrito,0621796,2008,ordinance_text,https://library.municode.com/ca/el_cerrito,2018,text,high,Wayback code-page capture 2018 (Municode)
+Hayward,0633000,2015,ordinance_text,https://library.municode.com/ca/hayward/codes/municipal_code,2018,text,high,Wayback code-page capture 2018 (Municode)
+Milpitas,0647766,2016,ordinance_text,https://library.municode.com/ca/milpitas/codes/code_of_ordinances?nodeId=TITXIZOPLAN_CH10ZO,2018,text,high,Wayback code-page capture 2018 (Municode)
+Mountain View,0649670,2014,ordinance_text,https://library.municode.com/ca/mountain_view/codes/code_of_ordinances?nodeId=PTIITHCO_CH36ZO,2017,text,high,Wayback code-page capture 2017 (Municode)
+Oakland,0653000,2014,ordinance_text,https://library.municode.com/ca/oakland/codes/planning_code,2017,text,high,Wayback code-page capture 2017 (Municode)
+San Carlos,0665070,2008,ordinance_text,https://www.codepublishing.com/CA/SanCarlos/,2014,text,high,Wayback code-page capture 2014 (CodePublishing)
+Solano County,06095,2005,ordinance_text,https://www.codepublishing.com/CA/SolanoCounty/,2015,text,high,Wayback code-page capture 2015 (CodePublishing). [corrected: earlier domain search falsely matched an Oro-Valley-AZ PDF on the shared codepublishing.com host]
+Sonoma County,06097,2015,ordinance_text,https://library.municode.com/ca/sonoma_county,2017,text,high,Wayback code-page capture 2017 (Municode)
+Walnut Creek,0683346,2006,ordinance_text,https://www.codepublishing.com/CA/WalnutCreek/,2014,text,high,Wayback code-page capture 2014 (CodePublishing). [corrected: shared-host false positive rejected]
+Daly City,0617918,2009,none_found,,,,low,DOWNGRADED (Task4): the 2014 'Zoning Ordinance.pdf' sits under a General-Plan-Update (/gpu/) path and could not be confirmed adopted (Wayback 404/503); no in-window ADOPTED zoning map/code capture found. Likely GPU draft -> not a valid pre-period source.
+San Leandro,0668084,2011,zoning_pdf,http://sanleandro.org/documents/Planning/San%20Leandro%20Zoning%20Map%20Effective%2011-3-2016.pdf,2016,spatial,high,Wayback city-site zoning PDF capture 2016 (2nd pass)
+San Ramon,0668378,2011,none_found,,,,low,"FALSE POSITIVE killed (Task4): 'rezoning.pdf' is a 7-page 'Rezoning to P-1 Submittal Requirements' application doc, NOT the citywide zoning map. Lead: a 'zoning_ordinance_map' page captured 2018 (302 redirect, points to EncodePlus; underlying-map vintage unverified)."
+Sunnyvale,0677000,2014,zoning_pdf,http://sunnyvale.ca.gov/m/Portals/0/Sunnyvale/CDD/Maps/Zoning%20North%20of%20101%20for%20web.pdf,2014,spatial,high,Wayback city-site zoning PDF capture 2014 (2nd pass)
+Tiburon,0678666,2012,zoning_pdf,http://www.townoftiburon.org:80/wp-content/uploads/2013/02/Tiburon-Zoning-Map-Effective-March-31-2006.pdf,2015,spatial,high,Wayback capture 2015 of 'Tiburon-Zoning-Map-Effective-March-31-2006.pdf' — the 2006-effective map still posted in-window = the circa-2016 envelope (stable).

@@ -2,6 +2,9 @@
 # ignore everything in the minutes_extractor folder
 data/meeting_minutes/processed/minutes_extractor/*
 
+# ignore .claude infrastructure
+.claude/
+
 # python environment & secrets
 .venv/
 __pycache__/

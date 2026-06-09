@@ -1,0 +1,5 @@
+place,GEOID,restrict_mf_permit,mf_per,min_lot_size,adu,height_ft_median,height_ft_mode,height_st_median,parking_median,parking_mode,maxden1,maxden5,inclusionary,open_space,zri,zri_up,timestamp,city
+Burlingame,609066,0,0.666666667,1,1,50,55,2,2,2,0,1,1,1,2.925407491,2.730230828,2/19/2021 14:37,Burlingame
+Fremont,626000,0,0.466666667,1,1,30,30,2,1,1,0,1,1,1,2.53684646,2.434849044,10/15/2019 23:04,Fremont
+Redwood,660102,0,0.6,1,1,50,35,2,1,1,0,1,1,1,2.533206398,2.478232376,10/24/2019 12:22,Redwood City
+SanJose,668000,0,0.388888889,1,1,45,30,2,1,1,0,1,1,1,3.317608584,3.069970078,12/19/2021 15:51,San Jose

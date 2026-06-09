@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-06-09 — Multi-jurisdiction reconnaissance: census, 6 probes, and consolidated DATA_STATUS
+
+**Goal**: Scope scaling the SF minutes/zoning pipeline to the whole Bay Area — map every locality's data sources and answer, end-to-end, whether the multi-jurisdiction panel is feasible (access, depth, spatial form, pre-period envelope, HCD treatment) — then consolidate into one authoritative status doc.
+
+**What was done**:
+- Restructured the data corpus to be per-locality (`meeting_minutes/<locality>/...`); `paths.py` gained `MFHR_LOCALITY` (default `san_francisco`); updated README/STRUCTURE/docstrings.
+- Ran the **minutes platform pilot** (14 priority cities): platform classification, scraper pilot (civic-scraper limits found), and an additive `jurisdiction_mappings.py` synonym layer.
+- Deployed a sub-agent for the **zoning-envelope assessment** (NZLUD coverage, code-host table, HCD panel); materialized **77 git-LFS pointer stubs** (~2.9 GB) in Dropbox from the local LFS cache (sha256-verified); ran the **WRLURI cross-check** (NZLUD `zri` rank-inverted vs WRLURI-2006, n=4).
+- Built the **Bay Area locality census** (109 localities, 8 parallel per-county agents, GEOIDs from Census Gazetteer).
+- Ran six probes: **Akamai/CivicPlus**, **archive-depth** (shallow), **API depth-read**, **zoning-data-form**, **pre-period envelope**, and the **final recon bundle** (CivicPlus depth, migration cliffs, HCD firm-up, pre-period verification).
+- Wrote **`output/DATA_STATUS.md`** — the single authoritative status doc; superseded the census report with a redirect. Self-verified all 33 numbers against the CSVs.
+
+**Key decisions / findings**:
+- **Akamai "wall" is a myth** — only 3 of 109 sites bot-blocked (Fremont, Portola Valley, San Jose); 25 of 28 CivicPlus clean.
+- **Agenda-trap is real and large** — year-dropdowns overstate minutes depth (Oakland 2000→**2014**, Santa Rosa 1999→**2016**); only minutes-type-verified years trusted.
+- **~2016 panel is feasible**: 68/109 verified minutes-start, **36 reach ≤2016** (a floor; 41 `unknown` are JS-gated, not absent). Migration cliffs add deep history (Marin 2005, SCC 2008, San Jose 2005).
+- Current zoning maps are scriptable (67/109 downloadable GIS + statewide Gov-OPR backstop). HCD treatment variable is clean/sourced (0–38mo exposure variation).
+- Pre-period envelope cheap for **15/25** (corrected down from 17 after killing San Ramon/Daly City false positives). Recon is **complete**; the two remaining blockers are decisions, not data.
+
+**Next steps**:
+- Build the unblocked adapters: Granicus/Legistar (41 localities), CivicClerk OData (10), CivicPlus AgendaCenter (26), Municode (44)/CodePublishing (23)/eCode360 (14).
+- **Gating quality step**: re-test extraction transfer (SF `autoextract` does NOT transfer) on real docs **with human review**, not unattended.
+- Cheap recon finishers: 12 CivicPlus CIDs (browser session), 9 pre-period `none_found` (publisher version history), 8 prohousing dates (HCD tracker XLS).
+- **Two open DECISIONS gate the rest**: (1) by-right vs. ministerial definition (the model's hinge → zoning extraction); (2) deep-history/ratchet investment (pre-2010 + San Jose Akamai + physical records).
+
+**Files touched**:
+- `code/commission_minutes_processing/paths.py`, `README.md`, `STRUCTURE.md`, `parse_sf_meeting_minutes.py`, `labeling_app/ingest.py` — modified (per-locality restructure)
+- `output/DATA_STATUS.md` — created (authoritative consolidated status; supersedes census report)
+- `output/minutes_platform_pilot/`, `zoning_envelope_project/`, `bay_area_census/`, `archive_depth_probe/`, `zoning_map_form_probe/`, `preperiod_envelope_probe/`, `hcd_preemption_panel/`, `migration_cliffs_probe/`, `civicplus_depth_probe/` — created (probe CSVs, reports, reproducible scripts, raw per-county provenance)
+- Dropbox `data/raw,clean,crosswalks,llm_regulatory_measurement/*` — 77 LFS stubs materialized to real data (not in git)
+- memory `corpus-moved-to-dropbox.md` — updated (per-locality layout note)
+
 ## 2026-06-08 — Data migration to Dropbox, schema enrichment, hand-label review setup
 
 **Goal**: Move the data corpus off the over-quota Google Drive to Dropbox without losing files; settle the extraction schema before the full relabel; and tee up a review of all hand-labeling so far.

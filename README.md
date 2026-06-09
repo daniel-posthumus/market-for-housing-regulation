@@ -22,13 +22,18 @@ requirements.txt / requirements.lock.txt / environment-notes.md
 STRUCTURE.md                          fuller map of the repo
 ```
 
-## Data lives on Google Drive (not in git)
+## Data lives on Dropbox (not in git)
 
 The ~18 GB corpus and all data are at
-`…/My Drive/market-for-housing-regulation/data/` and are **not** tracked in git. Code
+`…/Dropbox/market-for-housing-regulation/data/` and are **not** tracked in git. Code
 finds them via `code/commission_minutes_processing/paths.py` (`DATA_ROOT`), overridable
-with `export MFHR_DATA_ROOT=/path/to/data`. Archived non-minutes material (the old
-tabular pipeline, prospectus, resources, memos) is in the Drive `_archive/` folder.
+with `export MFHR_DATA_ROOT=/path/to/data`.
+
+The minutes corpus is organized **per locality** so it can scale to the whole Bay
+Area — `meeting_minutes/<locality>/{raw,tagged,processed,meeting_level_data}`. Today the
+only locality is `san_francisco`; to add another, create its subtree and run the pipeline
+with `export MFHR_LOCALITY=oakland`. `paths.MEETING_MINUTES` always points at the active
+locality, so the pipeline code stays locality-agnostic.
 
 ## Setup & workflow
 
