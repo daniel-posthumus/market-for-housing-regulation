@@ -29,11 +29,22 @@ xlrd>=2.0              # legacy .xls (data/raw/permits_2024_preliminary.xls)
 
 # --- Geospatial ---------------------------------------------------------------
 geopandas>=0.14        # CBSA shapefiles in 21_exploratory_graphics.py (needs GDAL)
+pyogrio>=0.7           # geopandas IO engine; its wheel BUNDLES GDAL (see notes)
+shapely>=2.0           # geometry ops (BG<->place overlay, sjoin_nearest)
 
 # --- External data APIs -------------------------------------------------------
 requests>=2.31         # Census ACS pull (08_acs_pull.py), scrapers
 fredapi>=0.5           # 30yr mortgage series (08a_housing_affordability_create.py)
 redivis>=0.10          # Corelogic loan-level pull (02_corelogic_loan.py)
+
+# --- Demand-side data collection (demand_estimation/) -------------------------
+# Layer I region-wide pulls: ACS PUMS+tables, LODES, TIGER, SSURGO (Soil Data
+# Access), CGS hazard, Gov-OPR zoning, CPAD, GTFS, IRS migration. See
+# .claude/instructions/demand_data_brief.md and demand_estimation/README.md.
+pyarrow>=14            # parquet output for every derived demand artifact
+us>=3.1                # FIPS helpers (optional; FIPS set is also hard-coded)
+# census>=0.8          # optional Census API wrapper — we use requests directly
+# pygris>=0.1          # optional TIGER helper — we fetch zips directly
 
 # --- R bridge -----------------------------------------------------------------
 rpy2>=3.5              # renders 05b_state_trifectas.Rmd from 05a (needs system R)

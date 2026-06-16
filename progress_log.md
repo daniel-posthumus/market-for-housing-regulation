@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-06-16 — Layer I demand-data pipeline (build + CoreLogic + crime), report, and Guren slides
+
+**Goal**: Execute the demand-side data-collection brief — build, run, and document the full region-wide (9-county Bay Area) Layer I data pipeline — then a chain of follow-ups (gSSURGO spatial, 511 transit, CoreLogic price spine, crime, PUMS weights), plus a 10-slide deck for the Adam Guren meeting and a demand-estimation roadmap. (Session spanned 06-12→06-16.)
+
+**What was done**:
+- Built `demand_estimation/` from scratch: collectors (TIGER, LODES, ACS PUMS+tables, SSURGO tabular+spatial, CGS hazard, Gov-OPR zoning, CPAD/CDE/GTFS amenities, IRS migration, crime), `build.py` orchestration (BG↔jurisdiction crosswalk, job access, soil extract + BG areal aggregation, controls, PUMS, design matrix), manifest/paths/ArcGIS-pager/manual-stubs. ~1.5 GB pulled to Dropbox `data/demand/`, idempotent + sha256-checksummed.
+- Follow-ups: gSSURGO spatial polygons via SDA WKT → `bg_soil_engineering.parquet` (5,184 BGs); 511 regional GTFS all-operator transit (4,590 BGs; fixed dead Caltrain feed → Trillium mirror + zip validation).
+- CoreLogic/Cotality: wrote the Redivis SQL filter queries; merged the user's extracts (5.3M deeds + 2.28M parcels) → geocoded to BG (100% parcel match, 99.9% BG) via `corelogic.py`.
+- Crime: SF + Oakland incident-level (Oakland geocoded via Census batch geocoder) + FBI CDE county-level for all 9 counties (api.data.gov key) → `bg_crime.parquet`, merged into controls.
+- PUMS survey weights (WGTP/PWGTP) added → population-correct moments; fixed corelogic stub README provenance (BU → Stanford Redivis).
+- `demand_data_report.tex` (18 pp, compiles clean): inventory, granularity table, per-source detail w/ integrated diagnostics + spatial choropleths, CoreLogic section, instrument-pipeline status, **new §8 demand-estimation roadmap**.
+- `output/political_economic_housing_model/guren_meeting_slides.tex` — 10-slide Beamer deck (fiscal-federalism framing, two margins, reaction function, identification routed to Wollmann).
+
+**Key decisions / findings**:
+- Demand data is region-wide (data root), reusing the minutes pipeline's `paths.py` `DATA_ROOT`; not per-locality.
+- Soil instrument has spatial variation independent of the price/income gradient (good for identification); SSURGO survey areas discovered at runtime (not all FIPS-aligned).
+- CoreLogic "Property" = tax-assessor + characteristics (there is no separate Tax dataset); LLMA walled off by EULA. Census batch geocoder is flaky → hardened with small batches + retries.
+- Data validated sane: CoreLogic median-price-by-year reproduces the Bay Area cycle; FBI crime rankings as expected; IRS shows post-COVID out-migration.
+- **Demand is NOT estimated** — only the data/design-matrix is assembled (stated explicitly in report §8); user will estimate by hand.
+
+**Next steps**:
+- Estimate demand by hand per report §8: define product/market/shares → hedonic price/user-cost index → conditional logit → BLP, instrument price (soil + slope + Gandhi–Houde).
+- RS Means cost schedule (the one manual blocker) → soil instrument's $ form; FRED 30-yr rate for owner user cost.
+- Build the multi-jurisdiction τ_j (discretionary-review) panel + z̄_j integration for the Layer III regulation game (only SF minutes processed so far).
+
+**Files touched**:
+- `demand_estimation/` — created (collectors/, `build.py`, `corelogic.py`, `crime.py`, `manifest.py`, `demand_paths.py`, `util.py`, `arcgis.py`, `stubs.py`, `report/`)
+- `demand_estimation/report/demand_data_report.tex` (+ stats/inventory/fill `.py` helpers, `figures/`, `.tex` fragments) — created (18-pp report)
+- `output/political_economic_housing_model/guren_meeting_slides.tex` — created (10-slide deck)
+- `STRUCTURE.md`, `requirements.txt`, `requirements.lock.txt`, `environment-notes.md`, `.gitignore` — modified (deps/docs/ignore for the demand pipeline)
+- Dropbox `data/demand/` — created (~1.5 GB; out of git)
+
 ## 2026-06-09 — Multi-jurisdiction reconnaissance: census, 6 probes, and consolidated DATA_STATUS
 
 **Goal**: Scope scaling the SF minutes/zoning pipeline to the whole Bay Area — map every locality's data sources and answer, end-to-end, whether the multi-jurisdiction panel is feasible (access, depth, spatial form, pre-period envelope, HCD treatment) — then consolidate into one authoritative status doc.

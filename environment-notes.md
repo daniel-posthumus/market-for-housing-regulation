@@ -80,6 +80,32 @@ system `poppler` `pdftotext` for spot checks: `brew install poppler`.
 3. **Path bug** — `code/analysis_code/01_election_land_use_scatters.py` builds a
    malformed path (`f'{clean_data}master_county_level'`, missing `/` and `.csv`).
 
+## Demand-side data collection (`demand_estimation/`)
+
+Layer I region-wide pulls (ACS, LODES, TIGER, SSURGO, hazard, zoning, CPAD,
+GTFS, IRS). Runs from the repo root, idempotent and resumable:
+
+```bash
+python -m demand_estimation.build            # collect + build
+python -m demand_estimation.build --collect-only
+```
+
+- **Geo stack**: reuses the same wheel-bundled GDAL as above (`pyogrio` ships
+  GDAL 3.11). No system GDAL needed; verified on this machine.
+- **Census API key**: ACS *aggregate tables* (§2.2) need a key — put it in
+  `CENSUS_API_KEY.txt` at the repo root (gitignored) or export `CENSUS_API_KEY`.
+  ACS *PUMS* (§2.1) is keyless (FTP bulk), so it runs without a key. If no valid
+  key is present the tables step logs `status=needs_key` and the run continues.
+- **Data location**: everything writes to Dropbox under `data/demand/` via
+  `demand_paths.py` (which imports `DATA_ROOT` from the minutes pipeline's
+  `paths.py`), so `MFHR_DATA_ROOT` overrides apply uniformly. Nothing large is
+  committed to git.
+- **Gotcha — stale `.venv` interpreter**: the repo's `.venv` was created under
+  the old project name (`housing_project`), so its console-script shebangs
+  (`.venv/bin/pip`, etc.) point at a path that no longer exists. The interpreter
+  itself is fine — invoke tools as `.venv/bin/python -m pip ...` (not
+  `.venv/bin/pip`), or recreate the venv per Quick start above.
+
 ## Data & Git LFS
 
 Large inputs (`*.dta`, several `*.csv`) are tracked with **Git LFS** per

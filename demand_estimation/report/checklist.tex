@@ -1,0 +1,40 @@
+\newcommand{\yes}{\textcolor{green!55!black}{\checkmark}}
+\newcommand{\no}{\textcolor{red}{\ding{55}}}
+\newcommand{\partialmark}{\textcolor{orange!90!black}{$\circ$}}
+
+\begin{itemize}[leftmargin=2.2em, itemsep=2pt]
+\item[\yes] Every \S2 source downloaded, checksummed (\texttt{sha256}), and
+  logged in \texttt{\_manifest.csv}.
+\item[\yes] BG$\leftrightarrow$jurisdiction crosswalk built (\NBG{} block
+  groups $\to$ \NJURIS{} jurisdictions) --- the load-bearing artifact.
+\item[\yes] Soil engineering-property extract built (\NMAPUNITS{} map units),
+  \textbf{and} the map-unit$\to$block-group areal-weighted aggregate
+  (\texttt{bg\_soil\_engineering.parquet}, \NSOILBG{} BGs) from \NSOILPOLY{}
+  SSURGO spatial polygons (full mukey coverage). Only the RS Means cost-index
+  join remains, as a documented \texttt{TODO}.
+\item[\yes] Hazard + amenity controls staged for residualization
+  (\texttt{bg\_controls.parquet}: seismic-zone share, open-space distance,
+  transit-stop density).
+\item[\yes] ACS micro (\NPUMSHH{} CA households) + BG tables (8 table groups)
+  staged for BLP.
+\item[\yes] IRS migration pulled; Infutor/Verisk stubbed.
+\item[\yes] Every \S3 manual source has a \texttt{\_stubs/<name>/README.md} +
+  manifest row (CoreLogic, RS Means, Infutor/Verisk).
+\item[\yes] CoreLogic/Cotality price spine \textbf{landed \& processed}
+  (\CLNTX{} sales, \CLNPARCEL{} parcels, merged + geocoded to BG, sanity-checked);
+  RS Means remains the one outstanding licensed blocker.
+\item[\yes] 511 regional transit: key \textbf{present} $\Rightarrow$ all-operator
+  bundle (\NSTOPS{} stops) fetched; full measure \path{transit_stops_1km_all}
+  (\NTRANSITBG{} BGs) built, with the BART+Caltrain baseline
+  (\path{transit_stops_1km_bartcaltrain}) retained for auditability.
+\item[\yes] \texttt{demand\_data\_report.tex} compiled to PDF, zero undefined
+  references.
+\item[\yes] Nothing behind auth was scraped or circumvented; no credentials
+  fabricated (CGS regulatory layer pulled from its public copy; 511 transit
+  fetched with the supplied key; CoreLogic/RS Means stubbed, not sourced).
+\end{itemize}
+
+\noindent\partialmark{} \emph{Single remaining soil blocker:} only the predicted
+construction-cost index (needs the RS Means schedule) is outstanding; the
+map-unit$\to$block-group aggregation TODO from the first run is now resolved ---
+see Section~\ref{sec:instrument}.

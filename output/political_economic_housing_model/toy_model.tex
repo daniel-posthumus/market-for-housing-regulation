@@ -11,9 +11,8 @@
 \newtheorem{assumption}{Assumption}
 \newtheorem{definition}{Definition}
 
-\title{The Political Economy of Fragmented Housing Regulation\\
-\large By-Right Envelope, Discretionary Friction, and the Minutes Record\\
-\large across a Single Labor Market}
+\title{Fragmented Housing Regulation as a Fiscal-Federalism Breakdown\\
+\large The Distortion from Local Free-Riding, and the Leakage of State Preemption}
 \author{Daniel Posthumus}
 \date{June 2026}
 
@@ -21,388 +20,268 @@
 \maketitle
 
 \begin{abstract}
-\noindent The ``abundance'' diagnosis holds that housing markets in productive U.S.\
-metros are out of equilibrium because land-use regulation throttles supply
-\citep{kleinthompson,hsieh2019housing,glaeser2005}. What that literature largely takes
-as exogenous---the stringency of regulation---is the equilibrium output of a \emph{market
-for regulation} run through local bodies. This note builds a deliberately small model with
-two changes relative to the supply-elasticity tradition. First, regulation operates on
-\emph{two margins}: a \emph{by-right envelope} set by the zoning map (what may be built
-ministerially, with certainty and no hearing) and a \emph{discretionary friction} applied
-to everything that exceeds it (conditional-use authorization, discretionary review,
-conditions, and delay). The empirical fact that motivates this split is that approvals,
-\emph{conditional on reaching a vote}, are nearly universal: restriction does not operate
-through denial at the hearing but through what must be endured to reach it. Second, the
-metro is \emph{fragmented}: one integrated labor market and a handful of housing
-submarkets are regulated by $\sim$100 jurisdictions whose boundaries align with neither, so
-each jurisdiction's choice of both margins is the solution to a game played against its
-neighbors \citep{brueckner1998testing,fischel2001homevoter}. Every object maps to a field
-in an item-level dataset built from planning-commission minutes (1998--present) under a
-single canonical schema. The point is measurability: a model whose primitives are the
-things the minutes record, and---crucially---a model that locates restriction where the
-record shows it actually lives.
+\noindent Local housing regulation is provided by jurisdictions far finer than the labor
+market and housing submarkets they sit in. Each jurisdiction enjoys the local amenity of low
+density but does not internalize the regional cost of the housing supply it suppresses --- the
+classic condition (\citealp{oates1972fiscal}; \citealp{besley2003centralized}) under which
+decentralized provision of a local public good with interjurisdictional spillovers ceases to
+be efficient. This note frames fragmented housing regulation as exactly that breakdown and
+builds a small equilibrium model of the \emph{market for regulation} aimed at two questions a
+purely descriptive account cannot answer. \textbf{First, how large is the distortion} from
+decentralized, non-internalized regulation, relative to a regional (internalized) benchmark?
+\textbf{Second, what is the leakage of state preemption} --- when the state forces open one
+regulatory margin (the by-right zoning envelope), to what extent do jurisdictions reassert
+restriction through the discretionary margin it leaves untouched? The model's central
+empirical object is the cross-jurisdiction \emph{reaction function}: in an efficient,
+no-spillover world jurisdictions would not respond to one another's regulation, so a nonzero
+strategic-interaction slope is the direct signature of the spillover that breaks the
+Decentralization Theorem. Every primitive maps to an item-level dataset built from
+planning-commission minutes paired with the by-right envelope, across Bay Area jurisdictions.
 \end{abstract}
 
 \tableofcontents
 
-\section{Introduction and relation to the literature}
+\section{The question, and why it is a federalism question}
 
-A large body of work establishes that the post-1970 divergence between house prices and
-construction costs in high-demand metros is a supply phenomenon driven by land-use
-regulation \citep{glaeser2005,glaeser2005empirical,glaeser2009causes,quigley2005effects},
-and that the resulting spatial misallocation is macroeconomically large
-\citep{hsieh2019housing}. Measurement has advanced from survey indices
-\citep{gyourko2008new,gyourko2021local,gyourko2015regulation} to LLM-based generative
-regulatory measurement \citep{bartik2024costs}. Yet both approaches measure regulatory
-\emph{outcomes}; neither observes the \emph{process} that produces them.
+A large literature establishes that local land-use regulation suppresses housing supply in
+high-demand metros at large aggregate cost \citep{glaeser2005,hsieh2019housing,glaeser2009causes}.
+Recent work measures the \emph{by-right} regulatory environment at scale, including with LLMs
+\citep{bartik2024costs,gyourko2021local}. What that work measures is a level (or a set of
+levels) of stringency; what it largely takes as given is \emph{why} regulation is set where it
+is, and what would happen under a different \emph{assignment of regulatory authority}. The
+``homevoter'' and ``jurisdictional fragmentation'' hypotheses supply the political ingredients
+\citep{fischel2004economic,fischel2001homevoter,elmendorf2025homevoter,ortalo2014political},
+but not a tractable equilibrium object that prices the externality and supports counterfactuals.
 
-The political-economy ingredients are well known in isolation.
-\citet{fischel2004economic} formalizes the ``homevoter''; \citet{ortalo2014political} study
-homeownership versus affordability in a voting model; \citet{jones2022partisanship}
-document how partisanship shapes housing policy; \citet{weiss1988real} traces the
-real-estate industry's hand in San Francisco's original zoning regime.
+\paragraph{The federalism frame.} The Decentralization Theorem \citep{oates1972fiscal} holds
+that local provision of a local public good is efficient \emph{absent interjurisdictional
+spillovers and scale economies}; \citet{besley2003centralized} recast the centralization
+trade-off as a political-economy problem, where provision is chosen by elected local
+representatives (decentralization) or a legislature (centralization), and the comparison turns
+on spillovers and taste heterogeneity operating through political channels. Housing regulation
+is precisely the case the theorem's condition excludes. A jurisdiction that restricts
+development consumes a \emph{local} amenity --- low density, preserved ``character,'' a
+scarcity rent on incumbent housing --- while the cost, suppressed housing supply, is borne
+\emph{regionally}: by would-be entrants priced out of the metro, by the labor market that loses
+agglomeration when workers cannot locate near high-productivity jobs, and by every other
+jurisdiction in the same housing submarket whose prices the restriction props up. The benefit
+is internalized; the cost spills across boundaries onto people who do not vote in the
+restricting jurisdiction. Decentralized provision is therefore inefficient, and the inefficiency
+is not incidental --- it is the structural reason fragmented housing regulation over-restricts.
 
-\paragraph{What is new here.} Three features the existing work abstracts away are exactly
-the features the administrative record makes visible. (i) Regulation is \emph{two
-instruments, not one level}: the map sets a by-right envelope, and a separate discretionary
-process taxes whatever exceeds it. (ii) That discretionary tax operates through
-\emph{process friction}---the requirement of a hearing, the mobilization of opposition,
-conditions, and delay---rather than through denial, which is rare. (iii) The metro is
-\emph{fragmented}, so both instruments are chosen jurisdiction-by-jurisdiction in a game
-coupled through shared prices and a shared labor market, making spillovers and strategic
-interaction first-class objects \citep{brueckner1998testing,brueckner2003strategic}. The
-contribution is a tractable equilibrium object with all three features, stated in terms a
-researcher can measure item-by-item across many jurisdictions.
+\paragraph{What this buys, and the two questions.} Framing the distortion as a federalism
+breakdown gives it a \emph{named efficiency benchmark} (the regional, internalized optimum) and
+turns two otherwise-vague goals into sharp questions.
+\begin{enumerate}
+\item \textbf{The magnitude of the distortion.} How much regulation, and how much suppressed
+housing supply, is attributable to fragmentation per se --- the gap between regulation chosen by
+atomistic localities each ignoring the spillover, and regulation chosen at the level that
+internalizes it (the submarket or the region)? This is the Oates wedge, made quantitative.
+\item \textbf{The leakage of preemption.} State preemption is \emph{partial centralization}: it
+forces open one regulatory margin and leaves another decentralized. If a jurisdiction regulates
+on two substitutable margins --- a \emph{by-right envelope} (zoning, the margin preemption
+targets) and a \emph{discretionary friction} (planning-commission review, which it retains) ---
+then preemption that loosens the envelope can be partly or wholly offset by tightening
+discretion. The leakage is the fraction of the intended loosening that localities claw back
+through the untouched margin. A descriptive measure of either margin alone cannot see it.
+\end{enumerate}
+\textbf{What is new here} is the combination: a two-margin structure that makes preemption
+leakage a coherent object, embedded in a fragmented system whose strategic interaction is the
+empirical signature of the very spillover that makes decentralization inefficient.
 
 \section{Environment}\label{sec:env}
 
-One productive metro---the Bay Area---comprises $J$ jurisdictions $j=1,\dots,J$ and a
-competitive ``rest of country'' delivering reservation utility $\bar u$. The defining
-feature is a mismatch of boundaries: \emph{one labor market} (all jurisdictions draw on a
-common worker pool; a worker earns the regional wage $w_m=w(N)$, $w'>0$, $N\equiv\sum_j
-N_j$, capturing Hsieh--Moretti agglomeration rents), \emph{a few housing submarkets}
-($s(j)\in\{1,\dots,S\}$, $S\ll J$, within which housing is a close substitute), and
-\emph{many regulators} (each $j$ sets its own regulation).
+One metro --- the Bay Area --- comprises $J$ jurisdictions $j=1,\dots,J$, grouped into $S\ll J$
+housing submarkets $s(j)$, all drawing on \emph{one} regional labor market. A worker employed
+anywhere in the metro earns the regional wage $w_m=w(N)$, $w'>0$, $N\equiv\sum_j N_j$, capturing
+agglomeration rents \citep{hsieh2019housing}. This is the coupling that makes regulation's cost
+regional: a household's income depends on the metro, not on the jurisdiction it sleeps in, so the
+benefit of access is regional while the disamenity of the housing that provides it is local.
 
-\paragraph{Preferences and prices.} A household of type $\theta$ in $j$ has utility
-$U = c + \alpha\ln h - \gamma g(D_j)$, $g'>0$, with $-\gamma g(D_j)$ the local density
-disamenity (so low density is a normal good and high-$\theta$ residents are the natural
-demanders of restriction), and income $y(\theta)=w_m\theta$ regardless of residence---the
-labor-market coupling. Within submarket $s$, clearing gives the price index
+\paragraph{Preferences and prices.} A household of type $\theta$ in $j$ has
+$U=c+\alpha\ln h-\gamma g(D_j)$, $g'>0$, where $-\gamma g(D_j)$ is the \emph{local} disamenity of
+density (so low density is a normal good and high-$\theta$ residents are the natural demanders of
+restriction), and income $y(\theta)=w_m\theta$. Within submarket $s$, clearing gives the price
+index
 \begin{equation}
 p_{s} = \frac{\alpha N_{s}}{H_{s}}, \qquad
 N_s=\!\!\sum_{j:s(j)=s}\!\!N_j,\ \ H_s=\!\!\sum_{j:s(j)=s}\!\!H_j,
 \label{eq:price}
 \end{equation}
-so a unit built in any jurisdiction of $s$ lowers the price faced by incumbents in every
-jurisdiction of $s$; density $D_j=N_j/\bar L_j$ is local. The cost of new housing is local;
-the benefit (lower submarket price, more regional employment hence higher $w_m$) is shared.
+so housing built in any jurisdiction of $s$ lowers the price faced by incumbents in \emph{every}
+jurisdiction of $s$; density $D_j=N_j/\bar L_j$ is local. (We treat $h$ as a normalized unit of
+housing services so that $H_s$ counts dwellings consistent with the data; the divisible-services
+reading and the indivisible-dwelling/spatial-indifference reading coincide under that
+normalization, and nothing below depends on the distinction.) Equations
+\eqref{eq:price} contain the externality: the \emph{cost} of approval (density) is local, the
+\emph{benefit} (lower submarket price, more regional employment hence higher $w_m$) is shared.
 
 \section{Regulation on two margins}\label{sec:tech}
 
-This section replaces the single ``approval rate'' of earlier drafts with the structure the
-record actually exhibits. The motivating fact, visible in the minutes: among items that
-reach a commission vote, approval (or its discretionary-review equivalent, declining to
-intervene) is nearly universal. Denial is not the instrument. Restriction operates
-\emph{before and around} the vote, on two margins.
+The empirical premise, visible in the minutes: among projects that reach a vote, approval (or
+its discretionary-review equivalent) is nearly universal. Restriction does not operate through
+denial at the hearing; it operates before and around it, on two margins.
 
-\paragraph{The by-right envelope.} The zoning map assigns each parcel in $j$ a use district
-and a height-and-bulk district, which together define a \emph{by-right envelope}
-$\bar z_j$: the scale and use a project may obtain \emph{ministerially}---built with
-certainty, no hearing, no discretionary cost. A project with proposed scale/use
-$z\le\bar z_j$ clears by right and never appears on the commission calendar. This is why the
-commission's \emph{conditional} approval rate is uninformative about stringency: the
-by-right projects, the bulk of conforming construction, are invisible to the hearing record
-by construction.
+\paragraph{The by-right envelope $\bar z_j$.} The zoning map assigns each parcel a use and
+height/bulk district, defining the scale/use a project may obtain \emph{ministerially} --- with
+certainty, no hearing. Projects within the envelope never appear on the commission calendar;
+this is the margin LLM-based zoning measurement captures \citep{bartik2024costs}, and the margin
+state preemption targets.
 
-\paragraph{The discretionary tax.} A project that requires more than the envelope
-allows---a use not principally permitted, a scale above the limit, a parcel in a special
-district---must enter discretionary review (conditional-use authorization, variance,
-mandatory or requested discretionary review). It is built only after enduring a
-\emph{discretionary tax} $\tau_j$ whose components are exactly what the minutes record. Each
-component below names the schema field(s) that identify it and how it is obtained---directly
-labeled, derived post-hoc, or (for two components) deferred pending a second source:
-\begin{enumerate}\itemsep2pt
-\item \textbf{Process exposure}---the requirement of a hearing at all, i.e.\ the share of
-activity the envelope forces off the by-right path. \emph{Labeled:} the
-\texttt{request\_type} enum (conditional\_use, discretionary\_review, variance, \dots) and
-\texttt{special\_use\_district}.
-\item \textbf{Mobilized opposition}---the disamenity $g(D_j)$ made politically operative.
-\emph{Labeled (modern era $\approx$2015+):}
-\texttt{oppose\_count}/\texttt{support\_count}/\texttt{neutral\_count} (stance markers
-$+/-/=$) and the grounds in \texttt{speaker\_statements}.
-\item \textbf{Disposition and conditioning}---whether the commission approved, declined to
-intervene, conditioned, or denied. \emph{Labeled:} the \texttt{action} enum, which for
-discretionary-review items uses the dedicated values \texttt{did\_not\_take\_dr} /
-\texttt{took\_dr} / \texttt{took\_dr\_and\_approved}; the \emph{margin} \texttt{vote} is
-\emph{derived} in coercion from $|\texttt{ayes}|-|\texttt{noes}|$. The conditioning
-\emph{content} (\texttt{modifications} free text) is captured where present but is sparse;
-treat conditioning as an indicator (\texttt{action}$=$approved\_with\_conditions /
-approved\_as\_modified) rather than a measured intensity.
-\item \textbf{Delay}---continuances, which raise carrying cost and induce attrition.
-\emph{Derived (post-hoc):} \texttt{action}$=$continued plus a case-level rollup---hearings
-per case and first-to-final-disposition span---built by joining item records on
-\texttt{case\_number} across meetings. The item-level schema does not express this directly;
-it is a downstream table, not a labeled field.
-\item \textbf{Denial}---rare, but present. \emph{Labeled:} \texttt{action}$=$disapproved or
-\texttt{took\_dr} against the project.
-\end{enumerate}
-Two finer measures of the tax---the project's scale \emph{above} the by-right envelope, and
-the affordable/exaction concessions extracted---are \emph{not} captured in this build:
-proposed stories/height are deferred to a derived pass over \texttt{project\_descr}, and
-inclusionary terms live in staff reports outside the minutes corpus. The model therefore
-identifies $\tau_j$ from process exposure, opposition, disposition/conditioning, delay, and
-denial, and treats the scale-above-envelope and exaction margins as extensions contingent on
-those additional sources.
+\paragraph{The discretionary friction $\tau_j$.} A project exceeding the envelope (a use not
+principally permitted, a scale above the limit, a special-district trigger) enters discretionary
+review and is built only after a \emph{discretionary tax} $\tau_j$ whose components the minutes
+record: process exposure (the share of activity forced off the by-right path, via
+\texttt{request\_type}), mobilized opposition ($g(D_j)$ made operative, via stance-marked speaker
+counts), conditioning (\texttt{action}$=$approved-with-conditions), delay (continuances, via a
+case-level join), and rare denial. This is the margin LLM zoning measurement \emph{cannot} see
+and the margin preemption leaves untouched.
 
-\begin{definition}[Effective regulation as a composite of two margins]
-Effective stringency in $j$ is $r_j=g(\bar z_j,\tau_j)$, increasing in the tightness of the
-by-right envelope (smaller $\bar z_j$ pushes more activity into the discretionary channel)
-and in the discretionary tax $\tau_j$ (heavier process exposure, opposition, conditioning,
-and delay). Crucially, $r_j$ can rise with \emph{no change in the conditional approval
-rate}: a jurisdiction restricts by shrinking $\bar z_j$ or raising $\tau_j$, not by denying
-more of what reaches a vote.
+\begin{definition}[Effective regulation]
+Effective stringency is $r_j=g(\bar z_j,\tau_j)$, increasing in the tightness of the envelope
+(smaller $\bar z_j$ pushes more activity into discretion) and in the discretionary tax. A
+jurisdiction restricts by lowering $\bar z_j$ \emph{or} raising $\tau_j$; the two are
+substitutes in producing restriction but face different costs, and --- crucially --- state
+preemption acts on $\bar z_j$ but not $\tau_j$.
 \end{definition}
 
-\paragraph{The developer's problem.} A candidate project of latent scale/use $z$ chooses how
-far to push above the envelope. Surplus from scale $z$ is $\Pi(z)$, increasing and concave;
-the discretionary cost of exceeding the envelope is $\tau_j\cdot\max\{z-\bar z_j,0\}$.
-The developer builds $z^\ast_j=\arg\max_z \Pi(z)-\tau_j\max\{z-\bar z_j,0\}$, files at
-$z^\ast_j$ if the net surplus is positive, and otherwise withdraws (or never files). Three
-empirical signatures follow: (i) bunching of projects at the envelope $\bar z_j$ (testable
-once proposed scale is recovered from \texttt{project\_descr}); (ii) near-universal approval
-\emph{conditional on filing above the envelope}, because projects that would be denied are
-deterred or shaved first---directly visible in the \texttt{action} distribution; (iii)
-restriction showing up as withdrawals, continuances, conditions, and a thin above-envelope
-calendar, not as denials---visible in \texttt{action} and the case-level continuance rollup.
+\section{The homevoter's choice and the fragmentation externality}\label{sec:pol}
 
-\begin{definition}[New supply]
-New construction in $j$ aggregates by-right building (projects with $z\le\bar z_j$, built
-with certainty) and surviving above-envelope projects:
-$\Delta H_j=\kappa_j^{\text{BR}}+\int \mathbf{1}\{\Pi(z^\ast_j)-\tau_j(z^\ast_j-\bar z_j)\ge
-0\}\,z^\ast_j\,dF(z)$. The discretionary record observes only the second term; the first is
-recovered from the map and permit data.
-\end{definition}
-
-\section{The political mechanism: homevoters choose \texorpdfstring{$(\bar z_j,\tau_j)$}{(z\_j, tau\_j)}}\label{sec:pol}
-
-Following the homevoter logic \citep{fischel2004economic}, jurisdiction $j$'s authorities
-are vote-maximizers answering to incumbent residents, a share $\lambda_j$ of whom are
-homeowners holding local housing as their principal asset; $\phi_j$ is the political weight
-on incumbents. The two margins map naturally to two bodies: the \emph{city council} sets the
-map $\bar z_j$ (legislative, infrequent), and the \emph{planning commission} sets the
-discretionary tax $\tau_j$ through its revealed disposition behavior (case-by-case,
-high-frequency). This resolves the ``unitary authority'' shortcut of earlier drafts: the map
-is a slow state variable, the discretionary tax a fast one.
-
-An incumbent homeowner's payoff from her jurisdiction's regulation, taking neighbors'
-policies as given, is
+Each jurisdiction's regulation is chosen by a vote-maximizing authority answering to incumbent
+homeowners (share $\lambda_j$, weight $\phi_j$), following the homevoter logic
+\citep{fischel2004economic}. Mapping the two margins to two bodies resolves the unitary-authority
+shortcut: the council sets the slow map $\bar z_j$, the planning commission sets the fast
+discretionary tax $\tau_j$. An incumbent's payoff, taking neighbors' policies as given, is
 \begin{equation}
-W^{\text{own}}_j = \underbrace{p_{s(j)}\big(\bar z_{-j},\tau_{-j};\bar z_j,\tau_j\big)}_{\text{submarket asset value}}
- \;-\; \underbrace{\gamma\,g\!\big(D_j(\bar z_j,\tau_j)\big)}_{\text{local density disamenity}} ,
+W^{\text{own}}_j = \underbrace{p_{s(j)}(\bar z_{-j},\tau_{-j};\bar z_j,\tau_j)}_{\text{submarket asset value}}
+ - \underbrace{\gamma\,g\!\big(D_j(\bar z_j,\tau_j)\big)}_{\text{local disamenity}},
 \label{eq:owner}
 \end{equation}
-where both $\bar z_j$ and $\tau_j$ raise the asset value (by restricting local supply) and
-reduce the disamenity, while only \emph{regional} supply matters for the price an incumbent's
-asset commands. Renters/entrants (weight $1-\phi_j\lambda_j$) prefer abundant regional
-supply. The authority chooses $(\bar z_j,\tau_j)$ to maximize
-$\Omega_j=\phi_j\lambda_j W^{\text{own}}_j+(1-\phi_j\lambda_j)W^{\text{ent}}_j$.
+where $-j$ denotes the profile of all other jurisdictions (only co-submarket neighbors,
+$s(k)=s(j)$, enter with nonzero weight). The authority maximizes
+$\Omega_j=\phi_j\lambda_j W^{\text{own}}_j+(1-\phi_j\lambda_j)W^{\text{ent}}_j$ over
+$(\bar z_j,\tau_j)$.
 
-\paragraph{The fragmentation wedge.} As in the single-margin model, the effect of $j$'s own
-supply on its submarket price is attenuated by submarket size: $\partial p_{s(j)}/\partial
-(\text{supply}_j)=-(p_s/H_s)$. A jurisdiction small within its submarket bears the full local
-disamenity of any approval but captures little of the price relief (it leaks to
-co-submarket neighbors), so it restricts on \emph{both} margins.
+\paragraph{The free-riding wedge.} The effect of $j$'s own approvals on the price its homeowners
+care about is attenuated by submarket size: $\partial p_{s(j)}/\partial(\text{supply}_j)
+=-(p_s/H_s)$. A jurisdiction small within its submarket bears the full \emph{local} disamenity of
+any approval but captures little of the price relief, most of which leaks to co-submarket
+neighbors. So it under-supplies and free-rides on their construction --- the microfoundation of
+the fragmentation externality.
 
-\begin{proposition}[Substitution between the two margins under preemption]\label{prop:sub}
-Suppose state preemption (e.g.\ ministerial-approval mandates, by-right upzoning, a
-builder's remedy) raises the marginal cost to $j$ of a tight envelope---forcing $\bar z_j$
-up or converting discretionary categories to ministerial ones---while leaving the marginal
-cost of discretionary friction $\tau_j$ unchanged. Then a jurisdiction whose homevoter bloc
-still demands restriction substitutes \emph{from the envelope to the tax}: $\bar z_j$ rises
-(the map loosens, as the mandate intends) while $\tau_j$ rises in compensation (more items
-pushed to conditions, more opposition entertained, more continuances). Effective stringency
-$r_j=g(\bar z_j,\tau_j)$ falls by less than the change in $\bar z_j$ alone would imply, and
-\emph{the conditional approval rate does not move}. A scalar index, or an approval-rate
-measure, registers the reform as working; the decomposed record reveals the offset.
+\begin{proposition}[Fragmentation over-restricts; the distortion is the Oates wedge]\label{prop:wedge}
+Holding $(\phi_j\lambda_j,\gamma,\bar L_j)$ fixed, each jurisdiction's privately optimal
+restriction is increasing in the number of jurisdictions sharing its submarket: as $j$ becomes
+atomistic the price-relief motive vanishes, the local-disamenity motive dominates, and both
+$\bar z_j$ tightens and $\tau_j$ rises. The \textbf{distortion} is the gap between the
+decentralized Nash regulation $\{(\bar z_j^\ast,\tau_j^\ast)\}$ and the regulation chosen by an
+authority that internalizes the submarket (or region) --- the regional planner who values
+entrants' access to $w_m$ and the cross-jurisdiction price externality in \eqref{eq:price}. This
+gap is the model's answer to Question 1, and it is exactly the inefficiency the Decentralization
+Theorem's spillover condition rules in.
 \end{proposition}
 
-\noindent This is the central testable mechanism and the reason both data margins are
-required. It is invisible to any one-dimensional measure of stringency.
+\section{Reaction functions: the empirical signature of the spillover}\label{sec:react}
 
-\begin{proposition}[Fragmentation intensifies restriction on both margins]\label{prop:frag}
-Holding $(\phi_j\lambda_j,\gamma,\bar L_j)$ fixed, a jurisdiction's restriction on each
-margin is increasing in the number of jurisdictions sharing its housing submarket. As $j$
-becomes atomistic within $s$, the price-relief motive vanishes, the local-disamenity motive
-dominates, and both $\bar z_j$ tightens and $\tau_j$ rises toward their restrictive corners.
-\end{proposition}
-
-\section{Strategic interaction and regional equilibrium}\label{sec:eq}
-
-Because $p_{s(j)}$ depends on neighbors' regulation, \eqref{eq:owner} defines a game with
-reaction functions on each margin.
+Because $p_{s(j)}$ depends on neighbors' regulation, \eqref{eq:owner} is a game, with a reaction
+function $R_j(\bar z_{-j},\tau_{-j})$ on each margin.
 
 \begin{proposition}[Regulation is strategically substitutable within a submarket]\label{prop:react}
-For co-submarket jurisdictions, $\partial R_j/\partial(\text{loosening}_k)<0$: if a neighbor
-loosens (raises $\bar z_k$ or lowers $\tau_k$), the submarket price falls, raising a
-homevoter-pivotal $j$'s incentive to restrict. Each jurisdiction free-rides on others'
-supply; the Nash equilibrium has less regional construction than the submarket-coordinated
-optimum.
+For co-submarket jurisdictions, if a neighbor loosens (raises $\bar z_k$ or lowers $\tau_k$), the
+submarket price falls, raising a homevoter-pivotal $j$'s incentive to restrict: $j$ tightens.
+Neighbors' regulation are strategic substitutes; each free-rides on the others' supply, and the
+Nash equilibrium has less regional construction than the internalized optimum.
 \end{proposition}
 
-\begin{proposition}[Regional over-restriction and demand-shock amplification]\label{prop:welfare}
-A metro planner internalizing entrants' access to the agglomeration rent and the
-cross-jurisdiction price externality chooses looser regulation on both margins for every
-$j$ where the homevoter bloc is pivotal; the wedge grows in $\phi_j\lambda_j$, in the
-agglomeration rent, and in submarket fragmentation. A positive regional demand shock raises
-every $p_s$, raising the asset-value return to restriction, so each jurisdiction tightens;
-strategic substitutability (Prop.~\ref{prop:react}) propagates the tightening across
-co-submarket neighbors. The regional price response exceeds both the fixed-regulation and
-the single-jurisdiction response.
+\paragraph{Why this is the centerpiece.} The reaction function is not merely an empirical
+regularity --- it is the \emph{direct test of the federalism breakdown}. Under the
+Decentralization Theorem's efficient case (no spillovers), jurisdictions would not respond to one
+another's regulation at all: each would serve its own residents independently and the
+cross-jurisdiction slope would be zero. A \emph{nonzero} strategic-interaction slope is therefore
+the spillover, made visible --- the empirical object whose sign and magnitude establish that the
+Oates condition fails and quantify how strongly. This is why estimating $R_j$ is the core
+empirical task, and why a multi-jurisdiction panel (not a single metro) is required:
+single-jurisdiction data cannot, even in principle, reveal a reaction function.
+
+\section{Preemption and its leakage}\label{sec:preempt}
+
+State preemption (e.g.\ ministerial-approval mandates, by-right upzoning, the builder's remedy)
+raises the marginal cost to $j$ of a tight \emph{envelope} --- forcing $\bar z_j$ up or
+converting discretionary categories to ministerial ones --- while leaving the marginal cost of
+the \emph{discretionary} tax $\tau_j$ unchanged.
+
+\begin{proposition}[Leakage: substitution from envelope to discretion]\label{prop:leak}
+With effective restriction $r_j=g(\bar z_j,\tau_j)$ and the two margins substitutes in producing
+it, a preemption that raises $\bar z_j$ (the map loosens, as intended) induces a
+homevoter-pivotal jurisdiction that still demands restriction to raise $\tau_j$ in compensation
+(more items conditioned, more opposition entertained, more continuances). Effective restriction
+falls by \emph{less} than the change in $\bar z_j$ alone implies, and \textbf{the conditional
+approval rate need not move}. The \emph{leakage} is the share of intended loosening offset by the
+discretionary margin: $0$ (preemption fully effective) to $1$ (fully clawed back). This is the
+model's answer to Question 2.
 \end{proposition}
 
-\section{Extensions}\label{sec:ext}
+\noindent Leakage is precisely what makes preemption a federalism question rather than a
+mechanical policy: partial centralization fails not because centralization is wrong but because
+it is \emph{incomplete}, leaving a decentralized margin through which the spillover reasserts
+itself. Strategic substitutability (Prop.~\ref{prop:react}) compounds it: as preempted
+jurisdictions claw back via $\tau$, co-submarket neighbors face a smaller price effect and adjust
+in turn.
 
-\paragraph{Credit / CRA.} An easing raises the demand shifter $\alpha\to\alpha(1+\mu)$
-\citep{favara2015credit,di2017credit}, raising $p_s$ and (Prop.~\ref{prop:welfare})
-tightening regulation, so part of a credit boom shows up as tighter discretion rather than
-more building. The CRA's tract-level eligibility generates within-metro, within-submarket
-variation in $\mu$ \citep{saadi2020role,brevoort2024reexamining}; the minutes locate each
-project (address $\to$ tract $\to$ jurisdiction $\to$ submarket), so the relevant object is
-the interaction of tract credit shocks with the local discretionary response.
+\section{Counterfactuals and the identification challenge}\label{sec:ident}
 
-\paragraph{Dynamics: ratchet and contagion.} Let the homeowner share evolve with prices,
-$\lambda_{j,t+1}=\lambda_{j,t}+\eta(p_{s(j),t}-\bar p)$. With submarket price linkage and
-strategic substitutability, a shock that tips one jurisdiction into a restrictive basin
-raises the submarket price, entrenching homeowners and tipping co-submarket neighbors: the
-restrictive regime is sticky within and \emph{contagious across} jurisdictions. This
-motivates the long panel (1998--present, $\geq$ one price cycle) across jurisdictions.
+Both questions are counterfactual. Question 1 compares the observed decentralized equilibrium to
+an internalized benchmark never observed; Question 2 asks how supply responds to a change in the
+assignment of regulatory authority. Answering them requires recovering the structural primitives
+--- the homevoter weights $\phi_j\lambda_j$, the disamenity $g(\cdot)$, the demand and
+agglomeration parameters --- from \emph{equilibrium} behavior alone, since only the chosen
+regulation is observed, not the objectives that generated it. This is the identification crux:
+the reaction-function slope is consistent with several mechanisms (the spillover modeled here,
+but also yardstick competition or common shocks; cf.\ the strategic-interaction literature
+\citealp{brueckner1998testing,brueckner2003strategic}), and disentangling them is what licenses
+the counterfactual. The empirical leverage comes from the \emph{preemption ramp itself}: the
+staggered, rule-driven timing of state mandates (builder's-remedy exposure following
+Housing-Element non-compliance) is a supply-side shock plausibly orthogonal to a jurisdiction's
+contemporaneous demand shock, providing variation that moves $\bar z_j$ for reasons other than
+local taste --- the wedge needed to separate the spillover from its observational rivals and to
+identify the leakage of Prop.~\ref{prop:leak}.
 
-\section{Mapping the model to the minutes data}\label{sec:mapping}
+\section{Mapping to data}\label{sec:data}
 
-The dataset is built item-by-item from planning-commission minutes under a single canonical
-schema (35 typed fields; one record per agenda item), with machine pre-fill corrected by a
-human in a two-pane labeling app and scored field-by-field on a held-out split. Table~1
-maps each model object to the schema field(s) that identify it, with the empirical caveats
-that the records impose.
+The by-right envelope $\bar z_j$ is read from zoning (and is largely available from existing
+LLM-based measurement, so need not be rebuilt); the discretionary tax $\tau_j$ is built fresh
+from planning-commission minutes, item by item, across Bay Area jurisdictions; the preemption
+ramp is dated from HCD Housing-Element compliance records; prices and quantities come from
+transaction data. The reaction-function estimation (Prop.~\ref{prop:react}) is a spatial-lag
+regression of a jurisdiction's discretionary tax on co-submarket neighbors', instrumented using
+the preemption variation of \S\ref{sec:ident}; the leakage estimation (Prop.~\ref{prop:leak}) is
+a difference-in-differences around preemption exposure with the \emph{envelope} and the
+\emph{discretionary tax} as separate outcomes --- predicting the map loosens while discretion
+tightens and the approval rate is flat. A short panel straddling the 2017--2023 preemption ramp
+suffices for both; the data infrastructure is documented separately.
 
-\begin{table}[ht]
-\centering\small
-\begin{tabular}{@{}p{4.1cm}p{3.5cm}p{6.9cm}@{}}
-\toprule
-\textbf{Model object} & \textbf{Symbol} & \textbf{Schema field(s) and caveat} \\
-\midrule
-By-right envelope & $\bar z_j$ &
- \texttt{type\_district}, \texttt{height\_and\_bulk\_district}, \texttt{special\_use\_district}
- (the map; the envelope is read off zoning, \emph{not} the minutes) + permit data for by-right builds \\
-Process exposure & component of $\tau_j$ &
- \texttt{request\_type} composition (share forced into conditional\_use / discretionary\_review / variance) \\
-Mobilized opposition & $g(D_j)$ operative &
- \texttt{oppose\_count}, \texttt{support\_count}, \texttt{neutral\_count} ($+/-/=$, \emph{modern minutes only, $\approx$2015+}); grounds in \texttt{speaker\_statements} \\
-Disposition \& conditioning & component of $\tau_j$ &
- \texttt{action} enum (incl.\ \texttt{did\_not\_take\_dr}/\texttt{took\_dr}/\texttt{took\_dr\_and\_approved} for DR; \texttt{approved\_with\_conditions}/\texttt{approved\_as\_modified} for conditioning); \texttt{vote} \emph{derived} from $|\texttt{ayes}|-|\texttt{noes}|$. Conditioning treated as indicator---\texttt{modifications} text is sparse \\
-Delay & component of $\tau_j$ &
- \texttt{action}$=$continued + case-level rollup (hearings per case, first-to-final span) \emph{derived} by joining on \texttt{case\_number}; a downstream table, not a labeled field \\
-Denial (rare) & component of $\tau_j$ &
- \texttt{action}$=$disapproved or \texttt{took\_dr} against the project \\
-Staff--commission wedge & planner vs.\ political &
- \texttt{preliminary\_recommendation} vs.\ \texttt{action}: override rate, \emph{derived} post-hoc by normalizing the staff recommendation onto the \texttt{action} enum \\
-Planner & fixed effect &
- \texttt{staff\_planner} (initial $+$ surname from block header; near-universal, machine pre-filled) \\
-Homevoter weight & $\phi_j\lambda_j$ &
- \texttt{ayes}/\texttt{noes}/\texttt{recused}; member-level approval propensity; board composition;
- tract homeownership (external) \\
-Density / scale & $z$, $D_j$ &
- \texttt{units\_proposed}, \texttt{units\_demolished}, \texttt{parking\_spaces}
- (\emph{reliable modern era; proposed stories/height deferred to a derived \texttt{project\_descr} pass}) \\
-Submarket / spatial keys & $s(j)$, $W$ &
- \texttt{project\_address}$\to$tract; \texttt{jurisdiction}; \texttt{supervisorial\_district}
- ($\approx$2015+); spatial-weights matrix over jurisdictions (external) \\
-Price & $p_s$ &
- External tract/ZIP indices merged on geocoded \texttt{project\_address}, aggregated to submarket \\
-Panel time index & $t$ &
- \texttt{meeting\_date} \\
-\bottomrule
-\end{tabular}
-\caption{Model objects and their schema counterparts. Caveats note whether a field is
-labeled directly, \emph{derived} downstream, or deferred; see \S\ref{sec:datafix}.}
-\label{tab:map}
-\end{table}
+\section{Scope and a noted extension}\label{sec:scope}
 
-\paragraph{Toward identification.} Reduced-form tests, ordered by how cleanly the current
-data supports them:
-\begin{itemize}\itemsep2pt
-\item \textbf{Staff--commission override (Prop.~\ref{prop:welfare}):} the cleanest, because
-it is a \emph{within-item} comparison---regress an override-toward-restriction indicator
-(\texttt{preliminary\_recommendation} more permissive than \texttt{action}) on the project
-tract's homeownership share and on \texttt{oppose\_count}. The override indicator is
-\emph{derived} by normalizing \texttt{preliminary\_recommendation} onto the \texttt{action}
-enum---a post-processing step, not a relabeling cost.
-\item \textbf{Margin substitution under preemption (Prop.~\ref{prop:sub}):} difference-in-differences
-around SB-9/35/423 / builder's-remedy exposure, with the \emph{envelope} (map) and the
-\emph{discretionary tax} (minutes) as separate outcomes; predict $\bar z$ loosens while
-$\tau$ rises and the conditional approval rate is flat.
-\item \textbf{Strategic interaction (Prop.~\ref{prop:react}):} spatial-lag reaction function
-of $j$'s discretionary tax on co-submarket neighbors' tax, instrumented by neighbors'
-exogenous characteristics \citep{brueckner1998testing,brueckner2003strategic}. Needs the
-multi-jurisdiction build.
-\item \textbf{Feedback / amplification (Prop.~\ref{prop:welfare}):} regress discretionary
-friction (opposition, continuances, conditioning) on lagged submarket price growth,
-instrumenting price with regional demand or rate shocks.
-\item \textbf{Mobilization $\to$ disamenity:} code \texttt{speaker\_statements} into grounds
-(shadow, traffic, character, precedent) to test whether opposition intensity tracks the
-density terms the model assigns to $g(D_j)$.
-\end{itemize}
-
-\section{What the build captures, derives, and defers}\label{sec:datafix}
-
-The schema (now 36 fields) and its coercion settle which model objects are labeled directly,
-which are derived downstream, and which are deferred to a second source. This division
-determines which tests run on this build.
-\begin{itemize}\itemsep3pt
-\item \textbf{Labeled directly.} Disposition (\texttt{action}, including the dedicated DR
-outcomes \texttt{did\_not\_take\_dr}/\texttt{took\_dr}/\texttt{took\_dr\_and\_approved}),
-process exposure (\texttt{request\_type}), opposition (\texttt{oppose\_/support\_/neutral\_count},
-modern era), the roll-call (\texttt{ayes}/\texttt{noes}/\texttt{recused}), zoning districts,
-the assigned planner (\texttt{staff\_planner}), and the spatial/time keys. These support the
-override, fragmentation, strategic-interaction, and amplification tests directly.
-\item \textbf{Derived, not labeled.} The vote margin \texttt{vote} is computed in coercion
-from $|\texttt{ayes}|-|\texttt{noes}|$ (never overwriting a stated tally). The
-staff--commission override indicator is a post-processing comparison of
-\texttt{preliminary\_recommendation} (normalized onto the \texttt{action} enum) with
-\texttt{action}. The delay margin---hearings per case and first-to-final-disposition
-span---is a case-level rollup joining item records on \texttt{case\_number}. None consume
-labeling surface.
-\item \textbf{Deferred to additional sources or passes.} The project's scale \emph{above}
-the by-right envelope (proposed stories/height) is recoverable from \texttt{project\_descr}
-but is left to a validated derived pass, because construction blocks carry multiple
-story figures (existing, addition, total) that a naive extractor confuses; until that pass is
-validated, the scale-bunching signature is untested. The discretionary \emph{trigger} (which
-envelope margin binds) requires a code-section$\to$category lookup and is deferred to a
-post-hoc NLP pass emitting a list. Affordable/inclusionary terms (the exaction margin) live
-in staff reports outside the minutes and are deferred pending that corpus. Final disposition
-after appeal lives in the Board of Supervisors / Board of Appeals series and is out of scope
-for a minutes-only build.
-\end{itemize}
-The practical consequence for the model: the discretionary tax $\tau_j$ is identified in this
-build from process exposure, opposition, disposition/conditioning, derived delay, and
-denial. The scale-above-envelope and exaction refinements (\S\ref{sec:tech}) are extensions
-that switch on when the deferred sources are added---they sharpen $\tau_j$ but are not
-required for the central two-margin substitution test (Prop.~\ref{prop:sub}), which needs
-only the map (envelope) and the discretionary disposition record (tax).
+The questions above are \emph{static/short-panel} counterfactuals: the magnitude of the
+fragmentation distortion and the leakage of preemption are identified off the cross-section of
+jurisdictions and the preemption ramp, and do not require deep historical data. A natural but
+\emph{separate} extension treats regulation as state-dependent --- a ``regulatory ratchet'' in
+which restriction is path-dependent and preemption shocks have persistent or hysteretic effects,
+propagating across co-submarket neighbors over time. That dynamic question would require a long
+panel and confronts a harder identification problem (state dependence vs.\ unobserved
+heterogeneity); it is deliberately held as an extension rather than a core result, since the two
+headline questions do not depend on it.
 
 \section{Conclusion}
 
-Two moves---splitting regulation into a by-right envelope and a discretionary tax that
-operates through process friction rather than denial, and embedding many such jurisdictions
-in a game coupled through shared prices and a shared labor market---deliver a model whose
-restriction lives where the minutes show it lives, whose central prediction (substitution
-between the two margins under preemption, Prop.~\ref{prop:sub}) requires exactly the two
-data dimensions the project builds, and whose strategic and dynamic results
-(Props.~\ref{prop:react}--\ref{prop:welfare}) motivate the multi-jurisdiction, long-panel
-extension. The near-universal conditional approval rate, far from a nuisance, is the
-equilibrium fingerprint of a regime that restricts before and around the vote rather than
-at it.
+Fragmented housing regulation is a textbook fiscal-federalism breakdown: a local public good
+(low density) whose provision via regulation imposes regional spillovers, so decentralized
+choice over-restricts. Two moves make the breakdown quantitative and policy-relevant ---
+splitting regulation into a by-right envelope and a discretionary friction (so that preemption
+\emph{leakage} is a coherent object), and embedding many jurisdictions in a game whose
+reaction functions are the direct empirical signature of the spillover. The model answers two
+questions a descriptive account cannot: how large the fragmentation distortion is, and how much
+of state preemption localities claw back through the margin it leaves untouched.
 
 \bibliographystyle{plainnat}
 \bibliography{toy_model}

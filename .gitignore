@@ -2,6 +2,12 @@
 # ignore everything in the minutes_extractor folder
 data/meeting_minutes/processed/minutes_extractor/*
 
+# ignore API key files (and the api_keys/ dir they were moved into)
+api_keys/
+CENSUS_API_KEY.txt
+511_API_KEY.txt
+demand_estimation/511_API_KEY.txt
+
 # ignore .claude infrastructure
 .claude/
 
@@ -35,3 +41,8 @@ code/commission_minutes_processing/labeling_app/labels.db
 *.lot
 # LaTeX .log only under output/ (avoids catching non-LaTeX logs elsewhere)
 output/**/*.log
+
+# demand_estimation: build run logs (regenerable) + report LaTeX .log.
+# Note: the demand data itself lives on Dropbox (/data above), never in git.
+demand_estimation/_logs/
+demand_estimation/report/*.log

@@ -6,7 +6,7 @@ pipeline: **scrape → parse/tag → label → build → train/extract**, all re
 schema so nothing drifts.
 
 Reproducibility: `requirements.txt` / `requirements.lock.txt` / `environment-notes.md`.
-The data corpus lives on **Google Drive, out of git** (see "Data" below).
+The data corpus lives on **Dropbox, out of git** (see "Data" below).
 
 ---
 
@@ -18,10 +18,11 @@ market-for-housing-regulation/
 ├── STRUCTURE.md                 # this file
 ├── requirements.txt / .lock     # Python deps (py3.12)
 ├── environment-notes.md         # interpreter, system deps, flagged issues
-├── code/commission_minutes_processing/   # the whole pipeline (below)
+├── code/commission_minutes_processing/   # the minutes pipeline (below)
+├── demand_estimation/           # Layer I demand-side data collection (below)
 ├── output/                      # reports, toy model, proposals
 ├── notes/                       # commission_members.{xlsx,docx}
-└── (data/ lives on Google Drive — not in repo)
+└── (data/ lives on Dropbox — not in repo)
 ```
 
 ## `code/commission_minutes_processing/`
@@ -44,6 +45,22 @@ market-for-housing-regulation/
 
 Run order: `scrape_minutes → parse_sf_meeting_minutes → (labeling_app: ingest → app →
 export) → training_sample_create → train.py | llm_extract.py → inference → data_collect`.
+
+## `demand_estimation/`
+
+Layer I demand-side data collection — **region-wide** (nine-county ABAG Bay
+Area), not per-locality, so its data sits at the **data root** under
+`data/demand/` (like `crosswalks/`, `shapefiles/`, `clean/`). Spec:
+`.claude/instructions/demand_data_brief.md`.
+
+| File | Role |
+|---|---|
+| `demand_paths.py` | Imports `DATA_ROOT` from the minutes `paths.py`; defines the `demand/` tree + the 9-county FIPS set. |
+| `util.py` / `manifest.py` / `arcgis.py` | Polite streaming HTTP + checksums + Census-key resolver; `_manifest.csv` writer; ArcGIS Feature Service → GeoJSON pager. |
+| `collectors/` | One module per source: `tiger`, `lodes`, `acs` (PUMS+tables), `ssurgo` (the instrument), `hazard`, `zoning`, `amenities`, `migration_irs`. |
+| `stubs.py` | Manual licensed sources (CoreLogic, RS Means, Infutor/Verisk) → `_stubs/<name>/README.md`. |
+| `build.py` | `python -m demand_estimation.build` — collect → build (BG↔jurisdiction crosswalk, job access, soil extract, controls, PUMS, design matrix). Idempotent, failure-isolated. |
+| `report/` | `demand_data_report.tex` (+ `.pdf`) — provenance + manual hand-offs. |
 
 ## `output/`
 
@@ -80,6 +97,7 @@ data/meeting_minutes/
 switch; default `san_francisco`), so all pipeline code is locality-agnostic. To onboard a
 new Bay Area locality: create `meeting_minutes/<locality>/` and run scrape → parse → label
 → build → train/extract with `MFHR_LOCALITY` set. Region-wide data (`crosswalks/`,
-`shapefiles/`, `clean/`, national `raw/`) is **not** per-locality and stays at the data
-root. The labeling DB (`labeling_app/labels.db`) is a regenerable local cache (gitignored);
+`shapefiles/`, `clean/`, national `raw/`, and the **`demand/`** subtree written by
+`demand_estimation/` — ACS, LODES, TIGER, SSURGO, hazard, zoning, amenities, migration)
+is **not** per-locality and stays at the data root. The labeling DB (`labeling_app/labels.db`) is a regenerable local cache (gitignored);
 durable labels are exported to `<locality>/tagged/training/{year}_labeled.json`.
