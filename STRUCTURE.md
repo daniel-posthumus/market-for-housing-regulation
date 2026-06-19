@@ -33,18 +33,24 @@ market-for-housing-regulation/
 | `extraction_common.py` | **The 35-field `SCHEMA`** (single source of truth) → `FIELDS`, `PROMPT_INSTRUCTION`, `coerce_record()`, `score_examples()`. |
 | `autoextract.py` | Regex/heuristic best-guess extraction from a raw block (form pre-fill + builder derivations). |
 | `minutes_scraping/scrape_minutes.py` | Consolidated, idempotent scraper (S3 HTML 1998–2014; live archive PDFs 2015–present). Legacy scrapers deprecated alongside. |
-| `parse_sf_meeting_minutes.py` | Scrape/parse archived HTML → `tagged/{year}/*.txt` blocks + meeting metadata. |
+| `parse_sf_meeting_minutes.py` | Scrape/parse archived **HTML (1998–2014)** → `tagged/{year}/*.txt` blocks + meeting metadata. |
+| `parse_modern_minutes.py` | Parse the **modern era (2015–present)** — text (2015–17) and PDF (2018+, via pdfplumber) → the same `<<Project>>`-tagged blocks, date-led filenames, + `processed/modern_meetings_metadata.csv`. Handles the dash case format and the spaced/space-stripped item headers the HTML parser can't. |
 | `training_sample_create.py` | Pair labels ↔ blocks → consolidated `tagged/training/training.txt` (JSONL). |
 | `migrate_labels.py` | One-time: migrate old `*_labeled.json` into the schema (backs up originals). |
-| `train.py` | Fine-tune T5 (`MINUTES_MODEL`/`MINUTES_USE_LORA`/`MINUTES_EPOCHS`); held-out test report. |
+| `train.py` | Fine-tune T5 (`MINUTES_MODEL`/`MINUTES_USE_LORA`/`MINUTES_EPOCHS`); held-out test report. Factored into importable functions reused by `learning_curve.py`. |
+| `learning_curve.py` | Fine-tune at increasing label counts vs. a fixed held-out test set → field-accuracy curve (`learning_curve.png`/`curve.csv`/`per_field.csv`); answers "how many labels do I need?". |
+| `label_qa.py` | Audit existing labels against their source blocks (continuance mis-coding, dropped `vote`/`noes`/`absent`, 2014 districts, `action='other'`); `--apply --backfill` safely fills recoverable fields and flags items for confirmation. |
 | `llm_extract.py` | Few-shot, schema-constrained extraction (HF or Anthropic backend) on the same split. |
-| `inference.py` | Run a trained model on a tagged file → `processed/structured_data.jsonl`. |
+| `run_extraction.py` | **Corpus-wide** structured extraction with periodic QA. Pluggable engine (`heuristic`/`hf`/`anthropic`), schema-aligned via `extraction_common`, resumable → `processed/structured_data.jsonl` + `extracted_results.csv` + `extraction_qa_report.md` (coverage, distributions, accuracy-vs-gold). Supersedes `inference.py`. |
+| `inference.py` | Legacy single-file/old-schema demo (kept for reference; use `run_extraction.py`). |
 | `data_collect.py` | JSONL → `processed/extracted_results.csv`. |
-| `labeling_app/` | Local web app to hand-label items: `ingest.py` (corpus → `labels.db`), `app.py` (Flask UI), `templates/` + `static/`, `README.md`. |
+| `labeling_app/` | Local web app to hand-label items: `ingest.py` (corpus → `labels.db`), `app.py` (Flask UI), `queue_order.py` (rare-class-first + year-balanced queue), `templates/` + `static/`, `README.md`. |
 | `scratch_code/` | Prototypes (pdfplumber, LoRA variants). |
 
-Run order: `scrape_minutes → parse_sf_meeting_minutes → (labeling_app: ingest → app →
-export) → training_sample_create → train.py | llm_extract.py → inference → data_collect`.
+Run order: `scrape_minutes → parse_sf_meeting_minutes (1998–2014) + parse_modern_minutes
+(2015–present) → (labeling_app: ingest → app → export) → training_sample_create →
+train.py | llm_extract.py → inference → data_collect`. `learning_curve.py` (how many
+labels?) and `label_qa.py` (audit/back-fill existing labels) support the labeling loop.
 
 ## `demand_estimation/`
 
@@ -70,6 +76,8 @@ output/
 │   ├── minutes_data_availability.md   # what the raw files contain, by era
 │   ├── processing_review.md           # code review + hand-label audit
 │   ├── data_infrastructure.md         # schema + worked examples
+│   ├── labeling_rules.md              # SF-specific coding manual (label/review spec)
+│   ├── hand_label_review_guide.md     # app workflow for reviewing labels
 │   ├── proposal/                      # research_proposal.tex
 │   └── graphics/
 └── political_economic_housing_model/

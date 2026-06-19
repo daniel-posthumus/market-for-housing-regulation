@@ -66,7 +66,11 @@ YEAR_INDEX = {
 }
 # Live archive page that lists every modern minutes PDF (2015–present).
 MODERN_ARCHIVE = "https://sfplanning.org/cpc-hearing-archives"
-MODERN_PDF_RE = re.compile(r"/Agenda_or_Minutes/(\d{8})_[a-z]+_min\.pdf$", re.I)
+# A minutes PDF filename carries the meeting date and ends in _min.pdf; the archive
+# links to them across several hosts/paths (citypln-m-extnl.sfgov.org/Agenda_or_Minutes
+# for recent years, sfplanning.org/sites/default/files/… for older ones), so we
+# identify minutes by the anchor text ("Minutes") or the _min.pdf suffix, NOT by host.
+MIN_NAME_RE = re.compile(r"(20\d{2})(\d{2})(\d{2}).*_min\.pdf$", re.I)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
@@ -93,6 +97,13 @@ def save_manifest(m: dict) -> None:
 
 def sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def is_pdf(b: bytes) -> bool:
+    """A real PDF starts with the %PDF magic. Corrupt/partial downloads (and HTML
+    error pages served with a .pdf name) don't — this is what let 44 garbage files
+    into the corpus undetected."""
+    return b[:4] == b"%PDF"
 
 
 # ── http session ─────────────────────────────────────────────────────────────
@@ -135,6 +146,9 @@ def download(session, url: str, dest: Path, manifest: dict,
         return "dry"
     r = get(session, url)
     if r is None:
+        return "error"
+    if dest.suffix.lower() == ".pdf" and not is_pdf(r.content):
+        log.error("not a PDF (corrupt source/redirect?) — not saving %s", url)
         return "error"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(r.content)
@@ -185,37 +199,102 @@ def scrape_html_year(session, year: str, manifest, dry, refresh) -> dict:
 
 
 # ── 2015–present PDF era ─────────────────────────────────────────────────────
-def modern_pdf_links(session) -> list[str]:
+def modern_minutes_links(session) -> dict[str, str]:
+    """{filename: url} for every MINUTES PDF on the archive page, regardless of host.
+    A link is minutes if its anchor text is 'Minutes' or its name ends _min.pdf —
+    this catches the older /sites/default/files/… links the old host-specific regex
+    missed (295 minutes vs 129)."""
     r = get(session, MODERN_ARCHIVE)
     if r is None:
-        return []
+        return {}
     soup = BeautifulSoup(r.text, "html.parser")
-    out, seen = [], set()
+    out: dict[str, str] = {}
     for a in soup.find_all("a", href=True):
         u = urljoin(MODERN_ARCHIVE, a["href"])
-        if MODERN_PDF_RE.search(u) and u not in seen:
-            seen.add(u)
-            out.append(u)
+        if not u.lower().endswith(".pdf"):
+            continue
+        from urllib.parse import unquote
+        name = unquote(urlparse(u).path).split("/")[-1]
+        is_min = a.get_text(strip=True).lower() == "minutes" or name.lower().endswith("_min.pdf")
+        if is_min and "closed" not in name.lower():
+            out.setdefault(name, u)           # first (page order) wins
     return out
 
 
 def scrape_modern(session, want_years: set[str] | None, manifest, dry, refresh) -> dict:
     stats = {"fetched": 0, "skipped": 0, "error": 0}
-    links = modern_pdf_links(session)
+    links = modern_minutes_links(session)
     if not links:
         log.error("modern archive: no minutes PDFs found at %s", MODERN_ARCHIVE)
         stats["error"] += 1
         return stats
     log.info("modern archive: %d minutes PDFs listed", len(links))
-    for u in links:
-        m = MODERN_PDF_RE.search(u)
-        year = m.group(1)[:4]
+    for name, u in links.items():
+        m = MIN_NAME_RE.search(name)
+        if not m:
+            continue
+        year = m.group(1)
         if want_years and year not in want_years:
             continue
-        name = Path(urlparse(u).path).name
         res = download(session, u, RAW / year / name, manifest, dry, refresh)
         if res in stats:
             stats[res] += 1
+    return stats
+
+
+# ── repair: re-download corrupt local PDFs ───────────────────────────────────
+def find_corrupt_modern_pdfs() -> list[Path]:
+    """Modern raw PDFs whose bytes aren't a real PDF (failed/partial downloads)."""
+    bad = []
+    for ydir in sorted(RAW.glob("[12][0-9][0-9][0-9]")):
+        if not ydir.is_dir() or int(ydir.name) < 2015:
+            continue
+        for f in sorted(ydir.glob("*.pdf")):
+            if "closed" in f.name.lower():        # closed sessions aren't parsed/used
+                continue
+            try:
+                with open(f, "rb") as fh:
+                    head = fh.read(5)
+            except Exception:
+                head = b""
+            if not is_pdf(head):
+                bad.append(f)
+    return bad
+
+
+def repair_modern(session, manifest, dry: bool) -> dict:
+    """Find corrupt modern PDFs on disk and re-download each from the archive,
+    matching by filename and validating the replacement is a real PDF before it
+    overwrites the bad file. Self-healing and idempotent."""
+    stats = {"repaired": 0, "still_bad": 0, "unlisted": 0}
+    corrupt = find_corrupt_modern_pdfs()
+    if not corrupt:
+        log.info("repair: no corrupt modern PDFs found — nothing to do")
+        return stats
+    log.info("repair: %d corrupt modern PDFs on disk", len(corrupt))
+    index = modern_minutes_links(session)
+    log.info("repair: %d minutes links available on archive", len(index))
+    for f in corrupt:
+        url = index.get(f.name)
+        if not url:
+            log.warning("repair: NO archive link for %s — needs manual sourcing", f.name)
+            stats["unlisted"] += 1
+            continue
+        if dry:
+            log.info("DRY would repair %s ← %s", f.name, url)
+            stats["repaired"] += 1
+            continue
+        r = get(session, url)
+        if r is None or not is_pdf(r.content):
+            log.error("repair: replacement for %s is missing/not-a-PDF (%s)", f.name, url)
+            stats["still_bad"] += 1
+            continue
+        f.write_bytes(r.content)
+        rel = str(f.relative_to(RAW))
+        manifest[rel] = {"url": url, "sha256": sha256(r.content), "bytes": len(r.content)}
+        log.info("repaired %s (%d bytes) ← %s", rel, len(r.content), url)
+        stats["repaired"] += 1
+        time.sleep(PAUSE)
     return stats
 
 
@@ -242,6 +321,9 @@ def main(argv=None):
                     help="html=1998-2014, modern=2015+, all=both (default)")
     ap.add_argument("--dry-run", action="store_true", help="list actions, fetch nothing")
     ap.add_argument("--refresh", action="store_true", help="re-download even if present")
+    ap.add_argument("--repair", action="store_true",
+                    help="re-download only the corrupt modern PDFs already on disk "
+                         "(validates each replacement is a real PDF); then exit")
     ap.add_argument("--list", action="store_true", help="print source coverage and exit")
     args = ap.parse_args(argv)
 
@@ -257,6 +339,14 @@ def main(argv=None):
     session = make_session()
     manifest = load_manifest()
     totals = {"fetched": 0, "skipped": 0, "error": 0}
+
+    if args.repair:
+        stats = repair_modern(session, manifest, args.dry_run)
+        if not args.dry_run:
+            save_manifest(manifest)
+        log.info("REPAIR DONE — repaired=%(repaired)d still_bad=%(still_bad)d "
+                 "unlisted=%(unlisted)d", stats)
+        return 0
 
     do_html = args.era in ("html", "all")
     do_modern = args.era in ("modern", "all")

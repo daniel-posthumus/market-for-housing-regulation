@@ -2,8 +2,9 @@
 
 *How to review every hand-labeled item with your own eyes before the existing
 labels are treated as gold-standard / ground truth. Companion to
-`data_infrastructure.md` (the pipeline + canonical schema) and the labeling app's
-`README.md` (developer-facing).*
+`data_infrastructure.md` (the pipeline + canonical schema), **`labeling_rules.md`
+(the SF-specific coding manual — the decision rules you review against)**, and the
+labeling app's `README.md` (developer-facing).*
 
 ---
 

@@ -60,15 +60,18 @@ function fieldRow(fld) {
 }
 
 async function refreshList() {
-  const qs = new URLSearchParams({ status: $("#fStatus").value, year: $("#fYear").value, q: $("#fSearch").value });
+  const qs = new URLSearchParams({ status: $("#fStatus").value, year: $("#fYear").value,
+    order: $("#fOrder").value, q: $("#fSearch").value });
   items = await api("/api/items?" + qs);
   const ul = $("#itemList"); ul.innerHTML = "";
   for (const it of items) {
     const li = document.createElement("li"); li.dataset.id = it.id;
     if (it.id === curId) li.classList.add("active");
     const st = it.flagged ? "flagged" : it.status;
+    const rare = (it.score > 0 && it.rare_class)
+      ? `<span class="badge rare" title="fills scarce class: ${it.rare_class}">rare ${it.score|0}</span>` : "";
     li.innerHTML = `<span class="cn">${it.case_number || "(no case#)"}</span>
-      <span class="badge s-${st}">${st}</span><br><span class="yr">${it.year} · ${it.meeting_date || "?"}</span>`;
+      <span class="badge s-${st}">${st}</span>${rare}<br><span class="yr">${it.year} · ${it.meeting_date || "?"}</span>`;
     li.onclick = () => loadItem(it.id);
     ul.appendChild(li);
   }
@@ -156,6 +159,7 @@ async function prefill() {
 function wireEvents() {
   $("#fStatus").onchange = refreshList;
   $("#fYear").onchange = refreshList;
+  $("#fOrder").onchange = refreshList;
   let t; $("#fSearch").oninput = () => { clearTimeout(t); t = setTimeout(refreshList, 250); };
   $("#btnSave").onclick = (e) => { e.preventDefault(); save(true); };
   $("#btnPrefill").onclick = prefill;

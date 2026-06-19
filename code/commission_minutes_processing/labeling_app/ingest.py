@@ -40,9 +40,14 @@ MONTHS = {m: i for i, m in enumerate(
 
 
 def parse_meeting_date(filename: str, year: int) -> str:
-    """Best-effort ISO date from a tagged filename like 'October_14_2004.txt' or
-    '02-12-1998.txt' or 'JANUARY_8_1998.txt'."""
+    """Best-effort ISO date from a tagged filename like 'October_14_2004.txt',
+    '02-12-1998.txt', 'JANUARY_8_1998.txt', or the modern '2023-01-05.txt'."""
     stem = re.sub(r"\.(txt|html)$", "", filename, flags=re.I)
+    iso = re.match(r"(20\d{2}|19\d{2})-(\d{2})-(\d{2})", stem)    # modern ISO[_qual] names
+    if iso:
+        y, mo, d = map(int, iso.groups())
+        if 1 <= mo <= 12 and 1 <= d <= 31:
+            return f"{y:04d}-{mo:02d}-{d:02d}"
     s = stem.replace("_", " ").replace("-", " ").strip().lower()
     toks = s.split()
     mon = day = None

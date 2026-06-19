@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-06-18 — Finish the SF minutes pipeline: modern-era parsing, corpus repair, corpus-wide extraction, label-QA, and the SF coding manual
+
+**Goal**: Push the (Guren-approved) SF Planning Commission minutes pipeline toward "A+": parse the unparsed modern era, get extraction running corpus-wide with quality checks, tee up the existing-label fixes, and write the SF-specific labeling rules.
+
+**What was done**:
+- **Modern-era parser** (`parse_modern_minutes.py`): pdfplumber for 2018+ PDFs, direct read for 2015–17 text → the same `<<Project>>` tagged blocks; date-led ISO filenames; hardened `ingest.py`'s filename date-parser for them. Parsed 2015–2026 → ~325 meetings.
+- **Corpus repair**: found **44 corrupt modern PDFs** (not `%PDF`). Added `scrape_minutes.py --repair` + `%PDF` validation on every download, and broadened the archive harvester to key on anchor text "Minutes" across all three hosts (was seeing 129 of 295 minutes links). Repaired all 44, re-parsed + re-ingested. Corpus now complete **1998–2026 with raw↔tagged parity; labels.db = 16,100 items** (9,081 HTML + 7,019 modern).
+- **Corpus-wide extraction** (`run_extraction.py`, supersedes the single-file/old-schema `inference.py`): pluggable engine (heuristic/hf/anthropic), schema-aligned via `extraction_common`, resumable, with **periodic QA checks** (coverage, distributions, accuracy-vs-gold). Ran the **heuristic v0 over all 16,100 blocks (~11s)** → `structured_data.jsonl` + `extracted_results.csv` + `extraction_qa_report.md`.
+- **Learning-curve harness** (`learning_curve.py`) + refactored `train.py` into importable functions it reuses; smoke-tested with a real flan-t5-small fine-tune.
+- **Label-QA gate** (`label_qa.py`): diffs each hand-label vs its source block; `--apply --backfill` ran on the real DB — **backfilled 405 labels, flagged 412 for confirmation, action='other' 351→76**, DB backed up.
+- **Rare-class-first + year-balanced labeling queue** (`labeling_app/queue_order.py` + `app.py` + UI order selector); fixes the old chrono+LIMIT-5000 bug. Verified first 29 queued items span one-per-year 1998→2026.
+- **SF coding manual** (`output/planning_commission_project/labeling_rules.md`): authoritative field-by-field SF rules (case-suffix→request_type map, the `action` disposition vocabulary incl. DR-specific, stance markers, recurring-case handling), cross-linked from the app README and review guide; **[QA]**-tagged rules map to `label_qa.py`.
+- Installed `pdfplumber` + `flask`; pinned the Flask stack in `requirements.lock.txt` (flask already in `requirements.txt`).
+
+**Key decisions / findings**:
+- Model-based extraction is a *downstream* step (needs a trained model + clean labels); ran the free, schema-correct **heuristic as v0** now, with the same runner ready to swap to T5/Anthropic via one flag.
+- Heuristic floor vs gold: copy fields strong (case#/request_type 100%, assessor_block 95%, height 88%, address 70%); judgment/roll-call/free-text weak — but `action`/`noes`/`vote` numbers are depressed by *dirty gold* (pre-backfill) and exact-match scoring, not just the engine.
+- Root cause of the 44 corrupt files: the harvester's host-specific regex missed older multi-host minutes links; fixed by anchor-text matching → self-healing scraper.
+- Label target guidance unchanged: ~600 well-balanced labels (oversample rare classes, label the modern era); use the learning curve to find the plateau.
+
+**Next steps**:
+- Human-confirm the 412 flagged labels in the app (label to `labeling_rules.md`); copy fields are auto-trustable, focus eyes on action/votes + the 76 residual `other`.
+- Re-run `run_extraction.py` after confirmation → trustworthy accuracy baseline.
+- Then: export → `learning_curve.py` → train T5 → `run_extraction.py --engine hf` and compare to the heuristic floor. (Optional: patch heuristic modern `action` parsing; set up Anthropic for an LLM pass.)
+- Reconcile minor PDF-stack lock drift (pdfplumber 0.11.9→0.11.10, pypdfium2, pdfminer) from this session's install if a full re-lock is wanted.
+
+**Files touched**:
+- `code/commission_minutes_processing/parse_modern_minutes.py` — created (2015+ parser)
+- `code/commission_minutes_processing/run_extraction.py` — created (corpus-wide extraction + QA)
+- `code/commission_minutes_processing/learning_curve.py` — created (how-many-labels curve)
+- `code/commission_minutes_processing/label_qa.py` — created (label linter + backfill)
+- `code/commission_minutes_processing/labeling_app/queue_order.py` — created (priority queue)
+- `code/commission_minutes_processing/train.py` — modified (refactored into importable functions)
+- `code/commission_minutes_processing/minutes_scraping/scrape_minutes.py` — modified (`--repair`, `%PDF` validation, anchor-text harvester)
+- `code/commission_minutes_processing/labeling_app/{ingest.py,app.py,templates/index.html,static/app.js,static/style.css}` — modified (ISO dates; priority order + rare badge)
+- `output/planning_commission_project/labeling_rules.md` — created (SF coding manual)
+- `output/planning_commission_project/hand_label_review_guide.md`, `STRUCTURE.md`, `code/commission_minutes_processing/{minutes_scraping/README.md,labeling_app/README.md}` — modified (docs/cross-links)
+- `requirements.lock.txt` — modified (Flask stack pins)
+- Dropbox `…/san_francisco/{tagged/2015..2026, processed/structured_data.jsonl, extracted_results.csv, extraction_qa_report.md}` — created/updated (out of git); `labeling_app/labels.db` — backfilled (+ `.qa.bak` backup)
+- memory `sf-minutes-pipeline-to-a-plus.md` — created/updated
+
 ## 2026-06-16 — Layer I demand-data pipeline (build + CoreLogic + crime), report, and Guren slides
 
 **Goal**: Execute the demand-side data-collection brief — build, run, and document the full region-wide (9-county Bay Area) Layer I data pipeline — then a chain of follow-ups (gSSURGO spatial, 511 transit, CoreLogic price spine, crime, PUMS weights), plus a 10-slide deck for the Adam Guren meeting and a demand-estimation roadmap. (Session spanned 06-12→06-16.)

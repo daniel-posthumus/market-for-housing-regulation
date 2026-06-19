@@ -25,6 +25,10 @@ sys.path.insert(0, str(HERE.parent))
 from extraction_common import (SCHEMA, FIELDS, SECTIONS, coerce_record,  # noqa: E402
                                PROMPT_INSTRUCTION, parse_obj)
 from autoextract import extract                                          # noqa: E402
+import queue_order                                                       # noqa: E402
+
+# labels that count as "gold so far" when measuring class balance for the queue.
+CONFIRMED_STATUSES = ("done", "prelabeled", "flagged")
 
 DB = HERE / "labels.db"
 from paths import MEETING_MINUTES
@@ -62,6 +66,8 @@ def api_items():
     status = request.args.get("status", "")
     year = request.args.get("year", "")
     q = request.args.get("q", "").strip()
+    order = request.args.get("order", "priority")     # "priority" | "chrono"
+    limit = int(request.args.get("limit", "5000"))
     where, params = [], []
     if status:
         where.append("l.status = ?"); params.append(status)
@@ -70,14 +76,27 @@ def api_items():
     if q:
         where.append("(i.case_number LIKE ? OR i.block_text LIKE ?)")
         params += [f"%{q}%", f"%{q}%"]
+    # data is needed to score rarity; cheap enough at this corpus size.
     sql = ("SELECT i.id, i.year, i.meeting_date, i.case_number, i.source_file, "
-           "l.status, l.flagged FROM items i JOIN labels l ON l.item_id = i.id")
+           "i.item_index, l.status, l.flagged, l.data "
+           "FROM items i JOIN labels l ON l.item_id = i.id")
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY i.year, i.source_file, i.item_index LIMIT 5000"
     con = db()
     rows = [dict(r) for r in con.execute(sql, params).fetchall()]
+
+    if order == "priority":
+        confirmed = [d for (d,) in con.execute(
+            "SELECT data FROM labels WHERE status IN (%s)" %
+            ",".join("?" * len(CONFIRMED_STATUSES)), CONFIRMED_STATUSES).fetchall()]
+        rows = queue_order.prioritize(rows, confirmed)
+    else:
+        rows.sort(key=lambda r: (r["year"], r["source_file"], r["item_index"]))
     con.close()
+
+    rows = rows[:limit]
+    for r in rows:                                    # don't ship block data to the list
+        r.pop("data", None); r.pop("item_index", None)
     return jsonify(rows)
 
 
