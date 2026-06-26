@@ -60,8 +60,9 @@ function fieldRow(fld) {
 }
 
 async function refreshList() {
+  const focus = $("#fFocus").value;
   const qs = new URLSearchParams({ status: $("#fStatus").value, year: $("#fYear").value,
-    order: $("#fOrder").value, q: $("#fSearch").value });
+    order: $("#fOrder").value, focus, q: $("#fSearch").value });
   items = await api("/api/items?" + qs);
   const ul = $("#itemList"); ul.innerHTML = "";
   for (const it of items) {
@@ -70,8 +71,20 @@ async function refreshList() {
     const st = it.flagged ? "flagged" : it.status;
     const rare = (it.score > 0 && it.rare_class)
       ? `<span class="badge rare" title="fills scarce class: ${it.rare_class}">rare ${it.score|0}</span>` : "";
+    // QA-flag badge: green "X only" when `focus` is the sole flag (quick fix),
+    // else list the fields QA touched so you know what to check.
+    let qa = "";
+    const fields = it.qa_fields || [];
+    if (focus && it.qa_only) {
+      qa = `<span class="badge qa-only" title="${focus} is the only QA flag — just fix it and Save">${focus} only</span>`;
+    } else if (focus) {
+      const others = fields.filter(f => f !== focus).length;
+      qa = `<span class="badge qa" title="QA flags: ${fields.join(", ")}">${focus} +${others}</span>`;
+    } else if (fields.length) {
+      qa = `<span class="badge qa" title="QA flags: ${fields.join(", ")}">QA: ${fields.length}</span>`;
+    }
     li.innerHTML = `<span class="cn">${it.case_number || "(no case#)"}</span>
-      <span class="badge s-${st}">${st}</span>${rare}<br><span class="yr">${it.year} · ${it.meeting_date || "?"}</span>`;
+      <span class="badge s-${st}">${st}</span>${rare}${qa}<br><span class="yr">${it.year} · ${it.meeting_date || "?"}</span>`;
     li.onclick = () => loadItem(it.id);
     ul.appendChild(li);
   }
@@ -160,6 +173,7 @@ function wireEvents() {
   $("#fStatus").onchange = refreshList;
   $("#fYear").onchange = refreshList;
   $("#fOrder").onchange = refreshList;
+  $("#fFocus").onchange = refreshList;
   let t; $("#fSearch").oninput = () => { clearTimeout(t); t = setTimeout(refreshList, 250); };
   $("#btnSave").onclick = (e) => { e.preventDefault(); save(true); };
   $("#btnPrefill").onclick = prefill;

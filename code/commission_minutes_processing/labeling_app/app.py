@@ -14,7 +14,7 @@ Run:
 Nothing leaves your machine unless you use the optional Anthropic pre-fill.
 """
 from __future__ import annotations
-import json, sqlite3, sys
+import json, re, sqlite3, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -49,6 +49,42 @@ def _now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+# ── QA-flag introspection ─────────────────────────────────────────
+# label_qa.py records why an item was flagged in labels.notes, as either
+#   "[QA-backfilled: action,absent]"   (empty fields it auto-filled), or
+#   "[QA] action_other: …; ayes_missing: …"  (suspect values, not filled).
+# _qa_fields() distils a note down to the set of schema fields involved, so the
+# UI can focus on one field at a time and tell when it's the ONLY thing to fix.
+_BACKFILL_RE = re.compile(r"\[QA-backfilled:\s*([^\]]+)\]")
+_QA_RE = re.compile(r"\[QA\]\s*(.+)$")
+_CHECK_FIELD = {
+    "action_other": "action", "action_mismatch": "action",
+    "case_number_missing": "case_number", "request_type_blank": "request_type",
+    "ayes_missing": "ayes", "noes_missing": "noes", "absent_missing": "absent",
+    "vote_missing": "vote", "vote_tally_mismatch": "vote",
+    "district_missing": "type_district",
+}
+
+
+def _qa_fields(notes: str) -> list[str]:
+    """Schema fields a QA note touches (back-filled or flagged), sorted."""
+    notes = notes or ""
+    fields: set[str] = set()
+    m = _BACKFILL_RE.search(notes)
+    if m:
+        fields.update(f.strip() for f in m.group(1).split(",") if f.strip())
+    qa = _QA_RE.search(notes)
+    if qa:
+        for part in qa.group(1).split(";"):
+            name = part.split(":")[0].strip().strip(".")
+            for check, fld in _CHECK_FIELD.items():
+                if name.startswith(check):
+                    fields.add(fld)
+            if "action" in name.lower():     # e.g. "source ACTION→'other'"
+                fields.add("action")
+    return sorted(fields)
+
+
 # ───────────────────────────── pages ─────────────────────────────
 @app.get("/")
 def index():
@@ -67,6 +103,7 @@ def api_items():
     year = request.args.get("year", "")
     q = request.args.get("q", "").strip()
     order = request.args.get("order", "priority")     # "priority" | "chrono"
+    focus = request.args.get("focus", "").strip()     # only flags touching this field
     limit = int(request.args.get("limit", "5000"))
     where, params = [], []
     if status:
@@ -78,12 +115,17 @@ def api_items():
         params += [f"%{q}%", f"%{q}%"]
     # data is needed to score rarity; cheap enough at this corpus size.
     sql = ("SELECT i.id, i.year, i.meeting_date, i.case_number, i.source_file, "
-           "i.item_index, l.status, l.flagged, l.data "
+           "i.item_index, l.status, l.flagged, l.data, l.notes "
            "FROM items i JOIN labels l ON l.item_id = i.id")
     if where:
         sql += " WHERE " + " AND ".join(where)
     con = db()
     rows = [dict(r) for r in con.execute(sql, params).fetchall()]
+
+    for r in rows:                                    # distil QA notes → fields
+        r["qa_fields"] = _qa_fields(r.get("notes"))
+    if focus:                                         # keep only flags touching `focus`
+        rows = [r for r in rows if focus in r["qa_fields"]]
 
     if order == "priority":
         confirmed = [d for (d,) in con.execute(
@@ -92,11 +134,16 @@ def api_items():
         rows = queue_order.prioritize(rows, confirmed)
     else:
         rows.sort(key=lambda r: (r["year"], r["source_file"], r["item_index"]))
+    # When focusing one field, float items where it's the ONLY flag to the top —
+    # those are the quick "just fix `focus` and Save" cases. Stable: keeps order.
+    if focus:
+        rows.sort(key=lambda r: r["qa_fields"] != [focus])
     con.close()
 
     rows = rows[:limit]
     for r in rows:                                    # don't ship block data to the list
-        r.pop("data", None); r.pop("item_index", None)
+        r.pop("data", None); r.pop("item_index", None); r.pop("notes", None)
+        r["qa_only"] = r["qa_fields"] == [focus] if focus else False
     return jsonify(rows)
 
 

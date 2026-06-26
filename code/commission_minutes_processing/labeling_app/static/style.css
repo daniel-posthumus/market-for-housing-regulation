@@ -25,6 +25,8 @@ button:hover { filter: brightness(1.05); }
 .s-todo { background: #fde68a; } .s-prelabeled { background: #bfdbfe; }
 .s-done { background: #bbf7d0; } .s-flagged { background: #fecaca; }
 .badge.rare { background: #ede9fe; color: #6d28d9; margin-right: 4px; }
+.badge.qa { background: #e2e8f0; color: #475569; margin-right: 4px; }
+.badge.qa-only { background: #bbf7d0; color: #166534; margin-right: 4px; font-weight: 600; }
 
 #main { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
 #rawPane { border-right: 1px solid #e5e7eb; overflow: auto; padding: 10px; }
