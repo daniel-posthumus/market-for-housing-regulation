@@ -116,13 +116,29 @@ PRESENT_RE    = re.compile(r"PRESENT:\s*(.+?)(?:\n|$)", re.I | re.S)
 ABSENT_RE     = re.compile(r"ABSENT:\s*(.+?)(?:\n|$)",  re.I | re.S)
 STAFF_RE      = re.compile(r"STAFF IN ATTENDANCE:\s*(.+?)(?:\n|$)", re.I | re.S)
 ANCHOR_RE     = re.compile(r"^\d+_\d{1,2}_\d{2}$")
-AGENDA_ITEM_RE = re.compile(r"^\s*\d+\.\s", re.M)
+# Agenda-item numbers carry an optional letter suffix ("7a.", "12b."), so allow it —
+# without the [a-z]? a sub-item like "7a." was missed and got merged into the item above.
+AGENDA_ITEM_RE = re.compile(r"^\s*\d+[a-z]?[.)]\s", re.M)
+
+# A numbered agenda item whose title is NOT a case number — a briefing, a "(PLANNER …)"
+# header, or an ALL-CAPS title (e.g. "2.  (L. BADINER …)", "2. BRIEFING ON POLICY …").
+# Requires the agenda number, so it can't match SPEAKER(S)/ACTION/AYES lines; requires
+# '(' or two capitals after it, so it can't match prose like "1. First point". Case-bearing
+# items are covered by CASE_HEADER_RE; the two match disjoint lines.
+AGENDA_NONCASE_RE = re.compile(r"(?m)^[^\S\r\n]*\d{1,2}[a-z]?[.)][^\S\r\n]+(?=\(|[A-Z]{2})")
 
 # NEW: Flexible case code/header support: 2-digit or 4-digit years.
 # Example matches: "98.226D", "1999.668B", "2000.271E", "99.123"
 CASE_CODE_RE   = re.compile(r"\b(?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?\b")
+# A header is a case code at line start, OPTIONALLY preceded by its agenda number
+# ("6. 2002.0778E", "7a. 2002.0388"). Without the optional prefix, items printed as
+# "<n>. <code>" weren't detected as boundaries and consecutive items merged.
+# Leading indent uses [^\S\r\n] (any horizontal whitespace incl. non-breaking space
+# U+00A0) — some archive pages indent headers with &nbsp;, which [ \t] missed, so those
+# items weren't detected and merged into the item above.
 CASE_HEADER_RE = re.compile(
-    r"(?m)^[ \t]*(?P<code>(?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?)"
+    r"(?m)^[^\S\r\n]*(?:\d+[a-z]?[.)][^\S\r\n]+)?"
+    r"(?P<code>(?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?)"
     r"(?:\s*[–-]\s*|\s*:\s*|\s+)"
 )
 
@@ -173,21 +189,29 @@ def add_project_tags(text: str) -> str:
       2) Numbered agenda items ("1. ...", "2. ...")
       3) Whole document as one block
     """
-    # 1) Try flexible case headers first (works for both 2- and 4-digit years)
-    blocks = _split_by_headers(text, CASE_HEADER_RE)
-    if len(blocks) < 2:
-        # 2) Fallback: numbered agenda items
-        positions = [m.start() for m in AGENDA_ITEM_RE.finditer(text)]
-        if positions:
-            positions.append(len(text))
-            blocks = []
-            for i in range(len(positions) - 1):
-                seg = text[positions[i]:positions[i+1]].strip()
-                if seg:
-                    blocks.append(seg)
-        else:
-            # 3) Fallback: single block
-            blocks = [text.strip()]
+    # Normalize source/OCR noise wedged *inside* a case code — a stray '!'/'?' anywhere in
+    # the suffix (e.g. "1999.668!BEK" → "1999.668BEK", "2001.1039E!KBMXZ" →
+    # "2001.1039EKBMXZ") — otherwise the header isn't detected and the item merges upward.
+    text = re.sub(r"((?:\d{2}|\d{4})\.\d{3,})([A-Z0-9/!?]+)",
+                  lambda m: m.group(1) + re.sub(r"[!?]", "", m.group(2)), text)
+
+    # 1) Boundaries = case-code headers UNION non-case numbered agenda headers (briefings,
+    #    "(planner)" items). The union means a case-less agenda item (e.g. "2. BRIEFING ON
+    #    POLICY …") no longer merges into the item above it. The two regexes match disjoint
+    #    lines (CASE_HEADER_RE needs a case code; AGENDA_NONCASE_RE needs '(' or two capitals
+    #    right after the agenda number), so their positions never collide on one line.
+    positions = sorted(set(m.start() for m in CASE_HEADER_RE.finditer(text))
+                       | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text)))
+    if len(positions) < 2:
+        # 2) Fallback: any numbered agenda item
+        positions = sorted(m.start() for m in AGENDA_ITEM_RE.finditer(text))
+    if positions:
+        bounds = positions + [len(text)]
+        blocks = [text[bounds[i]:bounds[i + 1]].strip() for i in range(len(bounds) - 1)]
+        blocks = [b for b in blocks if b]
+    else:
+        # 3) Fallback: single block
+        blocks = [text.strip()]
 
     # Emit with tags
     tagged_chunks = []

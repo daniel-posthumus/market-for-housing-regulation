@@ -1,0 +1,160 @@
+[
+  {
+    "meeting_date": "1999-04-01",
+    "jurisdiction": "San Francisco",
+    "supervisorial_district": "",
+    "item": "",
+    "case_number": "98.153D",
+    "request_type": "discretionary_review",
+    "resolution_or_motion_no": "",
+    "project_address": "1025 Minna Street",
+    "assessor_block": "3511",
+    "lot_number": "070",
+    "type_district": "RED",
+    "type_district_descr": "residential enclave district",
+    "height_and_bulk_district": "",
+    "special_use_district": "",
+    "units_proposed": 0,
+    "units_demolished": 0,
+    "parking_spaces": "",
+    "demolition": "",
+    "project_descr": "request for discretionary review of biulding permit application no. 9810703, proposing new construction of an eight-unit live/work building on two vacant lots in a RED",
+    "staff_planner": "",
+    "preliminary_recommendation": "",
+    "ceqa_determination": "",
+    "continued_to": "",
+    "action": "other",
+    "speakers": [
+      "None"
+    ],
+    "support_count": 0,
+    "oppose_count": 0,
+    "neutral_count": 0,
+    "speaker_statements": "",
+    "ayes": [
+      "Theoharis",
+      "Antenore",
+      "Chinchilla",
+      "Hills",
+      "Joe",
+      "Martin"
+    ],
+    "noes": [
+      "None"
+    ],
+    "absent": [
+      "Mills"
+    ],
+    "recused": [],
+    "excused": [],
+    "vote": "6-1",
+    "modifications": ""
+  },
+  {
+    "meeting_date": "1999-01-07",
+    "jurisdiction": "San Francisco",
+    "supervisorial_district": "",
+    "item": "",
+    "case_number": "98.266E",
+    "request_type": "ceqa_environmental",
+    "resolution_or_motion_no": "motion no. 14792",
+    "project_address": "1890 bryan street",
+    "assessor_block": "3970",
+    "lot_number": "003",
+    "type_district": "NEMIZ",
+    "type_district_descr": "greater northeast mission industrial zone",
+    "height_and_bulk_district": "",
+    "special_use_district": "",
+    "units_proposed": 0,
+    "units_demolished": 0,
+    "parking_spaces": "",
+    "demolition": "",
+    "project_descr": "an appeal of preliminary negative declaration published for the proposed addition to and adaptive reuse of an existing three-story, approximately 106,200 square foot vacant building at 1890 bryant street, formerly part of the best foods complex. two stories would be added to the existing structure, bringing the roof of the proposed building to a height of 65 feet, as measured form bryant street. the entire building would be converted from vacant food manufacturing to 122,5000 square feet of office use, with 134 tandem parking spaces at the basement and mezzanine level. the project would be considered by the planning commission as a planned unit development, and would require exceptions to planning code parking requirements and bulk limits, as well as authorization under planning code section 321 as an office development",
+    "staff_planner": "",
+    "preliminary_recommendation": "",
+    "ceqa_determination": "",
+    "continued_to": "",
+    "action": "other",
+    "speakers": [
+      "suheil totah",
+      "dan schwarzlander",
+      "juliet gray",
+      "fred snyder",
+      "judy west",
+      "john lefan"
+    ],
+    "support_count": 0,
+    "oppose_count": 0,
+    "neutral_count": 0,
+    "speaker_statements": "",
+    "ayes": [
+      "theoharis",
+      "antenore",
+      "chinchilla",
+      "hills",
+      "joe",
+      "martin"
+    ],
+    "noes": [
+      "none"
+    ],
+    "absent": [
+      "mills"
+    ],
+    "recused": [],
+    "excused": [],
+    "vote": "6-1",
+    "modifications": ""
+  },
+  {
+    "meeting_date": "1999-01-07",
+    "jurisdiction": "San Francisco",
+    "supervisorial_district": "",
+    "item": "",
+    "case_number": "98.455E",
+    "request_type": "ceqa_environmental",
+    "resolution_or_motion_no": "",
+    "project_address": "675 Townsend Street",
+    "assessor_block": "3799A",
+    "lot_number": "7",
+    "type_district": "",
+    "type_district_descr": "",
+    "height_and_bulk_district": "",
+    "special_use_district": "",
+    "units_proposed": 0,
+    "units_demolished": 0,
+    "parking_spaces": "",
+    "demolition": "",
+    "project_descr": "to consider an appeal of the preliminary negative declaration on the proposal to construct a mixed-use development of retail space, dwelling units, and live/work units on the site. A concrete podium about 18 feet above grade would be constructed. The following project components would be constructed within the podium: about 35,000 square feet of grocery, two levels of above-grade parking in a garage, and three live/work units. residential development consisting of 148 dwelling units would be constructed above the podium. the 148 dwelling units would consist of 76 four-story buildings on the eastern portion of the site, and 72 two-story buildings on the western portion of the site. the first level of the garage would contain 118 retail parking spaces, and the second level of the garage would contain 148 residential parking spaces",
+    "staff_planner": "",
+    "preliminary_recommendation": "",
+    "ceqa_determination": "",
+    "continued_to": "",
+    "action": "other",
+    "speakers": [
+      "None"
+    ],
+    "support_count": 0,
+    "oppose_count": 0,
+    "neutral_count": 0,
+    "speaker_statements": "",
+    "ayes": [
+      "Theoharis",
+      "Antenore",
+      "Chinchilla",
+      "Hills",
+      "Joe",
+      "Martin"
+    ],
+    "noes": [
+      "None"
+    ],
+    "absent": [
+      "Mills"
+    ],
+    "recused": [],
+    "excused": [],
+    "vote": "6-1",
+    "modifications": ""
+  }
+]

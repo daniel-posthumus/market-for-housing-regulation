@@ -55,7 +55,7 @@ valid (anything else coerces to `other` or empty).
 |---|---|---|
 | Case-number format | dot: `98.226D`, `2006.0893C` | dash: `2021-002057DRP` |
 | `supervisorial_district` | **not stated** → leave empty | `(District 2)` in header → fill |
-| Speaker stance `+ / − / =` | **absent** → counts stay `0` | present → fill support/oppose/neutral counts |
+| Speaker stance `+ / − / =` | usually **absent** → counts stay `0` | usually present → fill counts. Rule is marker-based, not era-based: count only explicit markers, never infer stance |
 | Zoning wording | "… RM-1 (…) **Use District**" | "… RH-2 (…) **Zoning District**" |
 | Source | scraped HTML | PDF (pdfplumber) / text |
 
@@ -107,6 +107,9 @@ Rules:
   (Planning Code §303(e), "modify Conditions of Approval under Motion No. …").
 - **Suffix not in the table** (e.g. `U`, `CRV`, `SHD`): classify from the "Request for …"
   sentence; if it doesn't map cleanly to a value, use `other` — don't force it.
+- **Article 11 Permit to Alter** (a "Major Alteration" to a Category I–IV downtown/C-3
+  building) → `historic` — it's the C-3 analog of a Certificate of Appropriateness; do
+  **not** use `downtown_project` (that's §309), even though the parcel is in a C-3 district.
 - `coastal` only for actual coastal-zone permits.
 - **[QA]** flags empty `request_type` when the suffix clearly implies one.
 
@@ -139,10 +142,6 @@ Agenda item number as printed (`1`, `12a`, `3b`).
 | `type_district_descr` | The plain-English name in the parenthetical, e.g. `residential, house, two-family` — lower-case it. |
 | `height_and_bulk_district` | The height/bulk code: `40-X`, `50-N`, `105-F`, `240-S`. From "… and a **40-X** Height and Bulk District". |
 | `special_use_district` | Named SUD if any (e.g. `Van Ness SUD`); usually empty. |
-| `units_proposed` | **Net new dwelling units.** Word-numbers count ("two-unit building" → `2`). Parking-only / CU-modification / use changes with no new homes → `0`. |
-| `units_demolished` | **Dwelling units removed.** Demolishing a garage/shed/commercial structure (no homes) → `0`, even though `demolition = yes`. |
-| `parking_spaces` | Capture the **change**, not the first number: "reduce from 18 to 6 spaces" → `from 18 to 6`. A plain count → `4`. |
-| `demolition` (enum `yes`/`no`) | `yes` if the project demolishes **anything** (building, garage, shed); else `no`. Distinct from `units_demolished` (homes only). |
 | `project_descr` | The full "Request for …" sentence(s). The safety-net field — keep it complete; this is where reviewers verify everything else. |
 
 ---
@@ -158,21 +157,6 @@ The **staff** recommendation, roughly verbatim: `Approval with Conditions`, `Dis
 `Do Not Take DR and Approve`, `Uphold Preliminary Mitigated Negative Declaration`. Keep it
 distinct from `action` — the gap between them is the staff-override signal the project
 studies, so precision here matters.
-
-### `ceqa_determination` (enum)
-Valid: `exempt, categorical_exemption, negative_declaration,
-mitigated_negative_declaration, eir, addendum, none, other`.
-
-| Block says… | value |
-|---|---|
-| "categorically exempt" / "Categorical Exemption" | `categorical_exemption` |
-| "exempt from CEQA" / "is exempt" (general) | `exempt` |
-| "(Mitigated) Negative Declaration" | `negative_declaration` / `mitigated_negative_declaration` |
-| "EIR" / "Environmental Impact Report" / "certify the EIR" | `eir` |
-| "Addendum [to the EIR]" | `addendum` |
-| CEQA not mentioned | leave empty (not `none`) |
-
-`none` is only for an explicit "no CEQA determination required"; otherwise empty.
 
 ### `continued_to`
 Only when continued: the **target date** as ISO `YYYY-MM-DD`, or `indefinite` for
@@ -216,34 +200,38 @@ Hard rules:
 
 ## 7. Politics — speakers & votes
 
-### Speaker stance (modern, 2015+ only)
-The `SPEAKERS:` block marks each speaker:
+### Speaker stance — only from explicit `+ / − / =` markers
+Some `SPEAKERS:` lists mark each speaker's position:
 - `+` = **support** → `support_count`
 - `−` = **oppose** → `oppose_count`
 - `=` = **neutral** (incl. staff "– Staff report") → `neutral_count`
 
 Rules:
 - `support_count`/`oppose_count`/`neutral_count` = the **number of marked speakers** of
-  each sign in the SPEAKERS section. HTML era has no markers → leave all `0`.
-- `speakers` = the **names** (drop the "– topic" after the dash). `SPEAKERS: None` →
-  empty list.
+  each sign. **Count only explicit markers.** If the block has no `+/−/=` markers, leave
+  all three at `0` — **do NOT infer** support/opposition from what a speaker said. (Markers
+  are mostly a modern feature but show up in some older minutes; go by the markers present,
+  not the year.)
+- `speakers` = the **names** (drop the "– topic" after the dash). If nobody spoke
+  (`SPEAKERS: None`), leave `speakers` **empty — never write "None" as a name.**
 
 ### Roll-call lists — `ayes`, `noes`, `absent`, `recused`, `excused`
-- Surnames only, as a list. The SF Commission seats **7**.
+- Surnames only, as a list. The SF Commission seats **7**, so no roll-call list — and no
+  side of a vote tally — can exceed 7.
 - Disambiguate same-surname members as printed (`W. Lee`, `S. Lee`).
-- `None` → empty list. **[QA]** back-fills `ayes`/`noes`/`absent` when the block has the
-  roll-call line but the label is empty.
+- **If a category is empty, leave the list empty — never write "None".** A literal "None"
+  entry adds a phantom member and corrupts the tally (a phantom noe turns a real `7-0` into
+  an impossible `7-1`). Coercion now strips "none"/"n/a" defensively, but don't enter it.
+  **[QA]** back-fills `ayes`/`noes`/`absent` when the block has the roll-call line but the
+  label is empty.
 - **`recused`** = stepped aside for a conflict of interest (different from `absent` =
   not present, and `excused` = formally excused). Code each from its own labeled line.
 
 ### `vote`
 Tally string `7-0`, `5-2`. If the block prints a tally, use it; otherwise the app derives
-it as `len(ayes)-len(noes)`. **[QA]** flags a stated tally that disagrees with the
-aye/noe counts (catches a roll-call mis-parse).
-
-### `speaker_statements`
-Optional free-text notes of what speakers/commissioners argued. Leave empty unless you're
-capturing substance.
+it as `len(ayes)-len(noes)`. **Sanity: ayes + noes ≤ 7** (the Commission's size) — a tally
+like `7-1` is impossible and almost always a "None" wrongly entered in `noes`. **[QA]**
+flags a stated tally that disagrees with the aye/noe counts.
 
 ---
 
@@ -258,9 +246,6 @@ Conditions or modifications the Commission imposed (free text). Empty if none.
 
 | Situation | Do this |
 |---|---|
-| "two-unit residential building" | `units_proposed = 2` (word→number) |
-| Demolish a garage + shed, build housing | `demolition = yes`, `units_demolished = 0` |
-| "reduce parking from 18 to 6" | `parking_spaces = from 18 to 6` |
 | DR item, "ACTION: No DR" | `action = did_not_take_dr` (not `approved`) |
 | "ACTION: Continued as proposed" | `action = continued`, `continued_to = <date>` |
 | Description cites "Motion No. 14737"; MOTION line says 17322 | `resolution_or_motion_no = Motion No. 17322` |

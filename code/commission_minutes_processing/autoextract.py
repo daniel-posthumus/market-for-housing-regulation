@@ -91,21 +91,6 @@ def _action_enum(txt: str) -> str:
     return "other"
 
 
-def _ceqa(text: str) -> str:
-    t = text.lower()
-    if "categorically exempt" in t or "categorical exemption" in t:
-        return "categorical_exemption"
-    if "exempt from the california environmental" in t or "exempt from ceqa" in t or "is exempt" in t:
-        return "exempt"
-    if "mitigated negative declaration" in t:
-        return "mitigated_negative_declaration"
-    if "negative declaration" in t:
-        return "negative_declaration"
-    if "environmental impact report" in t or re.search(r"\beir\b", t):
-        return "eir"
-    if "addendum" in t:
-        return "addendum"
-    return ""
 
 
 def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francisco") -> dict:
@@ -145,16 +130,6 @@ def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francis
     if addr:
         rec["project_address"] = addr.group(1).strip().title()
 
-    # scale
-    up = re.search(r"(\d+)\s*(?:new\s+)?(?:residential\s+|dwelling\s+)?units?", block, re.I)
-    if up:
-        rec["units_proposed"] = up.group(1)
-    if re.search(r"\bdemol", block, re.I):
-        rec["demolition"] = "yes"
-    pk = re.search(r"(\d+)\s+(?:off-street\s+)?parking\s+spaces?", block, re.I)
-    if pk:
-        rec["parking_spaces"] = pk.group(1)
-
     # request description: the sentence beginning "Request for ..."
     desc = re.search(r"(Request for .+?)(?:\(Continued|\(Proposed|Preliminary "
                      r"Recommendation|SPEAKERS|\n\n)", block, re.S | re.I)
@@ -167,7 +142,6 @@ def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francis
     if pl:
         rec["staff_planner"] = re.sub(r"\s+", " ", pl.group(1).strip()).title()
     rec["preliminary_recommendation"] = _after("Preliminary Recommendation", block)
-    rec["ceqa_determination"] = _ceqa(block)
     cont = re.search(r"continu\w+\s+to\s+([A-Z][a-z]+ \d{1,2},? \d{4})", block, re.I)
     if cont:
         rec["continued_to"] = cont.group(1)

@@ -20,7 +20,7 @@ processing review found (processing_review.md, Part B):
   vote_tally_mismatch   stated tally disagrees with len(ayes)-len(noes)     [MED]
   district_missing      block states a use district, label's is empty (2014)[MED]
   request_type_blank    case suffix implies a request_type, label's empty   [LOW]
-  enum_other            ceqa/demolition/request_type coerced to 'other'     [LOW]
+  enum_other            ceqa/request_type coerced to 'other'                [LOW]
 
 Operates on the labeling DB (labeling_app/labels.db), where each human label is
 already paired to its source block. Two modes:
@@ -48,12 +48,12 @@ from autoextract import extract, _after, _action_enum, derive_request_type, CASE
 
 # Fields safe to back-fill from the source block: high-confidence parses that the
 # processing review flagged as "a parse, not a re-read". Free-text/judgement
-# fields (project_descr, modifications, speaker_statements, preliminary_recommendation,
-# parking, units) are intentionally excluded — those need a human.
+# fields (project_descr, modifications, preliminary_recommendation) are intentionally
+# excluded — those need a human.
 BACKFILL_FIELDS = [
     "case_number", "request_type", "supervisorial_district", "assessor_block",
     "lot_number", "type_district", "type_district_descr",
-    "height_and_bulk_district", "staff_planner", "ceqa_determination", "action",
+    "height_and_bulk_district", "staff_planner", "action",
     "ayes", "noes", "absent", "recused", "excused", "vote", "resolution_or_motion_no",
 ]
 
@@ -133,11 +133,6 @@ def audit_record(label: dict, block: str) -> list[tuple[str, str, str]]:
     if not (label.get("type_district") or "").strip() and src["type_district"]:
         issues.append(("district_missing", "med",
                        f"block states district '{src['type_district']}'"))
-
-    # — enum coercion casualties —
-    for f in ("ceqa_determination", "demolition"):
-        if (label.get(f) or "").strip().lower() == "other":
-            issues.append(("enum_other", "low", f"{f}='other'"))
 
     return issues
 

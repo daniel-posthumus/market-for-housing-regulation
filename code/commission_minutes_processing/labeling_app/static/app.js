@@ -56,6 +56,17 @@ function fieldRow(fld) {
   ctrl.id = "f_" + fld.name; ctrl.dataset.name = fld.name;
   ctrl.addEventListener("input", () => wrap.classList.add("changed"));
   wrap.appendChild(ctrl);
+  // Any enum offering "other" gets a companion free-text box, shown when "other"
+  // is selected, so you can type a custom value instead of the canned choices.
+  if (fld.type === "enum" && fld.choices.includes("other")) {
+    const ti = document.createElement("input");
+    ti.type = "text"; ti.id = "f_" + fld.name + "__other";
+    ti.className = "other-text"; ti.placeholder = "type a custom value…";
+    ti.hidden = true; ti.style.marginTop = "4px";
+    ti.addEventListener("input", () => wrap.classList.add("changed"));
+    ctrl.addEventListener("change", () => { ti.hidden = ctrl.value !== "other"; });
+    wrap.appendChild(ti);
+  }
   return wrap;
 }
 
@@ -124,6 +135,17 @@ function fillForm(data) {
     let v = data[fld.name];
     if (Array.isArray(v)) v = v.join(", ");
     if (v === 0 && fld.type === "int") v = "";   // show empty for zero counts
+    // enum-with-other: a value that isn't a canned choice is a typed custom string —
+    // set the select to "other" and surface it in the companion text box.
+    if (fld.type === "enum" && fld.choices.includes("other")) {
+      const ti = $("#f_" + fld.name + "__other");
+      const val = (v == null) ? "" : String(v);
+      const known = val === "" || fld.choices.includes(val);
+      el.value = known ? val : "other";
+      if (ti) { ti.value = known ? "" : val; ti.hidden = el.value !== "other"; }
+      el.closest(".field").classList.remove("changed");
+      continue;
+    }
     el.value = (v == null) ? "" : v;
     el.closest(".field").classList.remove("changed");
   }
@@ -133,7 +155,14 @@ function collectForm() {
   const data = {};
   for (const fld of SCHEMA) {
     const el = $("#f_" + fld.name); if (!el) continue;
-    data[fld.name] = el.value;     // backend coerce_record() handles list/int/enum
+    // enum-with-other + "other" selected → send the typed custom string (or "other")
+    if (fld.type === "enum" && fld.choices.includes("other") && el.value === "other") {
+      const ti = $("#f_" + fld.name + "__other");
+      const custom = ti && ti.value.trim();
+      data[fld.name] = custom ? ti.value.trim() : "other";
+    } else {
+      data[fld.name] = el.value;   // backend coerce_record() handles list/int/enum
+    }
   }
   return data;
 }

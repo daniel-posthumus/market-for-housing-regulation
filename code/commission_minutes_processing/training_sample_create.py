@@ -59,7 +59,6 @@ KEY_ALIASES = {
     "caes_number": "case_number", "case_+number": "case_number",
     "case number": "case_number", "case_numer": "case_number",
     "spekaers": "speakers", "Speakers": "speakers",
-    "speaker_statemetns": "speaker_statements",
     "tyope_district": "type_district", "tpye_district": "type_district",
     "type_disrict": "type_district", "type_distrct": "type_district",
     "type_district_": "type_district", "tpe_district": "type_district",

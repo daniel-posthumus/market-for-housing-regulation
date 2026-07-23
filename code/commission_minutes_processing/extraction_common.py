@@ -23,7 +23,8 @@ REQUEST_TYPES = [
     "conditional_use", "conditional_use_modification", "discretionary_review",
     "variance", "rezoning_map_amendment", "planning_code_amendment",
     "general_plan_amendment", "text_amendment", "large_project_authorization",
-    "downtown_project", "ceqa_environmental", "historic", "coastal",
+    "downtown_project", "ceqa_environmental",
+    "appeal_preliminary_negative_declaration", "historic", "coastal",
     "office_allocation", "other",
 ]
 ACTIONS = [
@@ -31,11 +32,6 @@ ACTIONS = [
     "continued", "continued_indefinitely", "withdrawn", "did_not_take_dr",
     "took_dr", "took_dr_and_approved", "filed", "no_action", "other",
 ]
-CEQA = [
-    "exempt", "categorical_exemption", "negative_declaration",
-    "mitigated_negative_declaration", "eir", "addendum", "none", "other",
-]
-DEMOLITION = ["yes", "no"]
 
 # ───────────────────────────────── schema ─────────────────────────────────
 SCHEMA = [
@@ -72,14 +68,6 @@ SCHEMA = [
      "help": "Height & bulk district, e.g. 40-X, 50-N"},
     {"name": "special_use_district", "type": "scalar", "section": "Zoning & scale",
      "help": "Special use district, if any"},
-    {"name": "units_proposed", "type": "int", "section": "Zoning & scale",
-     "help": "Net new dwelling units proposed (integer)"},
-    {"name": "units_demolished", "type": "int", "section": "Zoning & scale",
-     "help": "Dwelling units demolished/removed (integer)"},
-    {"name": "parking_spaces", "type": "scalar", "section": "Zoning & scale",
-     "help": "Parking spaces, e.g. '4' or 'from 6 to 4'"},
-    {"name": "demolition", "type": "enum", "section": "Zoning & scale", "choices": DEMOLITION,
-     "help": "Does the project involve demolition?"},
     {"name": "project_descr", "type": "text", "section": "Zoning & scale",
      "help": "Full request/description text"},
 
@@ -88,8 +76,6 @@ SCHEMA = [
      "help": "Assigned planner from the block header, e.g. 'D. Winslow' (initial + surname; drop phone)"},
     {"name": "preliminary_recommendation", "type": "scalar", "section": "Process",
      "help": "STAFF recommendation, e.g. 'Approve with Conditions', 'Disapprove'"},
-    {"name": "ceqa_determination", "type": "enum", "section": "Process", "choices": CEQA,
-     "help": "Environmental/CEQA determination"},
     {"name": "continued_to", "type": "scalar", "section": "Process",
      "help": "If continued: target date (YYYY-MM-DD) or 'indefinite'"},
     {"name": "action", "type": "enum", "section": "Process", "choices": ACTIONS,
@@ -104,8 +90,6 @@ SCHEMA = [
      "help": "# speakers in OPPOSITION (the '-' marker)"},
     {"name": "neutral_count", "type": "int", "section": "Politics",
      "help": "# neutral speakers (the '=' marker)"},
-    {"name": "speaker_statements", "type": "text", "section": "Politics",
-     "help": "Notes / verbatim of what speakers or commissioners argued (optional)"},
     {"name": "ayes", "type": "list", "section": "Politics",
      "help": "Commissioners voting AYE (comma-separated surnames)"},
     {"name": "noes", "type": "list", "section": "Politics",
@@ -159,6 +143,17 @@ PROMPT_INSTRUCTION = _build_prompt()
 
 
 # ───────────────────────────── record helpers ─────────────────────────────
+# `demolition` is no longer an extracted/labeled field (dropped 2026-07-03): it added
+# labeling burden for a signal the description already states. Derive it on demand from
+# project_descr instead — e.g. in data_collect when building the analysis table.
+_DEMO_RE = re.compile(r"\bdemoli(?:sh|shed|tion)\b", re.I)
+
+
+def demolition_from_descr(project_descr: str) -> str:
+    """'yes' if the project description mentions demolition, else 'no'."""
+    return "yes" if project_descr and _DEMO_RE.search(project_descr) else "no"
+
+
 def empty_record() -> dict:
     """A schema-complete record with type-appropriate empties."""
     rec = {}
@@ -172,12 +167,17 @@ def empty_record() -> dict:
     return rec
 
 
+# "none"/"n/a" are not names — leave roll-call & speaker lists empty when nobody is in
+# that category (writing "None" as a list entry silently inflated vote tallies, e.g. a
+# phantom noe turning a 7-0 into an impossible 7-1). Stripped here so it can't recur.
+_NOT_A_NAME = re.compile(r"^\s*(none|n/?a)\s*$", re.I)
+
+
 def _to_list(v):
     if v is None:
         return []
-    if isinstance(v, list):
-        return [str(x).strip() for x in v if str(x).strip()]
-    return [p.strip() for p in re.split(r"[;,]", str(v)) if p.strip()]
+    items = v if isinstance(v, list) else re.split(r"[;,]", str(v))
+    return [s for x in items if (s := str(x).strip()) and not _NOT_A_NAME.match(s)]
 
 
 def _to_int(v):
@@ -204,7 +204,14 @@ def coerce_record(rec: dict) -> dict:
             out[n] = _to_int(v)
         elif t == "enum":
             sv = str(v).strip().lower().replace(" ", "_")
-            out[n] = sv if sv in f["choices"] else (str(v).strip() and "other" or "")
+            if sv in f["choices"]:
+                out[n] = sv
+            elif "other" in f["choices"] and str(v).strip():
+                # enums that offer "other" accept a typed-in value; keep it verbatim
+                # (the UI surfaces a free-text box whenever "other" is available)
+                out[n] = str(v).strip()
+            else:
+                out[n] = ""
         else:
             out[n] = str(v).strip()
     # Derived (check A): vote is recoverable from the roll call, so it is computed
