@@ -63,9 +63,10 @@ SEVERITY = {"high": 3, "med": 2, "low": 1}
 # disposition families: an action_mismatch only fires across families, so harmless
 # wording differences (approved vs approved_with_conditions) don't generate noise.
 ACTION_FAMILY = {
-    "approved": "approve", "approved_with_conditions": "approve",
-    "approved_as_modified": "approve",
-    "disapproved": "disapprove",
+    "approved": "approve", "intent_to_approve": "approve",
+    # legacy values kept as aliases so pre-migration labels still map cleanly
+    "approved_with_conditions": "approve", "approved_as_modified": "approve",
+    "disapproved": "disapprove", "intent_to_disapprove": "disapprove",
     "continued": "continue", "continued_indefinitely": "continue",
     "withdrawn": "withdraw",
     "did_not_take_dr": "no_dr", "took_dr": "dr", "took_dr_and_approved": "dr",

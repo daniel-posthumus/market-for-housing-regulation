@@ -98,10 +98,16 @@ def html_items() -> list[dict]:
                 for blk in (b.strip() for b in BLOCK_SPLIT.findall(PH.add_project_tags(text))):
                     if not blk:
                         continue
-                    m = CASE_RE.search(blk)
+                    # Case number comes from the block HEADER (anchored at the start), not
+                    # from any case code anywhere in the block — otherwise an administrative
+                    # block ("Review of Past Week's Events", "Public Comment", "Adjournment")
+                    # that merely *cites* a case (e.g. "- #8 97.678, ACTION: …") was wrongly
+                    # tagged with that cited case. A block formed by a non-case boundary has
+                    # no header code → empty case number, which is correct.
+                    hm = PH.CASE_HEADER_RE.match(blk)
                     items.append(dict(year=y, source_file=f"raw/{y}/{f.stem}",
                                       meeting_date=mdate, item_index=idx,
-                                      case_number=m.group(1) if m else "",
+                                      case_number=hm.group("code") if hm else "",
                                       block_text=blk))
                     idx += 1
         print(f"  {y}: {n_files} pages")
@@ -130,7 +136,8 @@ def human_labels(cons: list[sqlite3.Connection]) -> list[dict]:
     out: list[dict] = []
     for rank, cur in enumerate(cons):
         for data_json, status in cur.execute(
-                "SELECT data, status FROM labels WHERE status IN ('prelabeled','flagged','done')"):
+                "SELECT data, status FROM labels WHERE status IN "
+                "('prelabeled','flagged','done','review')"):
             try:
                 data = json.loads(data_json)
             except Exception:
@@ -179,7 +186,7 @@ def main():
           f"({sum(1 for l in labels if l['status']=='done')} done)")
 
     # place each label on the best-matching new block
-    prio = {"done": 3, "prelabeled": 2, "flagged": 1}
+    prio = {"done": 4, "review": 3, "prelabeled": 2, "flagged": 1}
     placed: dict[int, dict] = {}          # item_idx -> {rec, status, score, note}
     stats = {"confident": 0, "ambiguous": 0, "unmatched": 0, "unmatched_done": [], "collisions": 0}
     for L in labels:
@@ -195,8 +202,8 @@ def main():
         best_s, best_i = scored[0]
         second = scored[1][0] if len(scored) > 1 else float("-inf")
         confident = best_s >= 2.0 and (best_s - second) >= 2.0
-        if status == "done":
-            new_status, flagged = "done", 0
+        if status in ("done", "review"):     # user-curated states — preserve verbatim
+            new_status, flagged = status, 0
         elif confident:
             new_status, flagged = "prelabeled", 0
         else:

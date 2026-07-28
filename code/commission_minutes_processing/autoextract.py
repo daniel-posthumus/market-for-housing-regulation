@@ -13,7 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from extraction_common import coerce_record, empty_record
 
-CASE_RE = re.compile(r"\b((?:\d{2}|\d{4})[.\-]\d{3,}(?:[A-Z0-9/]+)?)\b")
+# Suffix allows lowercase: some items print the type suffix lowercase ("2004.1234d"),
+# which an uppercase-only suffix would truncate to "2004.1234" (dropping the type).
+CASE_RE = re.compile(r"\b((?:\d{2}|\d{4})[.\-]\d{3,}(?:[A-Za-z0-9/]+)?)\b")
 ITEM_RE = re.compile(r"^\s*(\d{1,2}[a-z]?)[.\)]\s", re.M)
 
 
@@ -63,22 +65,25 @@ def _names(s: str) -> list[str]:
 
 
 def _action_enum(txt: str) -> str:
+    # Disposition FAMILY only — conditions/modification are captured by the separate
+    # conditions_imposed / project_modified flags (see extract()).
     t = txt.lower()
     if not t:
         return ""
-    if "as modified" in t:
-        return "approved_as_modified"
-    if "approved with conditions" in t or "with conditions" in t:
-        return "approved_with_conditions"
-    if "took dr" in t and "approv" in t:
-        return "took_dr_and_approved"
-    if "did not take dr" in t or "not to take dr" in t or re.search(r"\bno dr\b", t):
+    dr = "discretionary" in t or re.search(r"\bd\.?r\.?\b", t)
+    if "intent" in t and ("disapprov" in t or "denied" in t or "deny" in t):
+        return "intent_to_disapprove"
+    if "intent" in t and "approv" in t:
+        return "intent_to_approve"
+    if dr and re.search(r"(did not|not to|declin|no)\s+.{0,6}?take", t) or re.search(r"\bno dr\b", t):
         return "did_not_take_dr"
-    if "took dr" in t:
+    if dr and "took" in t and "approv" in t:
+        return "took_dr_and_approved"
+    if dr and ("took" in t or "take" in t or "taken" in t):
         return "took_dr"
     if "indefinit" in t:
         return "continued_indefinitely"
-    if "continued" in t or "continue" in t:
+    if "continu" in t:
         return "continued"
     if "withdrawn" in t:
         return "withdrawn"
@@ -88,6 +93,32 @@ def _action_enum(txt: str) -> str:
         return "approved"
     if "filed" in t:
         return "filed"
+    return "other"
+
+
+def _prelim_cat(txt: str) -> str:
+    """Bucket a verbatim staff recommendation into a PRELIM_REC_CATS family."""
+    t = (txt or "").lower()
+    if not t:
+        return ""
+    if "pending" in t:
+        return "pending"
+    if "certif" in t and ("eir" in t or "environmental impact report" in t):
+        return "certify_eir"
+    if "uphold" in t and ("negative declaration" in t or "neg dec" in t or "mitigated" in t):
+        return "uphold_neg_dec"
+    if "discretionary" in t and re.search(r"(do not|does not|did not|not to|not)\s+.{0,6}?take", t):
+        return "did_not_take_dr"
+    if "discretionary" in t and "take" in t and "approv" in t:
+        return "took_dr_and_approved"
+    if "discretionary" in t and "take" in t:
+        return "took_dr"
+    if "disapprov" in t or "denied" in t or "deny" in t:
+        return "disapprove"
+    if "approv" in t:
+        return "approve"
+    if "no action" in t or "informational" in t:
+        return "no_action"
     return "other"
 
 
@@ -142,12 +173,20 @@ def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francis
     if pl:
         rec["staff_planner"] = re.sub(r"\s+", " ", pl.group(1).strip()).title()
     rec["preliminary_recommendation"] = _after("Preliminary Recommendation", block)
+    rec["preliminary_recommendation_category"] = _prelim_cat(rec["preliminary_recommendation"])
     cont = re.search(r"continu\w+\s+to\s+([A-Z][a-z]+ \d{1,2},? \d{4})", block, re.I)
     if cont:
         rec["continued_to"] = cont.group(1)
     elif re.search(r"indefinite", block, re.I) and re.search(r"continu", block, re.I):
         rec["continued_to"] = "indefinite"
-    rec["action"] = _action_enum(_after("ACTION", block))
+    action_txt = _after("ACTION", block)
+    rec["action"] = _action_enum(action_txt)
+    # conditions_imposed / project_modified are orthogonal flags derived from the ACTION text
+    al = action_txt.lower()
+    if re.search(r"with (the )?(following |modified )?condition", al):
+        rec["conditions_imposed"] = "yes"
+    if "as modified" in al or "as amended" in al or "revised plan" in al or "modified condition" in al:
+        rec["project_modified"] = "yes"
 
     # politics — confine stance counting to the SPEAKERS section (markers only
     # exist there, 2015+), so hyphens in addresses/"2-story" don't get counted.

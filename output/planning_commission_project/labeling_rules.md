@@ -79,7 +79,18 @@ matches the hearing date in the header.
 Valid values: `conditional_use, conditional_use_modification, discretionary_review,
 variance, rezoning_map_amendment, planning_code_amendment, general_plan_amendment,
 text_amendment, large_project_authorization, downtown_project, ceqa_environmental,
-historic, coastal, office_allocation, other`.
+appeal_preliminary_negative_declaration, historic, coastal, office_allocation, appeal,
+other`.
+
+**CEQA / appeal disambiguation** (these overlap — pick by what the Commission is acting on):
+- **`appeal_preliminary_negative_declaration`** — an appeal of a preliminary (mitigated)
+  negative declaration (the Commission upholds/overturns the neg-dec). Suffix often `E`.
+- **`ceqa_environmental`** — other CEQA determinations, esp. **EIR certification** (`E`,
+  `ENV`, `ENX`) that isn't a neg-dec appeal.
+- **`appeal`** — an appeal of a **Planning Director / Zoning Administrator** decision (e.g.
+  "Appeal of the Director's disapproval of a permit"; suffix often `U`). Its `action` is
+  `approved` (appeal granted / decision overturned) or `disapproved` (appeal denied /
+  decision upheld). Do **not** use `appeal` for neg-dec appeals — that's the CEQA value above.
 
 **SF suffix → request_type** (the authoritative map, mirrors `autoextract.derive_request_type`):
 
@@ -152,33 +163,57 @@ Agenda item number as printed (`1`, `12a`, `3b`).
 From the block header `(D. WINSLOW: (628) 652-7335)` → `D. Winslow` (leading initial +
 surname, Title-Cased, phone dropped). **[QA]** back-fills from the header.
 
-### `preliminary_recommendation`
-The **staff** recommendation, roughly verbatim: `Approval with Conditions`, `Disapprove`,
-`Do Not Take DR and Approve`, `Uphold Preliminary Mitigated Negative Declaration`. Keep it
-distinct from `action` — the gap between them is the staff-override signal the project
-studies, so precision here matters.
+### `preliminary_recommendation` (verbatim) + `preliminary_recommendation_category` (enum)
+- **`preliminary_recommendation`** — the **staff** recommendation, roughly verbatim:
+  `Approval with Conditions`, `Disapprove`, `Do Not Take DR and Approve`, `Uphold
+  Preliminary Mitigated Negative Declaration`.
+- **`preliminary_recommendation_category`** (enum: `approve, disapprove, did_not_take_dr,
+  took_dr, took_dr_and_approved, uphold_neg_dec, certify_eir, pending, no_action, other`) —
+  the same rec bucketed to a disposition family, so **"was the staff rec followed?"** is a
+  direct comparison against `action` (no string wrangling). Map on the same logic as
+  `action`: "Approval with Conditions" → `approve`; "Do Not Take DR and Approve" →
+  `did_not_take_dr`; "Uphold … Negative Declaration" → `uphold_neg_dec`; "Pending" →
+  `pending`. The app pre-fills this from the verbatim text — verify it.
+
+Keep this distinct from `action` — the **gap** between rec-category and action is the
+staff-override signal the project studies (staff `approve` → Commission `disapproved` = an
+override). That is exactly why both a verbatim string and a comparable category exist.
 
 ### `continued_to`
 Only when continued: the **target date** as ISO `YYYY-MM-DD`, or `indefinite` for
 "continued indefinitely / off calendar / to the call of the chair".
 
-### `action` (enum) — the disposition; **most error-prone field, read carefully**
-Valid: `approved, approved_with_conditions, approved_as_modified, disapproved, continued,
-continued_indefinitely, withdrawn, did_not_take_dr, took_dr, took_dr_and_approved, filed,
-no_action, other`.
+### `action` (enum) — the disposition FAMILY; **most error-prone field, read carefully**
+Valid: `approved, disapproved, continued, continued_indefinitely, withdrawn,
+did_not_take_dr, took_dr, took_dr_and_approved, intent_to_approve, intent_to_disapprove,
+filed, no_action, other`.
+
+> **Changed 2026-07-26:** `approved_with_conditions` / `approved_as_modified` are **gone**.
+> An approval is `approved`; whether it carried conditions or amended the plans is now two
+> separate flags (below). This removes the old three-way overlap and lets conditions/
+> modifications also attach to `took_dr_and_approved`, `did_not_take_dr`, etc.
 
 Read the **`ACTION:`** line and map:
 
 | `ACTION:` text | value |
 |---|---|
-| Approved | `approved` |
-| Approved with Conditions | `approved_with_conditions` |
-| Approved as Modified / as Amended | `approved_as_modified` |
+| Approved (with or without conditions/mods) | `approved` (+ set the flags below) |
 | Disapproved / Denied | `disapproved` |
+| Intent to Approve (final language later) | `intent_to_approve` |
+| Intent to Disapprove (final language later) | `intent_to_disapprove` |
 | Continued [to date] / Continued as Proposed | `continued` (+ set `continued_to`) |
 | Continued Indefinitely / off calendar | `continued_indefinitely` |
 | Withdrawn | `withdrawn` |
 | Filed | `filed` |
+
+### `conditions_imposed` / `project_modified` (enum yes/no) — orthogonal approval flags
+Set on any *approving* action (`approved`, `took_dr_and_approved`, `did_not_take_dr`+approve):
+- **`conditions_imposed` = `yes`** when the action carries conditions of approval ("with
+  conditions", "with the following condition"). The condition text goes in `modifications`.
+- **`project_modified` = `yes`** when the *plans themselves* were revised/amended ("as
+  modified", "as amended", "with modified conditions", "revised plans").
+- Leave empty when not an approval or not stated. Both can be `yes` at once
+  ("approved with conditions as amended").
 
 **Discretionary Review (`…D/DR/DRP`) items use the DR-specific values** — *not* approved/disapproved:
 

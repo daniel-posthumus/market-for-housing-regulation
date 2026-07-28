@@ -20,6 +20,7 @@ __pycache__/
 # labeling app working store (regenerable via ingest.py; durable labels are
 # exported to tagged/training/{year}_labeled.json). Backups too.
 code/commission_minutes_processing/labeling_app/labels.db
+code/commission_minutes_processing/labeling_app/labels.db*.bak
 *.preexport.bak
 
 # data lives on Dropbox now (migrated off Google Drive 2026-06-08; see paths.py);

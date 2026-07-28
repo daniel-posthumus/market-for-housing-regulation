@@ -25,12 +25,25 @@ REQUEST_TYPES = [
     "general_plan_amendment", "text_amendment", "large_project_authorization",
     "downtown_project", "ceqa_environmental",
     "appeal_preliminary_negative_declaration", "historic", "coastal",
-    "office_allocation", "other",
+    "office_allocation", "appeal", "other",
 ]
+# `action` is now the disposition FAMILY only. "Approved with conditions" / "approved as
+# modified" are no longer distinct values — they are `approved` plus the orthogonal
+# `conditions_imposed` / `project_modified` flags (which also apply to took_dr_and_approved
+# etc.). `intent_to_*` capture the SF pattern of voting an intent, then adopting final
+# language weeks later.
 ACTIONS = [
-    "approved", "approved_with_conditions", "approved_as_modified", "disapproved",
-    "continued", "continued_indefinitely", "withdrawn", "did_not_take_dr",
-    "took_dr", "took_dr_and_approved", "filed", "no_action", "other",
+    "approved", "disapproved", "continued", "continued_indefinitely", "withdrawn",
+    "did_not_take_dr", "took_dr", "took_dr_and_approved",
+    "intent_to_approve", "intent_to_disapprove", "filed", "no_action", "other",
+]
+# Staff preliminary-recommendation categories — mirror the action disposition families so
+# "was the staff rec followed?" is a direct enum comparison (no string wrangling), plus the
+# staff/CEQA-specific recs (uphold neg-dec, certify EIR, pending). The verbatim wording is
+# kept separately in `preliminary_recommendation`.
+PRELIM_REC_CATS = [
+    "approve", "disapprove", "did_not_take_dr", "took_dr", "took_dr_and_approved",
+    "uphold_neg_dec", "certify_eir", "pending", "no_action", "other",
 ]
 
 # ───────────────────────────────── schema ─────────────────────────────────
@@ -75,7 +88,10 @@ SCHEMA = [
     {"name": "staff_planner", "type": "scalar", "section": "Process",
      "help": "Assigned planner from the block header, e.g. 'D. Winslow' (initial + surname; drop phone)"},
     {"name": "preliminary_recommendation", "type": "scalar", "section": "Process",
-     "help": "STAFF recommendation, e.g. 'Approve with Conditions', 'Disapprove'"},
+     "help": "STAFF recommendation VERBATIM, e.g. 'Approve with Conditions', 'Disapprove'"},
+    {"name": "preliminary_recommendation_category", "type": "enum", "section": "Process",
+     "choices": PRELIM_REC_CATS,
+     "help": "Staff rec bucketed to a disposition family (compare to `action` for follow-rate)"},
     {"name": "continued_to", "type": "scalar", "section": "Process",
      "help": "If continued: target date (YYYY-MM-DD) or 'indefinite'"},
     {"name": "action", "type": "enum", "section": "Process", "choices": ACTIONS,
@@ -104,6 +120,10 @@ SCHEMA = [
      "help": "Vote tally, e.g. '7-0', '5-2'"},
 
     # — conditions —
+    {"name": "conditions_imposed", "type": "enum", "section": "Conditions", "choices": ["yes", "no"],
+     "help": "Did the approval carry conditions of approval? (orthogonal to `action`)"},
+    {"name": "project_modified", "type": "enum", "section": "Conditions", "choices": ["yes", "no"],
+     "help": "Were the project's plans revised/amended as a condition of the action?"},
     {"name": "modifications", "type": "text", "section": "Conditions",
      "help": "Conditions / modifications imposed by the Commission"},
 ]

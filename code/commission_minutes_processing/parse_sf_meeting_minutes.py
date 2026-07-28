@@ -127,18 +127,59 @@ AGENDA_ITEM_RE = re.compile(r"^\s*\d+[a-z]?[.)]\s", re.M)
 # items are covered by CASE_HEADER_RE; the two match disjoint lines.
 AGENDA_NONCASE_RE = re.compile(r"(?m)^[^\S\r\n]*\d{1,2}[a-z]?[.)][^\S\r\n]+(?=\(|[A-Z]{2})")
 
+# Calendar SECTION dividers (NOT agenda items). SF minutes group items under lettered
+# sections ("B. PUBLIC COMMENT", "F. REGULAR CALENDAR", "D. DIRECTOR'S REPORT"). Without a
+# boundary here, the administrative tail of a calendar (public comment, commission/director
+# matters, findings) merged into the LAST land-use item above it — e.g. 2000.078G swallowed
+# the whole PUBLIC COMMENT → DIRECTOR'S REPORT → FINDINGS run (thousands of chars, and a
+# stray later "ACTION:" the prefill could grab). The section TITLE is ALL-CAPS and stays
+# intact in get_text("\n") even when the lettered prefix splits onto its own line, so we
+# anchor on the title. The letter prefix ("F.", "C.COMMISSION") is optional. Match is
+# case-SENSITIVE and vocabulary-bounded so prose ("public comment", "Discretionary Review")
+# and masthead caps ("PLANNING COMMISSION", "BOARD OF SUPERVISORS") never match.
+_SECTION_TITLES = [
+    r"CONSENT CALENDAR", r"REGULAR CALENDAR",
+    r"(?:SPECIAL )?DISCRETIONARY REVIEW (?:CALENDAR|HEARING)",
+    r"(?:GENERAL )?PUBLIC COMMENT",
+    r"COMMISSIONERS['?]? QUESTIONS AND MATTERS", r"QUESTIONS AND MATTERS",
+    r"COMMISSION MATTERS", r"DEPARTMENT MATTERS",
+    r"DIRECTOR['?]?S (?:REPORT|ANNOUNCEMENTS)",
+    r"CONSIDERATION OF FINDINGS",
+    r"PRELIMINARY (?:MATTERS|ITEMS)",
+]
+SECTION_HEADER_RE = re.compile(
+    r"(?m)^[^\S\r\n]*(?:[A-Z][.)][^\S\r\n]*)?(?:"
+    + "|".join(t.replace(" ", r"[^\S\r\n]+") for t in _SECTION_TITLES)
+    + r")\b"
+)
+
+# Meeting ADJOURNMENT — the last agenda item otherwise swallows everything printed after
+# its roll-call: the "Adjournment: 7:12 p.m." line, the draft-minutes-adoption note, and
+# (on multi-meeting compilation pages, e.g. 1998) the entire masthead of the NEXT meeting
+# (e.g. 98.254D in doc 4763 ran on into the June 11 1998 meeting header). "Adjournment"/
+# "ADJOURNMENT" always starts its own line (optionally ":"/"–"/"-"/a time), so it's a clean
+# boundary that ends the item above it.
+ADJOURN_RE = re.compile(r"(?im)^[^\S\r\n]*ADJOURN(?:MENT|ED)?\b")
+
 # NEW: Flexible case code/header support: 2-digit or 4-digit years.
 # Example matches: "98.226D", "1999.668B", "2000.271E", "99.123"
-CASE_CODE_RE   = re.compile(r"\b(?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?\b")
+# Suffix allows LOWERCASE letters: some items print the type suffix lowercase
+# ("2004.1234d" for a Discretionary Review), which a uppercase-only suffix left undetected
+# so the following item merged into the one above (e.g. 2003.0672CE swallowed 2004.1234d).
+CASE_CODE_RE   = re.compile(r"\b(?:\d{2}|\d{4})\.\d{3,}(?:[A-Za-z0-9/]+)?\b")
 # A header is a case code at line start, OPTIONALLY preceded by its agenda number
 # ("6. 2002.0778E", "7a. 2002.0388"). Without the optional prefix, items printed as
 # "<n>. <code>" weren't detected as boundaries and consecutive items merged.
 # Leading indent uses [^\S\r\n] (any horizontal whitespace incl. non-breaking space
 # U+00A0) — some archive pages indent headers with &nbsp;, which [ \t] missed, so those
 # items weren't detected and merged into the item above.
+# The prefix also allows a BARE letter ("a. 2001.1061CD", "b. 2001.1061CD"): addendum
+# items ("THE FOLLOWING ITEMS WERE NOTICED ON AN ADDENDUM …") are lettered without a
+# leading number, so a digit-only prefix missed them and they merged into the numbered
+# item above. A case code must still follow, so this can't match condition sub-lists.
 CASE_HEADER_RE = re.compile(
-    r"(?m)^[^\S\r\n]*(?:\d+[a-z]?[.)][^\S\r\n]+)?"
-    r"(?P<code>(?:\d{2}|\d{4})\.\d{3,}(?:[A-Z0-9/]+)?)"
+    r"(?m)^[^\S\r\n]*(?:(?:\d+[a-z]?|[a-z])[.)][^\S\r\n]+)?"
+    r"(?P<code>(?:\d{2}|\d{4})\.\d{3,}(?:[A-Za-z0-9/]+)?)"
     r"(?:\s*[–-]\s*|\s*:\s*|\s+)"
 )
 
@@ -192,7 +233,7 @@ def add_project_tags(text: str) -> str:
     # Normalize source/OCR noise wedged *inside* a case code — a stray '!'/'?' anywhere in
     # the suffix (e.g. "1999.668!BEK" → "1999.668BEK", "2001.1039E!KBMXZ" →
     # "2001.1039EKBMXZ") — otherwise the header isn't detected and the item merges upward.
-    text = re.sub(r"((?:\d{2}|\d{4})\.\d{3,})([A-Z0-9/!?]+)",
+    text = re.sub(r"((?:\d{2}|\d{4})\.\d{3,})([A-Za-z0-9/!?]+)",
                   lambda m: m.group(1) + re.sub(r"[!?]", "", m.group(2)), text)
 
     # 1) Boundaries = case-code headers UNION non-case numbered agenda headers (briefings,
@@ -201,7 +242,9 @@ def add_project_tags(text: str) -> str:
     #    lines (CASE_HEADER_RE needs a case code; AGENDA_NONCASE_RE needs '(' or two capitals
     #    right after the agenda number), so their positions never collide on one line.
     positions = sorted(set(m.start() for m in CASE_HEADER_RE.finditer(text))
-                       | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text)))
+                       | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text))
+                       | set(m.start() for m in SECTION_HEADER_RE.finditer(text))
+                       | set(m.start() for m in ADJOURN_RE.finditer(text)))
     if len(positions) < 2:
         # 2) Fallback: any numbered agenda item
         positions = sorted(m.start() for m in AGENDA_ITEM_RE.finditer(text))
