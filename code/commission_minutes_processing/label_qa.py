@@ -16,8 +16,6 @@ processing review found (processing_review.md, Part B):
   ayes_missing          block has an AYES: roll-call, label's ayes empty    [MED]
   noes_missing          block has a NOES: line, label's noes empty          [MED]
   absent_missing        block has an ABSENT: line, label's absent empty     [LOW]
-  vote_missing          no vote and no ayes to derive one from              [MED]
-  vote_tally_mismatch   stated tally disagrees with len(ayes)-len(noes)     [MED]
   district_missing      block states a use district, label's is empty (2014)[MED]
   request_type_blank    case suffix implies a request_type, label's empty   [LOW]
   enum_other            ceqa/request_type coerced to 'other'                [LOW]
@@ -54,7 +52,7 @@ BACKFILL_FIELDS = [
     "case_number", "request_type", "supervisorial_district", "assessor_block",
     "lot_number", "type_district", "type_district_descr",
     "height_and_bulk_district", "staff_planner", "action",
-    "ayes", "noes", "absent", "recused", "excused", "vote", "resolution_or_motion_no",
+    "ayes", "noes", "absent", "recused", "excused", "resolution_or_motion_no",
 ]
 
 DB = HERE / "labeling_app" / "labels.db"
@@ -119,16 +117,6 @@ def audit_record(label: dict, block: str) -> list[tuple[str, str, str]]:
         issues.append(("noes_missing", "med", "block has a NOES: line"))
     if not (label.get("absent") or []) and _has_rollcall(block, ABSENT_RE):
         issues.append(("absent_missing", "low", "block has an ABSENT: line"))
-
-    # — vote —
-    vote = (label.get("vote") or "").strip()
-    if not vote and not ayes and _has_rollcall(block, AYES_RE):
-        issues.append(("vote_missing", "med", "no vote/ayes but block has AYES:"))
-    m = re.match(r"\s*(\d+)\s*-\s*(\d+)\s*$", vote)
-    if m and ayes:
-        if int(m.group(1)) != len(ayes) or int(m.group(2)) != len(noes):
-            issues.append(("vote_tally_mismatch", "med",
-                           f"tally {vote} vs ayes/noes {len(ayes)}/{len(noes)}"))
 
     # — districts (the 2014 gap) —
     if not (label.get("type_district") or "").strip() and src["type_district"]:

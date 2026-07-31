@@ -61,7 +61,6 @@ _CHECK_FIELD = {
     "action_other": "action", "action_mismatch": "action",
     "case_number_missing": "case_number", "request_type_blank": "request_type",
     "ayes_missing": "ayes", "noes_missing": "noes", "absent_missing": "absent",
-    "vote_missing": "vote", "vote_tally_mismatch": "vote",
     "district_missing": "type_district",
 }
 

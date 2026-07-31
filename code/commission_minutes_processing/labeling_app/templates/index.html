@@ -44,7 +44,6 @@
           <option value="absent">absent</option>
           <option value="ceqa_determination">ceqa_determination</option>
           <option value="ayes">ayes</option>
-          <option value="vote">vote</option>
           <option value="height_and_bulk_district">height_and_bulk_district</option>
           <option value="type_district_descr">type_district_descr</option>
           <option value="assessor_block">assessor_block</option>
@@ -60,6 +59,11 @@
     </aside>
 
     <main id="main">
+      <div id="reviewNote" class="review-note" hidden>
+        <span class="rn-tag">REVIEW</span>
+        <span id="reviewNoteText"></span>
+      </div>
+      <div id="panes">
       <section id="rawPane">
         <div id="rawMeta" class="meta"></div>
         <pre id="rawText"></pre>
@@ -81,6 +85,7 @@
           <button id="btnSave" class="primary">Save &amp; next (⌘/Ctrl+Enter)</button>
         </div>
       </section>
+      </div>
     </main>
   </div>
   <script src="/static/app.js"></script>

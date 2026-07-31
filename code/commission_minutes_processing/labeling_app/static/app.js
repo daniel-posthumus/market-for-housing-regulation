@@ -127,6 +127,16 @@ async function loadItem(id) {
   $("#status").value = it.label.status === "prelabeled" ? "todo" : it.label.status;
   $("#flagged").checked = it.label.flagged;
   $("#notes").value = it.label.notes || "";
+  // Surface a QA/review note as a prominent banner (strip the leading [review] tag).
+  const note = it.label.notes || "";
+  const isReview = it.label.status === "review" || /^\s*\[review\]/i.test(note);
+  const banner = $("#reviewNote");
+  if (isReview && note.trim()) {
+    $("#reviewNoteText").textContent = note.replace(/^\s*\[review\]\s*/i, "");
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
 }
 
 function fillForm(data) {

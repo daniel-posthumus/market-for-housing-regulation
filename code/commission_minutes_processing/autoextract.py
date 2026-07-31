@@ -211,7 +211,5 @@ def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francis
     nm = re.search(r"((?:Motion|Resolution)\s+No\.?\s*[:#]?\s*\d+)", block, re.I)
     if nm:
         rec["resolution_or_motion_no"] = nm.group(1).strip()
-    if rec["ayes"] and not rec["vote"]:
-        rec["vote"] = f"{len(rec['ayes'])}-{len(rec['noes'])}"
 
     return coerce_record(rec)

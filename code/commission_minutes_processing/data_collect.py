@@ -11,6 +11,13 @@ def jsonl_to_csv(jsonl_path: Path, csv_path: Path):
         extracted = pd.json_normalize(df["extracted"])
         df = pd.concat([df.drop(columns=["extracted"]), extracted], axis=1)
 
+    # 2b️⃣ Derive the vote tally from the roll-call lists (no longer a labeled field) —
+    #     do this while ayes/noes are still lists, before they're joined to strings below.
+    def _n(v):
+        return len(v) if isinstance(v, list) else (len([s for s in str(v).split(",") if s.strip()]) if v else 0)
+    if "ayes" in df.columns:
+        df["vote"] = df.apply(lambda r: f"{_n(r.get('ayes'))}-{_n(r.get('noes'))}" if _n(r.get('ayes')) else "", axis=1)
+
     # 3️⃣ Turn any list-columns into comma-joined strings
     for col in ("speakers", "ayes", "noes", "absent", "modifications"):
         if col in df.columns:

@@ -116,8 +116,9 @@ SCHEMA = [
      "help": "Commissioners recused (conflict of interest)"},
     {"name": "excused", "type": "list", "section": "Politics",
      "help": "Commissioners excused"},
-    {"name": "vote", "type": "scalar", "section": "Politics",
-     "help": "Vote tally, e.g. '7-0', '5-2'"},
+    # `vote` is no longer a labeled field (dropped 2026-07): the tally is fully recoverable
+    # from the ayes/noes lists, and hand-entering it only produced stale mismatches. Derive
+    # it on demand with derive_vote() in the analysis layer.
 
     # — conditions —
     {"name": "conditions_imposed", "type": "enum", "section": "Conditions", "choices": ["yes", "no"],
@@ -172,6 +173,15 @@ _DEMO_RE = re.compile(r"\bdemoli(?:sh|shed|tion)\b", re.I)
 def demolition_from_descr(project_descr: str) -> str:
     """'yes' if the project description mentions demolition, else 'no'."""
     return "yes" if project_descr and _DEMO_RE.search(project_descr) else "no"
+
+
+def derive_vote(rec: dict) -> str:
+    """Vote tally 'ayes-noes' derived from the roll-call lists (replaces the old hand-
+    labeled `vote` field). Empty when there is no aye roll-call. Use in the analysis
+    layer (data_collect) rather than storing a redundant, error-prone tally."""
+    ayes = _to_list(rec.get("ayes"))
+    noes = _to_list(rec.get("noes"))
+    return f"{len(ayes)}-{len(noes)}" if ayes else ""
 
 
 def empty_record() -> dict:
@@ -234,11 +244,6 @@ def coerce_record(rec: dict) -> dict:
                 out[n] = ""
         else:
             out[n] = str(v).strip()
-    # Derived (check A): vote is recoverable from the roll call, so it is computed
-    # rather than hand-labeled. Fill only when empty — never overwrite a stated
-    # tally — so a QA pass can still flag ayes/noes-vs-tally mismatches.
-    if not out["vote"] and out["ayes"]:
-        out["vote"] = f"{len(out['ayes'])}-{len(out['noes'])}"
     return out
 
 

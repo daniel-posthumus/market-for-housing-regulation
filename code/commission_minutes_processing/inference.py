@@ -38,7 +38,6 @@ Required keys:
 - ayes
 - noes
 - absent
-- vote
 - action_name
 
 Raw block:
@@ -47,7 +46,7 @@ Raw block:
 REQUIRED_KEYS = [
     "case_number","project_address","lot_number","assessor_block","project_descr",
     "type_district","type_district_descr","speakers","action","modifications",
-    "ayes","noes","absent","vote","action_name"
+    "ayes","noes","absent","action_name"
 ]
 _scalar_re = {k: re.compile(rf'"{k}"\s*:\s*"([^"]*?)"', re.I) for k in REQUIRED_KEYS}
 _list_re   = {k: re.compile(rf'"{k}"\s*:\s*(\[[^\]]*?\])', re.I) for k in REQUIRED_KEYS}

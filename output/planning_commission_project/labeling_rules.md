@@ -262,11 +262,12 @@ Rules:
 - **`recused`** = stepped aside for a conflict of interest (different from `absent` =
   not present, and `excused` = formally excused). Code each from its own labeled line.
 
-### `vote`
-Tally string `7-0`, `5-2`. If the block prints a tally, use it; otherwise the app derives
-it as `len(ayes)-len(noes)`. **Sanity: ayes + noes ≤ 7** (the Commission's size) — a tally
-like `7-1` is impossible and almost always a "None" wrongly entered in `noes`. **[QA]**
-flags a stated tally that disagrees with the aye/noe counts.
+### `vote` — **not a labeled field (removed 2026-07)**
+Don't hand-enter a tally. The vote is **derived** in the analysis layer as
+`len(ayes)-len(noes)` (see `derive_vote()` in `extraction_common.py`), so the roll-call
+lists are the single source of truth. Just enter `ayes`/`noes` correctly and the tally
+follows. **Sanity while labeling: ayes + noes ≤ 7** (the Commission's size) — if the derived
+tally would exceed 7, a "None" was wrongly entered in a list, or a name is missing.
 
 ---
 
