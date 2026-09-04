@@ -1,0 +1,196 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\title{SF Planning Commission Minutes:\\ Pipeline Status and Preliminary Results}
+\author{Dan Post}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}
+
+This directory documents the empirical backbone of the project: turning twenty-eight years
+of San Francisco Planning Commission meeting minutes (1998--2026) into an \emph{item-level}
+dataset of discretionary land-use decisions. One row is one request heard by the
+Commission --- a conditional use, a discretionary review, a variance, a rezoning --- with
+its case number, address, zoning district, staff recommendation, disposition, roll-call
+vote, and hearing date.
+
+That dataset is what makes the ``market for housing regulation'' measurable. It lets us
+ask who obtains discretionary approval, how often staff recommendations are overridden,
+how the approval rate moves with the political composition of the Commission, and how any
+of this responds to state preemption. The theory side lives in
+\texttt{output/political\_economic\_housing\_model/}; the extension of the same pipeline
+to the rest of the Bay Area is documented in the recon directories.
+
+\section{What is in this directory}
+
+\begin{longtable}{p{0.30\textwidth}p{0.62\textwidth}}
+\toprule
+File & What it is \\
+\midrule
+\endhead
+\texttt{minutes\_data\_availability.md} & Inventory of what the raw files actually contain,
+by document era (1{,}099 source files). Produced 2026-06-05; read-only. \\
+\texttt{processing\_review.md} & Code review of the pipeline plus an audit of the
+hand-labels, with a 2026-06-08 status update. \\
+\texttt{data\_infrastructure.md} & The schema and how the pieces fit together. \\
+\texttt{labeling\_rules.md} & The authoritative coding manual --- the per-field spec a
+labeler works from. \\
+\texttt{hand\_label\_review\_guide.md} & How to review existing labels before they become
+ground truth. \\
+\texttt{schema\_enrichment\_recommendation.md} & Field-by-field verdicts from the schema
+enrichment investigation (adopt / defer / reject). \\
+\texttt{meeting\_level\_info.tex} & How each item is matched to the meeting it was heard at,
+the meeting-level fields, their accuracy against the gold set, and summary statistics. \\
+\bottomrule
+\end{longtable}
+
+\section{The pipeline}
+
+\textbf{Scrape} $\to$ \textbf{parse} $\to$ \textbf{date} $\to$ \textbf{label} $\to$
+\textbf{extract}. Code lives in \texttt{code/commission\_minutes\_processing/}; the corpus
+lives outside the repo on Dropbox and is reached through \texttt{paths.py}.
+
+\emph{Parsing} splits each source document into blocks, one per agenda item, delimited by
+case headers, numbered agenda items, section headers, adjournment markers, and
+draft-minutes-adoption appendages. Two document eras are handled: scraped HTML
+(1998--2014) and PDF (2015--present).
+
+\emph{Dating} is a separate stage, and deliberately so. A block never states its own
+hearing date --- the meeting header above it does --- so the date is a structural question
+about which meeting a block falls under, not a textual one about the block. It is answered
+by \texttt{assign\_meeting\_dates.py} and validated against hand-marked meeting boundaries
+collected in \texttt{date\_boundary\_app/}. See the companion memo,
+\texttt{meeting\_level\_info.tex}.
+
+\emph{Meeting-level labelling} sits above the items. Time of day, whether the sitting was
+regular, special, joint or closed, the room, who sat and who staffed it are properties of
+the hearing, shared by every item heard at it, so they are recorded once per meeting and
+joined on the date rather than repeated on 23{,}000 rows.
+\texttt{meeting\_headers.py} cuts the header window around each known meeting start and
+pre-fills twelve such fields for confirmation in the boundary app.
+
+\emph{Labeling} is done in a local Flask app against the shared schema, with a machine
+pre-fill the human corrects. \emph{Extraction} then either fine-tunes a model on those
+labels or few-shot prompts one, and \texttt{learning\_curve.py} plots field accuracy
+against label count so labeling stops at the empirical plateau rather than a guess.
+
+\subsection{The schema is the single source of truth}
+
+\texttt{extraction\_common.py} holds one list, \texttt{SCHEMA}, from which the labeling
+form, the model prompt, the training builder's required keys, and the evaluation metric
+are all generated. Editing that list propagates everywhere. It currently carries
+\textbf{28 fields} in six groups: Identity, Location, Zoning \& scale, Process, Politics,
+Conditions.
+
+Four fields have been dropped as the schema settled, each for a stated reason:
+\texttt{jurisdiction} (constant), \texttt{supervisorial\_district} (recoverable from the
+address), \texttt{item} (agenda number, no analytic signal), and --- as of 30 August 2026
+--- \texttt{meeting\_date}, which is a property of the meeting rather than the item and is
+now supplied by the dating stage.
+
+Two design decisions in the schema are worth stating because they carry the empirics.
+First, \texttt{action} records the disposition \emph{family} (\texttt{approved},
+\texttt{disapproved}, \texttt{continued}, \texttt{took\_dr\_and\_approved}, \ldots), with
+``with conditions'' and ``as modified'' split out into two orthogonal flags. This removed a
+three-way overlap in the old vocabulary and lets conditions attach to non-approval
+outcomes. Second, the staff recommendation is stored twice: verbatim
+(\texttt{preliminary\_recommendation}) and bucketed to the same disposition families
+(\texttt{preliminary\_recommendation\_category}). The gap between that category and
+\texttt{action} \emph{is} the staff-override signal the project studies, and storing both
+makes ``was the staff recommendation followed?'' a direct enum comparison rather than
+string wrangling.
+
+\section{Preliminary results}
+
+\subsection{Corpus}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+Quantity & Count \\
+\midrule
+Parsed items, 1998--2026 & 23{,}043 \\
+\quad HTML era (1998--2014) & 16{,}024 across 724 pages \\
+\quad Modern era (2015--2026) & 7{,}019 \\
+Meetings identified, HTML era & 818 \\
+Pages holding more than one meeting & 41 (max 5) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Dating}
+
+The dating stage corrected \textbf{1{,}937 of 16{,}024} HTML-era item dates. Distinct
+hearing dates per year moved from 12--17 to 35--47 for 1998--2000, in line with the
+Commission's roughly weekly sitting; later years were already close to correct. Against a
+hand-marked gold standard of 97 documents and 101 meeting boundaries, boundary precision
+and recall are both 1.000 and item date accuracy is 1.000 on 1{,}322 scored items --- and
+on the 21 documents marked after the rules were frozen it is 1.000 on 334 items, so the
+result is genuinely out-of-sample. All 280 modern PDFs agree with their file names. Details
+and caveats are in the companion memo.
+
+\subsection{Meetings}
+
+All \textbf{102 meetings} of the gold sample are hand-confirmed --- the 101 marked
+boundaries plus one the dating stage found that the marking missed. Against those labels
+the ten meeting-level fields agree on \textbf{94.6\%} of values, and on the 21 meetings
+labelled after the rules were frozen they agreed on \textbf{92.1\%} before correction, so
+the extraction generalises. The sample is already informative about the panel's
+composition: 90 regular sittings, 7 special, and 5 joint --- with the Redevelopment Agency
+Commission (1998), Building Inspection (2007, 2018), Public Health (2011) and Historic
+Preservation (2023). Two joint sittings are headed simply ``Special Meeting'' and are
+identifiable as joint only from the two bodies named above the date.
+
+\subsection{Labeling}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrl}
+\toprule
+Status & Items & Meaning \\
+\midrule
+\texttt{done} & 119 & confirmed gold \\
+\texttt{review} & 80 & existing labels with a specific QA issue to recheck \\
+\texttt{flagged} & 179 & 145 representativeness-sample draws + 34 recovered labels \\
+\texttt{todo} & 22{,}665 & unlabeled \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The queue is ordered rare-class-first and interleaved by year, so labeling top-down fills
+scarce request types and dispositions evenly across the panel rather than exhausting 1998
+first. A fixed random sample per year is flagged separately so the gold set is
+representative of the whole period rather than of whichever years were labeled earliest.
+
+\section{Status and open questions}
+
+\begin{itemize}
+\item \textbf{Settled.} The schema; the parser's block boundaries; the dating stage and its
+validation; the labeling workflow and coding manual.
+\item \textbf{In progress.} Item-level hand-labeling. The immediate queue is the 80
+\texttt{review} items, then the 145 representativeness draws. The meeting-level gold set
+(97 documents, 102 meetings) is complete.
+\item \textbf{Open.} Forty-two labels carry a hand-typed date that disagreed with the
+dating pipeline (preserved in \texttt{date\_field\_disagreements.csv}); several look like
+labels attached to the wrong block by the earlier content-matching recovery and need a
+separate pass. The learning curve has not yet been run at full size, so the number of
+labels required for the extraction model is still an estimate rather than a measurement.
+\item \textbf{Decision pending.} Whether to extend meeting-level labelling beyond the
+81-meeting pilot to all 818 detected meetings. The pre-fill is good enough that the cost is
+confirmation rather than transcription, but the analytic payoff of the meeting-level fields
+is not yet established.
+\item \textbf{Known non-transfer.} The heuristic extractor is tuned to SF minutes and does
+not transfer to other jurisdictions; extending the pipeline requires re-testing extraction
+on real documents with human review, not unattended.
+\end{itemize}
+
+\end{document}

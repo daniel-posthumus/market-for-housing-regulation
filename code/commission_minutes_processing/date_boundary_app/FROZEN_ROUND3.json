@@ -1,0 +1,9 @@
+{
+  "round": 3,
+  "note": "State after incorporating round-3 feedback. Freeze point for a future round 4.",
+  "sha256_16": {
+    "assign_meeting_dates.py": "e6ab9e126e2aecba",
+    "meeting_headers.py": "b84c3c23bea98e13",
+    "parse_sf_meeting_minutes.py": "7d4035a15ab9c1c5"
+  }
+}

@@ -89,10 +89,18 @@ def html_items() -> list[dict]:
                 print(f"  ⚠ read {f.name}: {e}")
                 continue
             n_files += 1
-            soup = BeautifulSoup(html, "lxml")
+            # A page whose bytes say PDF has no HTML structure to chop; take its text
+            # directly (see PH.read_page_text) and treat it as one section.
+            if html.startswith("%PDF"):
+                sections = [("single", None)]
+                soup = None
+            else:
+                soup = BeautifulSoup(html, "lxml")
+                sections = PH.chop_into_meetings(soup)
             idx = 0
-            for anchor, sect in PH.chop_into_meetings(soup):
-                text = BeautifulSoup(sect, "lxml").get_text("\n")
+            for anchor, sect in sections:
+                text = (PH.read_page_text(f) if sect is None
+                        else BeautifulSoup(sect, "lxml").get_text("\n"))
                 meta = PH.extract_header(text)
                 mdate = to_iso(meta.get("date"), anchor)
                 for blk in (b.strip() for b in BLOCK_SPLIT.findall(PH.add_project_tags(text))):

@@ -1,5 +1,236 @@
 # Progress Log
 
+## 2026-09-04 — Meeting-level extraction validated over four rounds, run corpus-wide, and closed out
+
+**Goal**: Finish the meeting-level layer: validate the extraction against hand labels until
+the accuracy claim is honest, run it over the whole corpus, and document it. Then return to
+item-level labeling.
+
+**What was done**:
+- Built the meeting-level gold set in **four rounds** (126 documents, 135 meetings), each
+  scored with the extraction rules frozen and SHA-verified beforehand. Out-of-sample field
+  agreement rose **92.1% → 95.3% → 96.0%** across rounds 2–4.
+- Round 4 was the first with **machine-placed boundaries** (drawn weighted by measured
+  anomaly rate, 20.9% vs 15.1% uniform) — the configuration that runs unattended.
+- Found and fixed the **window-anchoring gap** that three rounds of hand-marking had hidden:
+  the date stage anchors on the page title (correct for dates), but meeting *attributes* live
+  in a body header ~230 lines below. `snap_to_header` cut unlabelled-meeting anomalies from
+  84.5%→1.4% (time), 86.0%→4.5% (venue), 72.9%→2.0% (type).
+- Fixed the early-era truncation the user spotted: `STAFF`/`IN ATTENDANCE:` and
+  `THE`/`MEETING WAS CALLED TO ORDER` wrap mid-phrase, and the capture followed only four
+  wrapped lines against staff rolls of twenty names.
+- Ran `extract_all_meetings.py` over the corpus: **1,179 meetings from 1,086 documents,
+  1998–2026**, written to `meetings_all.csv` + a `meetings_all` table.
+- Added `plot_extraction_accuracy.py` (accuracy by round + error by era) and
+  `plot_meeting_timeseries.py` (staff and absence over time, banded by inferred presidency,
+  remote era shaded).
+- Rewrote `meeting_level_info.tex` (15 pp) end-to-end; created `CLAUDE.md`.
+
+**Key decisions / findings**:
+- **Dates are done: 1,621/1,621 items correct across all four rounds**, never re-tuned.
+- **No LLM anywhere** in the date or meeting pipeline — all deterministic, ~9s over 724 pages.
+- Error is concentrated, not diffuse: **3.8% from 2002 onward, 11.1% for 1999–2001 (5.7%
+  excluding `staff`)**. Every round's failures traced to a handful of named layout quirks.
+- **Absence during remote hearings was 4.9% vs 9.1% in person** — the clearest pattern found.
+- Presidency terms inferred from who called meetings to order: 19 terms, ~1 year each.
+  Absence varies 2.0–15.4% by term but tracks the **era, not the chair** (Fong's two terms
+  differ by more than many presidents differ from each other) — flagged as needing a
+  specification that separates chair from period.
+- Left the two Lees **visibly unresolved** on 192 meetings rather than guessing; an earlier
+  tie-break had manufactured a 9%-vs-0.4% absence gap between them.
+- **2018 is a corpus hole** (2 documents vs 27–44 for neighbours) — a scraping gap, drawn as
+  a break rather than interpolated.
+
+**Next steps**:
+- **Return to item-level hand-labeling** — 80 `review` items, then the 145
+  representativeness draws; the learning curve has never been run at full size.
+- Fill the 2018 scrape gap before any year-on-year series crosses it.
+- Optional: consistency pass on the gold labels' name spellings (~1.5 pts of measured
+  accuracy, no code change); filter the 9 landing-page documents from denominators.
+
+**Files touched**:
+- `meeting_headers.py`, `assign_meeting_dates.py` — modified (snap_to_header, staff endpoint,
+  stop markers, name reconciliation, joint-meeting presiding rule)
+- `extract_all_meetings.py`, `draw_validation_sample.py`, `plot_extraction_accuracy.py`,
+  `plot_meeting_timeseries.py` — created
+- `date_boundary_app/{app.py,static/*,templates/*}` — modified (wrapped-date detection, range
+  selection, meeting-level labelling view)
+- `output/planning_commission_project/meeting_level_info.tex` (+ .pdf), `extraction_accuracy.*`,
+  `meeting_timeseries.*` — created/rewritten
+- `CLAUDE.md` — created; `.gitignore` — modified (LaTeX rules, generated CSVs)
+
+## 2026-08-30 (later) — Meeting-level labelling pass and an `output/` that makes sense
+
+**Goal**: Stand up a meeting-level pass alongside the date-boundary work, and reorganize
+`output/` so nine one-shot probes stop sitting as siblings of the two real project lines.
+
+**What was done**:
+- Wrote `meeting_headers.py`: cuts the ±15 **non-blank** lines around each marked boundary and
+  pre-fills 12 meeting-level fields (type, scheduled and gavel times, presiding, room, roll
+  call, staff, joint body, previous meeting's adjournment).
+- Added a `/meetings` view to the boundary app — window left, form right, ⌘/Ctrl+Enter to
+  save and advance — plus CSV export. Pilot is **81 meetings**: the 80 hand-marked boundaries
+  plus the joint session the date stage found, carried with `origin='detected'`.
+- Pre-fill coverage on 81: meeting_type 81, scheduled_time 81, location 81, present 78, staff
+  76, called_to_order 74, presiding 74, absent 36, joint_body 4, adjournment 3.
+- Fixed three pre-fill bugs found by inspection: roll calls bleeding past their label (regex
+  lookahead → line-based capture with stop markers), **cross-meeting bleed** (the window
+  straddles two meetings, so `ABSENT: Martin` from the previous item's vote was read as this
+  meeting's absences — now everything but adjournment is read from the date line down), and a
+  wrapped stop marker (`THE MEETING WAS / CALLED TO ORDER`).
+- Sub-agent reorganized `output/` into three research lines + archive: `bay_area_recon/`
+  (the nine probes, moved together so sibling path constants survive) with `_source_data/`
+  for raw third-party CSVs; `demand_memo.pdf` rejoined `demand_estimation/report/`;
+  `operationalization_memo.pdf` joined the theory line; `OUTPUT_INVENTORY.md` filed to
+  `_archive/`. New `README.md` at `output/` and in `bay_area_recon/`.
+
+**Key decisions / findings**:
+- A meeting is not an item: time, type, room, roll call and staff are properties of the
+  hearing shared by every item heard at it, so they are recorded once and joined on the date.
+- The window's **leading** lines are the previous meeting's tail — useful (adjournment) and
+  dangerous (its roll call), which is why the date line splits the two halves.
+- Four joint sittings in the pilot: with the Redevelopment Agency Commission (1998),
+  Building Inspection (2007, 2018) and Historic Preservation (2023). The 2018 one is headed
+  "Special Meeting" and is only detectable as joint from "PLANNING COMMISSION / AND / BUILDING
+  INSPECTION COMMISSION".
+- Reorg verification: all 14 touched scripts byte-compile, 12 module-level path constants
+  resolve, 0 surviving pre-move paths, 0 new dangling references.
+
+**Next steps**:
+- Work the 81-meeting pilot in `/meetings`; then decide whether to extend meeting-level
+  labelling to all 818 detected meetings.
+- Still open from earlier: 21 unmarked gold documents, the 42 date disagreements.
+
+**Files touched**:
+- `meeting_headers.py` — created; `date_boundary_app/{app.py,templates/meetings.html,static/meetings.js,static/style.css,templates/index.html,README.md}` — modified/created
+- `output/**` — reorganized into `bay_area_recon/` + two live lines + `_archive/`; two new READMEs
+- `jurisdiction_mappings.py`, `build_hcd_panel.py`, `civicplus_depth_probe/probe.py`, 5 `memo.tex`, `STRUCTURE.md`, `README.md` — path/reference updates
+- `.gitignore` — modified (`.DS_Store`, `meetings_pilot.csv`)
+
+## 2026-08-30 — Gold-validated date inference, schema drops meeting_date, output/ reorganized into per-directory memos
+
+**Goal**: Review the hand-marked meeting-boundary gold set, harden the date-inference stage
+against it, document the method, and clean up `output/`.
+
+**What was done**:
+- Reviewed all **76 hand-marked documents** against independent structural signals (roll call,
+  adjournment, "Back to Top" anchors, room location). Only 3 flags, and 2 were the machine's:
+  the hand labels were right where they disagreed with the detector.
+- Added the corroboration gate the review implied — a header needs a roll call within 800
+  chars after **or** a room/location within 300 chars before. Dropped 21 of 824 candidates and
+  moved **47 items** onto correct dates (killed the "Rules Committee meeting this coming
+  Monday, February 10, 2003 at 2:30 p.m." false positive and its 2003-01-23 twin).
+- Replaced same-date dedup with a distance rule (3,000 chars), so a genuine second meeting on
+  one day survives — the 1998-01-15 joint Planning/Redevelopment Agency session in Room 404.
+- Added **positional** precision/recall to the scorer; set-level agreement cannot see a missed
+  same-day boundary. Final gold scores: boundary P/R **1.000**, positional P/R **0.988/1.000**,
+  item date accuracy **1.000** on 988 items.
+- Verified all **280 modern PDFs**: filename date == in-document header, 280/280, zero
+  exceptions. PDF filenames adopted as authoritative.
+- Fixed `raw/2000/20000203-documentid=32.pdf.html` — a PDF saved under an `.html` name, parsed
+  as HTML into one 23 KB block of binary. Readers now route on magic bytes; that meeting's
+  **15 items were restored**. Only such file in the corpus.
+- Dropped `meeting_date` from `SCHEMA` (28 fields now): it is a property of the meeting, not
+  the item. Stripped from 23,043 stored labels, preserved 42 disagreeing hand-typed dates to
+  `date_field_disagreements.csv`, and attached at export time from `items.meeting_date`.
+- Wrote `output/planning_commission_project/date_boundary_inference.tex` (4 pp: method,
+  validation, error rates) and a `memo.tex` in **all 11** `output/` subdirectories (3 via
+  sub-agents), plus `OUTPUT_INVENTORY.md` from a fourth.
+- Deleted `output/DATA_STATUS.md`, `output/final_recon_bundle_report.md`, and
+  `planning_commission_project/graphics/`; folded their content into the memos that replace them.
+- **Reorganized `output/`** from 11 flat siblings into 3 lines + archive. The nine June-2026
+  Bay Area recon probes moved together into `output/bay_area_recon/` (moving them as a group
+  preserves every `HERE.parent / "<sibling>"` constant); the two raw third-party releases
+  (`nzlud_muni.csv`, `hcd.csv`) moved out of the reports folder into
+  `bay_area_recon/_source_data/`; `demand_memo.pdf` rejoined `demand_estimation/report/`;
+  `operationalization_memo.pdf` moved beside the toy model it operationalizes;
+  `OUTPUT_INVENTORY.md` was filed into `output/_archive/` as the audit record it is.
+  Added `output/README.md` and `output/bay_area_recon/README.md`.
+
+**Key decisions / findings**:
+- **No LLM is used for date inference.** All 724 pages pass deterministically and gold
+  agreement is exact — paying for inference would buy nothing and make the stage
+  non-reproducible. Revisit only for a new jurisdiction, piloted on its own gold sample first.
+- `raw/2007/index.aspx-page=1340.html` is short because it is a real closed-session special
+  meeting (Planning Director search), not a scrape failure.
+- Sub-agents surfaced stale numbers across the recon probes: `preperiod` 17/25 → **15/25**,
+  `archive_depth` reports understate their own CSV (64/32 vs 68/36), and `consolidate.py`'s
+  "verified" filter now wrongly rejects API-verified rows.
+
+**Next steps**:
+- Mark the remaining 21 gold documents (both previously-broken ones are now readable).
+- Consider adding the missed 1998-01-15 joint-session boundary to gold.
+- Work the 42 date disagreements — several look like labels attached to the wrong block.
+- No LaTeX toolchain on this machine: the 12 `.tex` files pass a structural check but are
+  uncompiled.
+
+**Files touched**:
+- `assign_meeting_dates.py` — modified (corroboration gate, same-day meetings, PDF sniffing)
+- `parse_sf_meeting_minutes.py`, `rebuild_review_db.py` — modified (`read_page_text` routes on magic bytes)
+- `extraction_common.py`, `autoextract.py`, `labeling_app/app.py` — modified (meeting_date dropped; export joins it)
+- `date_boundary_app/{app.py,README.md}` — modified (positional scoring, PDF sniffing)
+- `output/*/memo.tex` — created (11 files); `output/planning_commission_project/date_boundary_inference.tex` — created
+- `output/DATA_STATUS.md`, `output/final_recon_bundle_report.md`, `planning_commission_project/graphics/` — deleted
+- `output/planning_commission_project/labeling_rules.md`, `STRUCTURE.md`, `README.md` — modified
+- `output/` reorganized (see above): 9 probe dirs → `output/bay_area_recon/`; path constants fixed in
+  `jurisdiction_mappings.py` (+1 `.parent`), `build_hcd_panel.py` (`_source_data/hcd.csv`),
+  `civicplus_depth_probe/probe.py` (hard-coded `/Users/danpost/…` → `Path(__file__).parent`);
+  `output/README.md`, `output/bay_area_recon/README.md` — created
+- `date_field_disagreements.csv` — created; `labels.db` — 47 dates + 23,043 label records updated
+
+## 2026-08-29 — Meeting dates become their own stage: corpus-wide date repair + boundary gold-standard app
+
+**Goal**: Get back to hand-labeling; instead found that ~29% of HTML-era items carried the
+wrong `meeting_date`. Fix it automatically, move date assignment out of the parser into its
+own stage, and build a way to validate that stage against hand-marked truth.
+
+**What was done**:
+- Set up the labeling app (`labels.db` already on the 29-field schema; 117 done / 82 review /
+  179 flagged / 22,651 todo) and repointed `paths.py` at this machine's Dropbox root.
+- Diagnosed the date bug: the HTML parser split pages into meetings via `<a name="6_4_98">`
+  anchors, present on only **3 of 724** archive pages, so every other page stamped its FIRST
+  date on all blocks. 1999 and 2000 had **12 distinct dates each** (one per monthly file)
+  against ~40–48 real meetings.
+- Wrote `assign_meeting_dates.py` — a stage that never re-derives block boundaries. It folds
+  page and block text, locates each block by content via an order-preserving
+  longest-increasing-subsequence alignment (multi-pass, since anchored pages emit sections out
+  of document order), detects meeting headers, and reads off the date each block falls under.
+- Applied it: **1,890 item dates corrected**, 1,873 label records synced. 1998 17→45 distinct
+  dates, 1999 12→38, 2000 12→35; 2001+ essentially unchanged. 99.1% of items now land on a
+  Thursday, the remainder on archive-declared special meetings.
+- Built `date_boundary_app/` (Flask, :5006) — click the line where a meeting starts, pick its
+  date; `--score` compares gold marks to the pipeline at both boundary and block level.
+  Queue covers 1,086 documents (HTML + PDF), sample = one typical month per year = 97 docs.
+- Deleted `fix_meeting_dates.py`: its block-offset logic mirrored an outdated boundary rule
+  and would have written *wrong* dates (it put 97.499Q on 06-25; truth is 06-18).
+
+**Key decisions / findings**:
+- Date assignment is now **decoupled from parsing by construction** — the only coupling is
+  "here is the text of a block", so changing boundary rules can't silently misalign dates.
+- Two signals carry the whole corpus deterministically: a header date must be weekday-adjacent
+  *and* followed by a gavel time (kills prose like "Saturday, June 16, 2001, at 9:00"), plus
+  the archive's own title date on per-meeting pages. **All 724 pages validate — no LLM tagging
+  was needed**, so none is wired up.
+- Non-Thursday dates are only flagged when the archive doesn't corroborate them; the 139
+  Mon/Tue/Fri items are real special meetings.
+- 42 existing hand-labels carry a date disagreeing with their page (one is a typo,
+  `20001-09-07`); these were **left alone**, not overwritten, and are listed for review.
+
+**Next steps**:
+- Mark the 97-document sample in the boundary app, then `python app.py --score --csv`.
+- Resume labeling: 82 `review` items first, then the 145 `[sample: representativeness]` draws.
+- Decide what to do with the 42 label/page date disagreements — several look like labels
+  attached to the wrong block by the content-matching recovery.
+
+**Files touched**:
+- `code/commission_minutes_processing/assign_meeting_dates.py` — created (the date stage)
+- `code/commission_minutes_processing/date_boundary_app/{app.py,templates,static,README.md}` — created
+- `code/commission_minutes_processing/fix_meeting_dates.py` — deleted (superseded; wrote wrong dates)
+- `code/commission_minutes_processing/paths.py` — modified (data root → this machine's Dropbox)
+- `README.md`, `labeling_app/README.md` — modified (date stage documented; stale 35-field/path fixes)
+- `.gitignore` — modified (date_gold.db, audit CSVs)
+- `labels.db` — 1,890 item dates + 1,873 label records corrected (backup: `labels.db.predateassign.bak`)
+
 ## 2026-06-18 — Finish the SF minutes pipeline: modern-era parsing, corpus repair, corpus-wide extraction, label-QA, and the SF coding manual
 
 **Goal**: Push the (Guren-approved) SF Planning Commission minutes pipeline toward "A+": parse the unparsed modern era, get extraction running corpus-wide with quality checks, tee up the existing-label fixes, and write the SF-specific labeling rules.
@@ -101,7 +332,7 @@
 **Files touched**:
 - `code/commission_minutes_processing/paths.py`, `README.md`, `STRUCTURE.md`, `parse_sf_meeting_minutes.py`, `labeling_app/ingest.py` — modified (per-locality restructure)
 - `output/DATA_STATUS.md` — created (authoritative consolidated status; supersedes census report)
-- `output/minutes_platform_pilot/`, `zoning_envelope_project/`, `bay_area_census/`, `archive_depth_probe/`, `zoning_map_form_probe/`, `preperiod_envelope_probe/`, `hcd_preemption_panel/`, `migration_cliffs_probe/`, `civicplus_depth_probe/` — created (probe CSVs, reports, reproducible scripts, raw per-county provenance)
+- `output/minutes_platform_pilot/`, `zoning_envelope_project/`, `bay_area_census/`, `archive_depth_probe/`, `zoning_map_form_probe/`, `preperiod_envelope_probe/`, `hcd_preemption_panel/`, `migration_cliffs_probe/`, `civicplus_depth_probe/` — created (probe CSVs, reports, reproducible scripts, raw per-county provenance). *All nine now live under `output/bay_area_recon/` (moved 2026-08-30).*
 - Dropbox `data/raw,clean,crosswalks,llm_regulatory_measurement/*` — 77 LFS stubs materialized to real data (not in git)
 - memory `corpus-moved-to-dropbox.md` — updated (per-locality layout note)
 

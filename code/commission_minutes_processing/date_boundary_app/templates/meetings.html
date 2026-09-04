@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meeting-level labelling</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <strong>SF Planning Minutes — meetings</strong>
+    <span id="progress" class="progress"></span>
+    <span class="spacer"></span>
+    <a href="/" class="topbtn">← boundaries</a>
+    <button id="btnExport" title="Write meetings_pilot.csv">Export CSV</button>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <div class="filters">
+        <select id="fStatus">
+          <option value="">all</option>
+          <option value="todo">todo</option>
+          <option value="done">done</option>
+        </select>
+        <select id="fType">
+          <option value="">any type</option>
+          <option value="regular">regular</option>
+          <option value="special">special</option>
+          <option value="joint">joint</option>
+          <option value="closed_session">closed session</option>
+          <option value="">(unset)</option>
+        </select>
+      </div>
+      <ul id="docList"></ul>
+    </aside>
+
+    <main id="main">
+      <div id="docbar">
+        <span id="mtgName">—</span>
+        <span class="spacer"></span>
+        <span id="originBadge" class="pill"></span>
+        <button id="btnSave" class="primary" title="save &amp; next (⌘/Ctrl+Enter)">Save &amp; next</button>
+      </div>
+
+      <div id="hint">
+        The window below is the &plusmn;15 non-blank lines around the marked meeting start.
+        Fields are pre-filled from it — correct what is wrong, then save. The leading lines
+        are the tail of the <em>previous</em> meeting, which is where its adjournment time is.
+      </div>
+
+      <div id="split">
+        <div id="win"></div>
+        <div id="form"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/meetings.js"></script>
+</body>
+</html>

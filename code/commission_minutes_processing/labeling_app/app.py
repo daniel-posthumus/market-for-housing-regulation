@@ -209,12 +209,10 @@ def _anthropic_prefill(block: str, meeting_date: str) -> dict:
     msg = client.messages.create(
         model=model, max_tokens=1500,
         messages=[{"role": "user",
-                   "content": PROMPT_INSTRUCTION + block +
-                   f"\n\n(meeting_date is {meeting_date})"},
+                   "content": PROMPT_INSTRUCTION + block},
                   {"role": "assistant", "content": "{"}])
     obj = parse_obj("{" + msg.content[0].text) or {}
-    if not obj.get("meeting_date"):
-        obj["meeting_date"] = meeting_date
+    obj.pop("meeting_date", None)      # the date stage owns this, not the model
     return obj
 
 
@@ -241,14 +239,19 @@ def api_export():
     only_done = request.args.get("all", "0") != "1"
     con = db()
     rows = con.execute(
-        "SELECT i.year, l.data, l.status FROM items i JOIN labels l "
-        "ON l.item_id=i.id").fetchall()
+        "SELECT i.year, i.meeting_date, i.source_file, l.data, l.status FROM items i "
+        "JOIN labels l ON l.item_id=i.id").fetchall()
     con.close()
     by_year = {}
-    for year, data, status in rows:
+    for year, meeting_date, source_file, data, status in rows:
         if only_done and status != "done":
             continue
-        by_year.setdefault(year, []).append(coerce_record(json.loads(data)))
+        rec = coerce_record(json.loads(data))
+        # meeting_date is not a labeled field — it is attached here from the item, where
+        # assign_meeting_dates.py put it, so the exported record still carries a date.
+        rec["meeting_date"] = meeting_date
+        rec["source_file"] = source_file
+        by_year.setdefault(year, []).append(rec)
     written = {}
     for year, recs in by_year.items():
         out = TRAIN_DIR / f"{year}_labeled.json"

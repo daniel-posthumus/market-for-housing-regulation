@@ -49,14 +49,17 @@ PRELIM_REC_CATS = [
 # ───────────────────────────────── schema ─────────────────────────────────
 SCHEMA = [
     # — identity & panel keys —
-    {"name": "meeting_date", "type": "scalar", "section": "Identity",
-     "help": "ISO date of the hearing, YYYY-MM-DD"},
-    {"name": "jurisdiction", "type": "scalar", "section": "Identity",
-     "help": "Regulating body's city/county", "default": "San Francisco"},
-    {"name": "supervisorial_district", "type": "scalar", "section": "Identity",
-     "help": "Supervisorial district number, e.g. '11' (modern minutes only)"},
-    {"name": "item", "type": "scalar", "section": "Identity",
-     "help": "Agenda item number, e.g. '1', '12a'"},
+    # jurisdiction (always San Francisco), supervisorial_district (recoverable from the
+    # address), and item (agenda number) were dropped 2026-08: not worth labeling — derive
+    # jurisdiction/district post-hoc, and the agenda number carries no analytic signal.
+    #
+    # meeting_date was dropped 2026-08-30 for a different reason: it is not a property of
+    # the item at all, it is a property of the MEETING the item was heard at. A block does
+    # not state its own hearing date — the meeting header above it does — so asking a
+    # labeler to type it is asking them to copy the section header, and getting it from the
+    # item's own text is what produced the 1,890 wrong dates the date stage later repaired.
+    # It is now assigned by `assign_meeting_dates.py` from the item's position in its source
+    # document, and attached at export time from items.meeting_date. Do not re-add it here.
     {"name": "case_number", "type": "scalar", "section": "Identity",
      "help": "Planning case number, e.g. 98.226D, 2022-001764CUA"},
     {"name": "request_type", "type": "enum", "section": "Identity", "choices": REQUEST_TYPES,

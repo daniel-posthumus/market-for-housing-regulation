@@ -8,7 +8,7 @@ confirm. Nothing leaves your machine unless you opt into the Anthropic pre-fill.
 
 All of it — the labeling form, the model prompt, the builder's required keys, and the
 eval metric — is generated from `SCHEMA` in
-[`../extraction_common.py`](../extraction_common.py) (35 fields, grouped: Identity,
+[`../extraction_common.py`](../extraction_common.py) (29 fields, grouped: Identity,
 Location, Zoning & scale, Process, Politics, Conditions). **Add/rename a field there
 and it propagates everywhere** (re-run the app to pick it up). Field types:
 `scalar | text | list | int | enum`.
@@ -16,7 +16,7 @@ and it propagates everywhere** (re-run the app to pick it up). Field types:
 ## One-time setup
 
 ```bash
-cd /Users/danpost/housing_project
+cd ~/market-for-housing-regulation
 source .venv/bin/activate
 
 # 1. Migrate existing hand-labels into the new schema (backs up originals to
@@ -31,6 +31,21 @@ python code/commission_minutes_processing/parse_modern_minutes.py
 cd code/commission_minutes_processing/labeling_app
 python ingest.py
 ```
+
+### Dates are a separate stage
+
+`ingest.py` and `rebuild_review_db.py` stamp each block with a provisional date (the
+source file's first one). **That is not the answer** — a single archive page can bundle
+four meetings. Run the date stage after any ingest or rebuild:
+
+```bash
+python ../assign_meeting_dates.py                    # dry run + date_assignment_audit.csv
+python ../assign_meeting_dates.py --apply --sync-labels
+```
+
+It locates each block back inside its source page by content and reads off the meeting
+header it falls under, so it stays correct no matter how the parser's block boundaries
+change. `../date_boundary_app/` is where you hand-mark meeting starts to check it.
 
 `ingest.py` creates `labels.db` (SQLite) with one row per project block.
 Each gets a pre-filled label: your migrated record if the case number matches
@@ -131,11 +146,14 @@ compute-heavy (a full fine-tune per point) and resumable (skips done points).
 - `templates/index.html`, `static/app.js`, `static/style.css` — the UI.
 - `labels.db` — your labeling store (SQLite; not the training output).
 - `../label_qa.py` — audit/back-fill existing labels (the QA gate above).
+- `../assign_meeting_dates.py` — the date stage (which meeting each block belongs to).
+- `../date_boundary_app/` — hand-mark meeting starts; scores the date stage against them.
 - `../learning_curve.py` — how-many-labels learning curve.
 
 ## Extending to other Bay Area jurisdictions
-The schema already carries `jurisdiction` (defaults to "San Francisco") and
-`supervisorial_district`. To add another city: scrape its minutes, parse into
+`jurisdiction` and `supervisorial_district` are no longer labeled fields (dropped
+2026-08 — derived post-hoc), so a second city is a corpus question, not a schema one.
+To add one: scrape its minutes, parse into
 `<<Project Start>>…<<Project End>>` blocks under `data/meeting_minutes/tagged/<city>/`,
 adjust `ingest.py`'s source glob, and re-ingest. The form, model, and metric need no
 change — that is the point of the shared schema, and what the toy model's

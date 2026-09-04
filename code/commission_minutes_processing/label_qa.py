@@ -49,7 +49,7 @@ from autoextract import extract, _after, _action_enum, derive_request_type, CASE
 # fields (project_descr, modifications, preliminary_recommendation) are intentionally
 # excluded — those need a human.
 BACKFILL_FIELDS = [
-    "case_number", "request_type", "supervisorial_district", "assessor_block",
+    "case_number", "request_type", "assessor_block",
     "lot_number", "type_district", "type_district_descr",
     "height_and_bulk_district", "staff_planner", "action",
     "ayes", "noes", "absent", "recused", "excused", "resolution_or_motion_no",

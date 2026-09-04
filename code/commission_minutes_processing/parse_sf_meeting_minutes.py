@@ -161,6 +161,14 @@ SECTION_HEADER_RE = re.compile(
 # boundary that ends the item above it.
 ADJOURN_RE = re.compile(r"(?im)^[^\S\r\n]*ADJOURN(?:MENT|ED)?\b")
 
+# Draft-minutes-adoption appendage — 1998-era pages tack a minutes-adoption / correction
+# record ("THE DRAFT MINUTES ARE/WERE PROPOSED FOR ADOPTION AT THE REGULAR MEETING …",
+# followed by its own ACTION:/AYES:/ABSENT:) onto the LAST agenda item, so that item
+# swallowed a second, unrelated disposition (e.g. 98.350D/DD in doc 4763 absorbed a
+# correction to Item #10, 97.629C). The marker starts its own line → clean boundary.
+MINUTES_ADOPTION_RE = re.compile(
+    r"(?im)^[^\S\r\n]*THE\s+DRAFT\s+MINUTES\s+(?:\w+\s+){0,3}PROPOSED\s+FOR\s+ADOPTION")
+
 # NEW: Flexible case code/header support: 2-digit or 4-digit years.
 # Example matches: "98.226D", "1999.668B", "2000.271E", "99.123"
 # Suffix allows LOWERCASE letters: some items print the type suffix lowercase
@@ -189,6 +197,23 @@ def _clean(val: str, multiline=False) -> str:
     if multiline:
         val = re.sub(r"\s+", " ", val)
     return val.strip()
+
+def read_page_text(path: Path) -> str:
+    """Text of one scraped archive page, routed on CONTENT rather than file extension.
+
+    The 2000-02-03 page was scraped as a PDF but saved as
+    `20000203-documentid=32.pdf.html`; handing its bytes to the HTML parser produced one
+    23 KB block of `%PDF-1.2 …` binary in place of that meeting's 15 items. Sniffing the
+    magic bytes costs nothing and cannot be fooled by a misleading name.
+    """
+    with path.open("rb") as fh:
+        if fh.read(5).startswith(b"%PDF"):
+            import pdfplumber
+            with pdfplumber.open(path) as pdf:
+                return "\n".join((pg.extract_text() or "") for pg in pdf.pages)
+    return BeautifulSoup(path.read_text(encoding="utf-8", errors="ignore"),
+                         "lxml").get_text("\n")
+
 
 def chop_into_meetings(soup: BeautifulSoup) -> list[tuple[str, str]]:
     """Return [(anchor_name, inner_html)] for each meeting in one page."""
@@ -244,7 +269,8 @@ def add_project_tags(text: str) -> str:
     positions = sorted(set(m.start() for m in CASE_HEADER_RE.finditer(text))
                        | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text))
                        | set(m.start() for m in SECTION_HEADER_RE.finditer(text))
-                       | set(m.start() for m in ADJOURN_RE.finditer(text)))
+                       | set(m.start() for m in ADJOURN_RE.finditer(text))
+                       | set(m.start() for m in MINUTES_ADOPTION_RE.finditer(text)))
     if len(positions) < 2:
         # 2) Fallback: any numbered agenda item
         positions = sorted(m.start() for m in AGENDA_ITEM_RE.finditer(text))

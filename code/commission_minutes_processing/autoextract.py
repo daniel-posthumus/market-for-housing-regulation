@@ -124,18 +124,16 @@ def _prelim_cat(txt: str) -> str:
 
 
 
-def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francisco") -> dict:
+def extract(block: str, meeting_date: str = "") -> dict:
+    """meeting_date is accepted and ignored: it belongs to the meeting, not the block, and
+    is assigned by assign_meeting_dates.py. The parameter stays so existing call sites and
+    the app's prefill path keep working."""
     rec = empty_record()
-    rec["meeting_date"] = meeting_date
-    rec["jurisdiction"] = jurisdiction
 
     cm = CASE_RE.search(block)
     if cm:
         rec["case_number"] = cm.group(1)
         rec["request_type"] = derive_request_type(cm.group(1))
-    im = ITEM_RE.search(block)
-    if im:
-        rec["item"] = im.group(1)
 
     # parcel / districts
     b = re.search(r"Assessor.{0,3}s?\s+Block\s+([0-9A-Z]+)", block, re.I)
@@ -151,9 +149,6 @@ def extract(block: str, meeting_date: str = "", jurisdiction: str = "San Francis
     hb = re.search(r"\b(\d{2,3}-[A-Z])\b(?:\s+Height)?", block)
     if hb:
         rec["height_and_bulk_district"] = hb.group(1)
-    sd = re.search(r"\(District\s+(\d+)\)", block)
-    if sd:
-        rec["supervisorial_district"] = sd.group(1)
 
     # address: an ALL-CAPS street-ish line near the top
     addr = re.search(r"\n\s*([0-9][0-9A-Z\-/ ]{2,40}(?:STREET|AVENUE|BOULEVARD|"

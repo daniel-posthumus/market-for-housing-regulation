@@ -54,7 +54,6 @@ valid (anything else coerces to `other` or empty).
 | Feature | HTML era 1998–2014 | Modern era 2015–present |
 |---|---|---|
 | Case-number format | dot: `98.226D`, `2006.0893C` | dash: `2021-002057DRP` |
-| `supervisorial_district` | **not stated** → leave empty | `(District 2)` in header → fill |
 | Speaker stance `+ / − / =` | usually **absent** → counts stay `0` | usually present → fill counts. Rule is marker-based, not era-based: count only explicit markers, never infer stance |
 | Zoning wording | "… RM-1 (…) **Use District**" | "… RH-2 (…) **Zoning District**" |
 | Source | scraped HTML | PDF (pdfplumber) / text |
@@ -63,9 +62,15 @@ valid (anything else coerces to `other` or empty).
 
 ## 3. Identity fields
 
-### `meeting_date` — ISO `YYYY-MM-DD`
-Comes from the meeting, not the item; the app pre-fills it from the file. Verify it
-matches the hearing date in the header.
+### `meeting_date` — **no longer a labeled field** (dropped 2026-08-30)
+It was never a property of the item: a block does not state its own hearing date, the
+meeting header above it does. Typing it meant copying the section header, and reading it
+off the source file is precisely what produced 1,890 wrong dates. It is now assigned by
+`assign_meeting_dates.py` from the block's position in its source document, shown in the
+app as read-only context, and attached to the exported record from `items.meeting_date`.
+**Label everything else; the date arrives by join.** See
+`code/commission_minutes_processing/date_boundary_app/` for how that assignment is
+validated against hand-marked meeting boundaries.
 
 ### `case_number`
 - Copy the item's **own** planning case number; **drop spaces** (`2022-001764CUA`).
@@ -130,8 +135,9 @@ Rules:
 - **Not** a prior motion cited in the description (e.g. "…under Motion No. 14737" is the
   *cited* one — skip it). This cited-vs-action confusion is a known trap. **[QA]**
 
-### `item`
-Agenda item number as printed (`1`, `12a`, `3b`).
+> **Dropped 2026-08:** `jurisdiction` (always San Francisco — set post-hoc), `item` (agenda
+> number, no analytic signal), and `supervisorial_district` (recoverable from the address)
+> are no longer labeled fields.
 
 ---
 

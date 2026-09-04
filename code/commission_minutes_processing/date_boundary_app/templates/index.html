@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meeting-date Boundaries</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <strong>SF Planning Minutes — meeting-date boundaries</strong>
+    <span id="progress" class="progress"></span>
+    <span class="spacer"></span>
+    <a href="/meetings" class="topbtn" title="Confirm each meeting's type, times, room, roll call and staff">meetings →</a>
+    <button id="btnScore" title="Compare your gold marks against the pipeline's inferred dates">Score vs pipeline</button>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <div class="filters">
+        <label class="chk"><input type="checkbox" id="fSample" checked> one month / year</label>
+        <select id="fYear"><option value="">all years</option></select>
+        <select id="fStatus">
+          <option value="">all</option>
+          <option value="todo">todo</option>
+          <option value="done">done</option>
+        </select>
+      </div>
+      <ul id="docList"></ul>
+    </aside>
+
+    <main id="main">
+      <div id="docbar">
+        <span id="docName">—</span>
+        <span class="spacer"></span>
+        <span id="markCount" class="pill"></span>
+        <button id="btnPrev" title="previous date mention (N)">↑ date</button>
+        <button id="btnNext" title="next date mention (n)">↓ date</button>
+        <button id="btnSave" class="primary" title="save & next document (⌘/Ctrl+Enter)">Save &amp; next</button>
+      </div>
+
+      <div id="marks"></div>
+
+      <div id="hint">
+        Click the line where a meeting <em>starts</em> — the header line carrying its date —
+        and confirm the date. Blocks after that mark belong to that meeting until the next
+        mark. Most documents are one meeting: mark the first header line and move on.
+        <kbd>n</kbd>/<kbd>N</kbd> jump between date mentions, <kbd>m</kbd> marks the
+        current line, <kbd>⌘/Ctrl+Enter</kbd> saves.
+      </div>
+
+      <div id="doc"></div>
+    </main>
+  </div>
+
+  <div id="scoreModal" class="modal hidden">
+    <div class="modal-card">
+      <header><strong>Gold vs pipeline</strong><button id="btnCloseScore">close</button></header>
+      <pre id="scoreBody">…</pre>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

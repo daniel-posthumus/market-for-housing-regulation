@@ -24,10 +24,7 @@ import os
 from pathlib import Path
 
 # Default: the project's data folder on Dropbox (migrated off Google Drive 2026-06-08).
-_DEFAULT_DATA_ROOT = (
-    "/Users/danpost/Library/CloudStorage/Dropbox/"
-    "market-for-housing-regulation/data"
-)
+_DEFAULT_DATA_ROOT = "~/Library/CloudStorage/Dropbox/mfhr_data"
 
 DATA_ROOT = Path(os.environ.get("MFHR_DATA_ROOT", _DEFAULT_DATA_ROOT)).expanduser()
 

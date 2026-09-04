@@ -1,0 +1,917 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+\title{Can the Minutes Pipeline Go Region-Wide?\\
+\large The Bay Area reconnaissance sprint, June 2026 --- consolidated findings from nine probes}
+\author{Dan Post}
+\date{August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\begin{minipage}{0.94\textwidth}
+\small \textbf{Standing document.} The single memo for \texttt{output/bay\_area\_recon/}. It
+replaces the nine per-probe memos that used to sit one per directory; each probe directory keeps
+its CSVs, scripts and \texttt{.md} reports, and \S6 says which file came from where. Where a
+narrative \texttt{.md} report disagrees with its own CSV, the CSV is authoritative and the
+disagreement is recorded in \S7 rather than quietly resolved.
+\end{minipage}}
+\end{center}
+
+\section{The question, the answer, and what is still blocked}
+
+The project studies the \emph{market for housing regulation}: an item-level dataset of
+discretionary land-use decisions built from San Francisco Planning Commission minutes
+(1998--present), read through a model with two margins --- the \emph{by-right envelope}
+$\bar z_j$ a locality allows without a hearing, and the \emph{discretionary} margin $\tau_j$
+applied to everything else. The headline test is substitution: when the state forces the by-right
+margin open, do localities claw restriction back through discretion? That test needs neighbours,
+so this sprint asked one logistical question --- \textbf{can the SF pipeline be extended to the
+roughly 109 land-use regulators of the nine-county ABAG Bay Area?} Nine probes ran in June 2026.
+
+\paragraph{Yes, with one hard qualification and one unmade decision.} Retrieval is tractable: all
+109 localities were surveyed and keyed to a Census GEOID, the region's meeting portals collapse
+to four vendor families covering 87 of the 109, and only \textbf{three} sites region-wide are
+genuinely bot-blocked. Depth is adequate for the window that matters: \textbf{36 localities} have
+minutes reaching 2016 or earlier, straddling the 2017--2023 preemption ramp, and 36 is a floor,
+not a ceiling. The spatial side is better --- \textbf{67 of 109} publish a downloadable zoning
+GIS layer and a statewide layer backstops the rest, so address-to-district matching is a script,
+not an RA-hours problem. The treatment variable is clean: all 25 estimation-sample localities
+carry sourced builder's-remedy exposure dates spanning \textbf{0.0 to 38.4 months}.
+
+The qualification is extraction. The SF heuristics \textbf{do not transfer}: run unmodified on a
+real Daly City minutes document, \texttt{autoextract.extract()} produced two correct fields out
+of roughly 35, and three of the wrong ones were populated with plausible-looking garbage.
+Region-wide expansion is a research programme with a per-jurisdiction (or LLM) extractor and a
+human in the loop, not a scripting exercise.
+
+The unmade decision gates the whole right-hand side: \textbf{does the by-right envelope mean
+``principally permitted use'' or ``no discretionary review of any kind''?} Fremont and San Mateo
+both apply design or site review to uses their codes mark permitted, so the code's ``P'' column
+is strictly wider than the model's ministerial envelope. Nothing downstream is well defined until
+this is settled, and no further data collection will settle it.
+
+\paragraph{Blocked, in order of consequence.} (i) The envelope definition above. (ii)
+\textbf{San Jose}, whose 2005--2018 minutes are confirmed to exist but sit behind Akamai --- a
+budget call, not a measurement. (iii) The \textbf{41 localities with unknown archive depth}, of
+which 12 are CivicPlus sites needing one browser session to read a committee ID. (iv)
+\textbf{Sample width}: both the HCD panel and the pre-period probe were fixed at 25 localities,
+and depth work has since raised confirmed $\leq$2016 breadth to 36. (v) The \textbf{pre-period
+envelope for 10 of 25} sample localities, a per-publisher superseded-version dig rather than
+archival research.
+
+\section{The frame: 109 land-use regulators, keyed and classified}
+
+Everything joins to \texttt{bay\_area\_census/bay\_area\_locality\_census.csv} --- 109 rows
+$\times$ 20 columns, one per entity that actually regulates land use: 101 incorporated cities and
+towns, the eight county governments, and San Francisco as a consolidated reference row (85 typed
+\texttt{city}, 16 \texttt{town}, 8 \texttt{county}). The city frame was supplied rather than
+agent-generated, so completeness is not in question; eight per-county shallow surveys in
+\texttt{raw/} (Alameda 15, Contra Costa 20, Marin 12, Napa 6, San Mateo 21, Santa Clara 16,
+Solano 8, Sonoma 10 $=$ 108 localities) are the provenance for every cell. Each row records the
+regulating body, minutes URL, vendor platform, code host, an access status per side, and --- the
+point of the exercise --- a \emph{solution class}: the single engineering effort that would
+unlock it, which turns a 109-item to-do list into a handful of adapters.
+
+\paragraph{The region collapses into a few adapters.} Minutes side:
+\texttt{granicus\_family\_clean} 41, \texttt{civicplus\_clean} 26, \texttt{custom\_cms} 10,
+\texttt{civicclerk\_modern\_api} 10, \texttt{primegov\_portal} 4, \texttt{civicweb\_portal} 3,
+\texttt{unknown} 3, \texttt{civicplus\_akamai} 2, \texttt{escribe\_portal} 2,
+\texttt{onbase\_portal} 2, \texttt{municode\_meetings\_portal} 2, and one each of
+\texttt{novusagenda\_portal}, \texttt{laserfiche\_portal}, \texttt{granicus\_family\_akamai} and
+\texttt{reference\_done} (San Francisco). Four classes --- Granicus-family, CivicPlus, CivicClerk
+and the custom-CMS tail --- cover \textbf{87 of 109}, and a single Granicus/Legistar adapter
+unlocks 41 on its own: the highest-ROI engineering in the project. Zoning code hosts cluster
+harder: \texttt{municode\_api} 44, \texttt{codepublishing\_clean} 23, \texttt{ecode360\_clean}
+14, \texttt{publiclaw\_clean} 8, \texttt{amlegal\_or\_ecode\_403} 7, \texttt{unknown} 6,
+\texttt{city\_site} 3, \texttt{qcode\_clean} 2, and one each \texttt{encodeplus} and
+\texttt{reference\_done} --- three hosts cover 81 of 109.
+
+\paragraph{Access is largely solved, and the Akamai scare was a myth.} Measured
+\texttt{minutes\_access}: \texttt{clean} 78, \texttt{js\_shell} 16, \texttt{unknown} 10,
+\texttt{akamai\_403} 3, \texttt{unsupported\_platform} 2. The 16 \texttt{js\_shell} rows are not
+blocked --- their content sits behind a modern API (CivicClerk, PrimeGov, IQM2, OnBase, Municode
+Meetings) and needs an API client. Zoning access: \texttt{clean} 94, \texttt{unknown} 14,
+\texttt{akamai\_403} 1. Tractability tier: \texttt{needs\_adapter} 69, \texttt{clean} 35,
+\texttt{access\_blocked} 3, \texttt{unknown} 2. The census was written on the premise that the
+roughly 27 CivicPlus localities might \emph{all} sit behind Akamai --- a class-wide wall. A
+header-only sweep of all \textbf{28} CivicPlus hosts with an ordinary browser User-Agent (no
+evasion, no header tricks, no IP rotation) found \textbf{25 clean}, \textbf{2 Akamai 403s}
+(Fremont, Portola Valley) and \textbf{1 stale-URL 404} (Antioch, behind Cloudflare --- a wrong
+path, not a bot wall). Akamai is a per-site subscription, not a platform property; counting San
+Jose, the region has \textbf{three} genuinely blocked sites. The working retrieval path was
+demonstrated end-to-end: fetch \texttt{/AgendaCenter} with a normal User-Agent, parse the
+embedded \texttt{ViewFile/Minutes/\_\dots} links, walk \texttt{/AgendaCenter/PreviousVersions}
+for history. The 19\,KB Saratoga minutes PDF in \texttt{bay\_area\_census/} proves the path
+yields a real document.
+
+\paragraph{The join key is solid; the body names are not.} All 109 rows carry a real GEOID and
+zero are \texttt{to\_verify}; names were never the join, because name joins fail silently here
+(NZLUD stores Redwood City as ``Redwood''). Row confidence: \texttt{med} 64, \texttt{high} 41,
+\texttt{low} 4. Minutes are recorded as posted for 104 localities, \texttt{unknown} for 4,
+\texttt{sparse} for 1; none was confirmed paper-only, so there is no digitization emergency, and
+the five whose platform could not be identified are Colma, Monte Sereno, Newark, Fairfax and San
+Rafael. The regulating body is often \emph{not} a ``Planning Commission'' --- Planning Board
+(Alameda), Planning \& Zoning Commission (Albany), Environmental Planning Commission (Mountain
+View), Planning \& Transportation Commission (Palo Alto, San Carlos), a combined Planning
+Commission and Board of Zoning Adjustments (San Leandro), Permit Sonoma --- so cross-jurisdiction
+matching on body name will break.
+
+\paragraph{Left open here.} Ten non-CivicPlus \texttt{minutes\_access = unknown} rows were never
+probed; six zoning hosts and three minutes platforms remain \texttt{unknown}; eight localities
+run dual or migrating systems where the authoritative record is not established (Foster City, San
+Pablo, Menlo Park, El Cerrito, Pinole, Union City, Brentwood, Santa Clara County); Antioch's
+correct agenda URL is still wrong in the CSV; and a per-host terms-of-service check before any
+bulk run remains prudent.
+
+\section{Minutes: how far back, and can we fetch them}
+
+Four probes answer one question. \texttt{archive\_depth\_probe/archive\_depth.csv} (109 $\times$
+10) is the post-merge authority on depth; \texttt{civicplus\_depth\_probe/civicplus\_depth.csv}
+and \texttt{migration\_cliffs\_probe/migration\_cliffs.csv} feed corrections into it;
+\texttt{minutes\_platform\_pilot/} is the only probe that touched an actual document.
+
+\subsection{Depth distribution and the panel window}
+
+\textbf{Pass 1} read each of the 109 archives as a normal browser client --- no downloads,
+time-boxed, \emph{unknown over guess} --- and left 55 of 109 unknown, mostly because JS-shell
+portals do not put depth in static HTML. \textbf{Pass 2} (\texttt{api\_probe.py}, 22 live jobs)
+queried each portal's own API for metadata only: Legistar \texttt{events} filtered on
+\texttt{EventMinutesFile ne null}, CivicClerk \texttt{/v1/Events} scanning
+\texttt{publishedFiles} for \texttt{type="Minutes"}, PrimeGov \texttt{ListArchivedMeetings}, and
+the Granicus minutes-mode RSS feed (capped at roughly 80--100 items). \textbf{The typing rule} is
+what makes the numbers mean anything: a year counts only if the API returned an actual
+Minutes-type file --- agendas, packets, video and year-dropdown ranges do not count.
+
+\begin{center}
+\begin{tabular}{lrr@{\qquad}lrr}
+\toprule
+\textbf{Earliest minutes year} & \textbf{Count} & \textbf{Share} &
+\textbf{Common start} & \textbf{Localities} & \textbf{high/med} \\
+\midrule
+$\leq$ 2005      & 6  & 5.5\%  & $\leq$ 2014 & 29 & 22 \\
+2006--2010       & 11 & 10.1\% & $\leq$ 2016 & 36 & 29 \\
+2011--2015       & 15 & 13.8\% & $\leq$ 2018 & 45 & 37 \\
+2016 and later   & 36 & 33.0\% &             &    &    \\
+\texttt{unknown} & 41 & 37.6\% &             &    &    \\
+\midrule
+\textbf{Known depth} & \textbf{68} & \textbf{62.4\%} & & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A 2016-start panel therefore has enough co-submarket breadth for a strategic-interaction reaction
+function around the ramp, and 36 is a \textbf{floor}: the 41 \texttt{unknown} rows are
+overwhelmingly a method limit (JS or API-gated portals), not proven-shallow archives, so resolving
+them can only add localities. Deep history is the opposite story --- only 6 localities reach 2005
+or earlier and only 17 reach 2010 or earlier --- so long-run ``ratchet'' dynamics are not
+supported by the online record. Supporting distributions: confidence \texttt{high} 32,
+\texttt{med} 23, \texttt{low} 54; continuity \texttt{continuous} 48, \texttt{gaps} 3 (Cloverdale
+2012 missing, Fairfax 2025 missing, Daly City sparse), \texttt{unknown} 58; type basis
+\texttt{typed\_minutes} 42, \texttt{type\_ambiguous} 30, \texttt{agendas\_only} 2,
+\texttt{unknown} 35.
+
+Of the 55 rows in \texttt{archive\_depth\_api.csv} (55 $\times$ 11),
+\texttt{minutes\_type\_confirmed} is \texttt{yes} for 20, \texttt{no\_api} for 34,
+\texttt{absent} for 1. Nineteen resolved to a specific verified year: Alameda 2005; El Cerrito
+and San Carlos 2008; Albany and Daly City 2009; Oakland and Burlingame 2014; Hayward, Emeryville
+and Sonoma County 2015; Santa Rosa 2016; Hercules, Napa and San Mateo County 2017; Pinole and San
+Mateo 2019; Napa County 2021; Contra Costa County and Pleasanton 2023. The twentieth ``yes'' is
+the city of Sonoma, whose CivicWeb portal confirms a Minutes bucket labelled ``prior to 2017''
+without exposing the year. The one \texttt{absent} is \textbf{Cupertino}: Legistar holds events
+with status Final back to 2005 but \texttt{EventMinutesFile} is null throughout, so its minutes
+live elsewhere. Platform mix of the 55: Legistar/Granicus 20, CivicPlus 14, CivicClerk 5, custom
+CMS 4, PrimeGov 3, CivicWeb 3, Municode Meetings 2, and one each of eScribe, OnBase, NovusAgenda
+and other.
+
+\subsection{The agenda trap}
+
+Year-dropdown floors systematically overstate depth, because dropdowns span \emph{agendas} or
+events, which predate posted minutes. Hard checks against Legistar \texttt{EventMinutesFile}:
+
+\begin{center}
+\begin{tabular}{lccl}
+\toprule
+\textbf{Locality} & \textbf{Dropdown floor} & \textbf{Actual minutes} & \textbf{First minutes record} \\
+\midrule
+Oakland    & 2000 & \textbf{2014} & 2014-09-18 \\
+Santa Rosa & 1999 & \textbf{2016} & 2016-02-02 \\
+Hayward    & 2013 & \textbf{2015} & --- \\
+Alameda    & 2005 & 2005 (confirmed) & 2005-01-12 \\
+Emeryville & 2015 & 2015 (confirmed) & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Oakland alone was a 14-year overstatement. Any remaining non-API dropdown floor among the 68
+known rows is an \emph{upper bound} until API-confirmed.
+
+\subsection{CivicPlus: the method works, the coverage does not}
+
+CivicPlus AgendaCenter exposes no depth API, leaving 14 localities as the largest unresolved
+block --- but it does have a server-rendered Search endpoint answering a date-range query in plain
+HTML (\texttt{/AgendaCenter/Search/?term=\&CIDs=\{cid\}\&startDate=\dots\&endDate=\dots}) and
+returning links of the form \texttt{ViewFile/Minutes/\_YYYYMMDD-N}. Because the document type is
+\emph{in the path}, the read is definitively minutes-typed --- the property dropdown reads lacked,
+and the reason the agenda trap cannot bite here. Regex the planning body's numeric \texttt{CID}
+out of \texttt{/AgendaCenter}, query Search, take the minimum year in \texttt{ViewFile/Minutes}
+links, collecting agenda years separately so an agenda/minutes gap is flagged rather than mistaken
+for depth. The first pass used one wide 2004--2018 window; the second walked single probe years
+(2008, 2010, 2012, 2014, 2016), avoiding truncation and giving a crude continuity check.
+
+\textbf{Result: 2 of 14 resolved.} \textbf{Campbell 2006} is the win --- minutes-typed files
+continuously 2006--2016 under \texttt{CID=6}, with 2004 empty: a clean verified floor, and one of
+only six Bay Area localities reaching 2006 or earlier. \textbf{Los Altos Hills 2022} is a floor,
+not a depth --- static \texttt{ViewFile/Minutes} links for 2022--2026 with the deeper archive
+still gated, recorded at \texttt{med} confidence flagged
+\texttt{static\_html\_floor(deeper\_may\_exist)}. The other twelve --- Antioch, Atherton, Cotati,
+Half Moon Bay, Millbrae, Monte Sereno, Oakley, Pleasant Hill, San Anselmo, San Pablo, Windsor,
+Yountville --- run the newer \textbf{CivicEngage} generation, which renders the committee list
+client-side: the \texttt{CID} never appears in static HTML and \texttt{PreviousVersions} returns
+404, so the query cannot be formed. That is a \emph{rendering} limit, not an access one (HTTP 200
+throughout, hosts confirmed unblocked by the Akamai sweep), so all twelve are honest
+\texttt{unknown} flagged \texttt{civicengage\_js\_gated(CID\_not\_static)} --- explicitly
+\textbf{not} \texttt{minutes\_absent}. One browser-rendered session reading each \texttt{CID} out
+of the rendered DOM finishes the job; it is cheap and not a blocker, since the twelve are mostly
+small cities outside the estimation panel.
+
+\subsection{Migration cliffs: a change of address, not a loss of data}
+
+Three jurisdictions showed minutes apparently starting around \emph{2024} because they migrated
+their portal that year --- and they are among the largest regulators in the set (San Jose is the
+region's biggest city; the two counties regulate all unincorporated territory), so a 2024 start
+would have excluded them from the ramp panel. Each prior platform was identified from redirects,
+clerk pages and URL conventions, tested for whether the legacy host still serves, and read at
+listing level using minutes-only feeds (Granicus \texttt{ViewPublisherRSS.php?mode=minutes}) or
+year-filtered calendars (IQM2). \textbf{All three cliffs were domain or view migrations. 3 of 3
+gain deep history.}
+
+\textbf{Marin County --- 2005, high confidence}: Board of Supervisors agendas, minutes and video
+have been online since 2005 on the legacy Granicus view (\texttt{view\_id=33}), and a separate
+older archive at \texttt{marincounty.org/depts/bs/oldmeetingarchive} carries 1995--2005 agendas
+and minutes without video. \textbf{Santa Clara County --- 2008, medium}: the legacy IQM2 instance
+at \texttt{sccgov.iqm2.com/Citizens/} is still up and returns Board Minutes links back to 2008,
+with the CSV explicit that the type is strongly indicated but \emph{not} document-verified and
+that the archive likely extends earlier. \textbf{San Jose --- 2005 at the listing, documents
+gated}: the legacy Granicus minutes RSS (\texttt{view\_id=51}) lists \textbf{80 minutes items
+spanning 2005--2018}, but the MinutesViewer link 302-redirects to the \texttt{sanjoseca.gov}
+DocumentCenter, which is Akamai-blocked; recorded as
+\texttt{prior\_archive\_reachable = listing\_only} with an explicit instruction not to attempt to
+defeat the block.
+
+All three merged into \texttt{archive\_depth.csv}; together with Campbell 2006 and Los Altos
+Hills 2022 they took the confirmed $\leq$2016 panel \textbf{from 32 to 36 localities}. The lesson
+generalises --- a portal migration is a \emph{visible-archive cliff}, and any locality whose
+depth begins at a suspiciously round recent year should be checked against its prior platform ---
+but only these three were investigated, so other cliffs may sit undetected inside the 41
+\texttt{unknown} rows. Both surviving legacy archives are decommissioning candidates, so
+retrieving Marin and Santa Clara County history is time-sensitive.
+
+\subsection{The retrieval and extraction pilot: the one probe that touched a document}
+
+The earlier 14-city pilot (Daly City, South San Francisco, San Mateo, Redwood City, San Bruno,
+Burlingame; San Jose, Palo Alto, Mountain View, Sunnyvale; Oakland, Berkeley, Fremont, Richmond)
+is superseded in \emph{coverage} by the census but is the only source for the sprint's most
+consequential finding.
+
+\paragraph{No single-vendor scraper covers the set.} The 14 cities span six stacks:
+Legistar/Granicus $\times 6$, CivicPlus $\times 4$, CivicClerk $\times 1$, PrimeGov $\times 1$,
+Hyland OnBase $\times 1$, eScribe $\times 1$, plus Berkeley on a custom CMS with Laserfiche.
+Berkeley and the City of San Mateo could not be cleanly classified, and two platforms present ---
+eScribe and Hyland OnBase --- are unsupported by \texttt{civic-scraper} in any form.
+
+\paragraph{One of three pilot cities yielded minutes.} \emph{Daly City} succeeded, but not
+through \texttt{civic-scraper}, which targets the legacy CivicClerk ASPX portal while Daly City
+runs the modern \texttt{*.api.civicclerk.com} React backend. The modern OData API does work: an
+\texttt{Events} query filtered on \texttt{categoryName eq 'Planning Commission'} returns events
+whose \texttt{publishedFiles[]} carries typed Agenda, Minutes and Agenda Packet entries,
+downloadable via \texttt{GetMeetingFileStream} --- the pattern later reused for the roughly ten
+CivicClerk localities region-wide. \emph{San Jose} failed on every route: its Legistar Web API
+returned complete metadata (14 Planning Commission meetings for the first half of 2024, matching
+the second-and-fourth-Wednesday schedule) but every one has \texttt{EventMinutesFile = False} and
+status ``Draft'', and the Granicus route dead-ends at the Akamai-blocked DocumentCenter.
+\emph{Fremont} failed on access: \texttt{civic-scraper} returned \textbf{zero assets}, and
+\texttt{/AgendaCenter}, \texttt{/government/agenda-center} and the RSS feed all return HTTP 403.
+
+\paragraph{A silent-gap risk: publishing minutes is not the same as holding meetings.} Of the
+\textbf{12} Daly City Planning Commission meetings in 2024, the API exposed Agenda $\times 11$,
+Agenda Packet $\times 5$, Minutes $\times 1$ --- \emph{one} minutes document for the year, so an
+unattended backfill would report success and return essentially nothing. Alongside it, minutes
+are approved one meeting later and attached to the \emph{following} meeting's packet (the 5
+December 2023 minutes arrived under the 6 February 2024 packet), so a backfill must key minutes
+to meeting $N-1$. The same pattern recurs in the census, where Campbell and Healdsburg show
+agendas but no posted minutes.
+
+\paragraph{The central finding: the SF extractor does not transfer.} Run unmodified on the real
+Daly City minutes, \texttt{autoextract.extract()} produced, out of roughly 35 schema fields,
+\textbf{two} correct ones --- \texttt{ceqa\_determination} (\texttt{eir}; an FEIR was before the
+commission) and \texttt{item} (1). The rest were empty or confidently wrong:
+
+\begin{center}
+\small
+\begin{tabular}{p{0.17\textwidth} p{0.15\textwidth} p{0.24\textwidth} p{0.32\textwidth}}
+\toprule
+\textbf{Field} & \textbf{Extractor} & \textbf{Truth} & \textbf{Failure mode} \\
+\midrule
+\texttt{case\_number} & \texttt{21-14998} & \texttt{GPA-04-21-14998} &
+SF regex grabbed the tail of the case number \\
+\texttt{units\_proposed} & \texttt{235} & \texttt{1,235} &
+the thousands comma split the match \\
+\texttt{parking\_spaces} & \texttt{5} & \texttt{34.5} &
+the decimal point split the match \\
+\texttt{project\_address} & \texttt{333 90Th Street} & city-hall boilerplate &
+grabbed the page footer \\
+\texttt{request\_type} & empty & GPA $+$ PD $+$ subdivision $+$ design review &
+SF uses case-number \emph{suffixes}; Daly City uses \emph{prefixes} \\
+\texttt{action} & empty & ``voted 4-0 \dots\ recommend approval'' &
+no SF-style \texttt{ACTION:} label in the document \\
+\texttt{assessor\_block} & empty & \texttt{APN 091-211-230} &
+Daly City writes APN, not ``Assessor's Block'' \\
+vote, speakers, stance & empty / 0 & 4-0 vote; no stance markers &
+SF's post-2015 stance markers do not exist here \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The dangerous rows are the middle three: an empty field announces itself; a populated address,
+unit count and parking count that are all silently wrong do not. The operational conclusion,
+carried forward as a \emph{gating quality step}: the SF heuristics must never run unattended on
+another jurisdiction, and any multi-jurisdiction build must first validate an extractor on real
+Granicus or CivicClerk minutes \emph{with human review}.
+
+\paragraph{Vocabulary does not transfer either.} The proposed mapping layer
+(\texttt{jurisdiction\_mappings.py}, additive, not wired into the pipeline) covers Daly City
+only: of its 13 \texttt{request\_type} entries, five are clean synonyms (general plan amendment,
+GPA, rezoning, conditional use, variance) and eight are flagged judgment calls; of seven
+\texttt{action} entries, five are clean and two flagged. Three flagged cases matter
+substantively. \textbf{``DR'' means different things in different cities}: in SF it is
+\emph{Discretionary Review} --- review of a project that is otherwise by right, precisely the
+behaviour the model is about --- while in Daly City it is \emph{Design Review}, so mapping on the
+letters would be exactly wrong. \textbf{Four common suburban request types have no canonical
+enum} --- Planned Development, Major Subdivision, Precise Plan, Development Agreement --- and all
+collapse to \texttt{other}; they recur across California suburbs, so it is a schema question. And
+\textbf{``recommend approval'' is not approval}: on legislative items the Daly City commission
+only recommends to the City Council, while the SF \texttt{action} enums assume a final
+disposition. The pilot document is exactly that case --- a 4-0 vote to \emph{recommend} approval
+of a general plan amendment, rezoning, subdivision, design review and EIR certification for a
+\textbf{1,235-unit} project.
+
+\paragraph{Tooling limits, recorded because they will recur.} \texttt{civic-scraper} v1.1.0 has
+four defects that bit here: its CLI auto-routes only CivicPlus and DigitalTowPath;
+\texttt{LegistarSite} crashes in \texttt{pytz.timezone(None)} unless a timezone is passed; its
+Legistar events call fetches the current year only (\texttt{events(since=2024)} returned 180
+events all dated 2026), so backfill needs the Legistar Web API with date filters; and its
+CivicClerk and CivicPlus scrapers target older portal versions than several Bay Area cities run.
+
+\section{Zoning: the current envelope and the pre-period envelope}
+
+\subsection{Spatial form: a script, not an army of RAs}
+
+\texttt{zoning\_map\_form\_probe/zoning\_map\_form.csv} (109 $\times$ 8) classifies the
+\emph{form} in which each locality publishes its current spatial zoning --- deliberately not what
+the zoning says --- looking in order for a downloadable GIS layer, a viewer with no obvious
+download, a static PDF map, or nothing.
+
+\begin{center}
+\begin{tabular}{lrrl}
+\toprule
+\textbf{\texttt{best\_form}} & \textbf{Count} & \textbf{Share} & \textbf{Meaning} \\
+\midrule
+\texttt{gis\_layer}        & 67 & 61.5\% & downloadable shapefile / GeoJSON / feature service \\
+\texttt{gis\_viewer\_only} & 28 & 25.7\% & interactive viewer, no obvious download \\
+\texttt{pdf\_map}          & 13 & 11.9\% & static zoning-map PDF only \\
+\texttt{none\_found}       & 1  & 0.9\%  & nothing located (Pacifica) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{download\_apparent}: yes 71, no 37, unknown 1. Confidence: high 60, med 46, low 3
+(Hillsborough, San Bruno, Pacifica). The 13 PDF-only localities --- Atherton, Clayton, Colma,
+Daly City, Healdsburg, Hercules, Millbrae, Monte Sereno, Pinole, Portola Valley, San Pablo,
+Saratoga, Woodside --- are all small, none a large regulator. Within \texttt{gis\_layer},
+\textbf{55 are native} city, county or consortium sources and \textbf{12 are covered only by the
+statewide fallback}: twelve Alameda County cities (Alameda, Albany, Dublin, Emeryville, Fremont,
+Hayward, Livermore, Newark, Piedmont, Pleasanton, San Leandro, Union City) whose own portals were
+never separately checked --- verifiable from the file, since exactly 12 \texttt{gis\_layer} rows
+carry a \texttt{gis.data.ca.gov} URL. Three regional or county sources close 26 localities on
+their own: MarinMap (all 12 Marin localities, 11 rows via \texttt{gis.marinpublic.com} plus the
+county's own), the Solano Regional GIS Consortium (all 8 Solano localities on one ArcGIS
+organisation), and Napa County GIS (all 6 Napa localities, 5 on \texttt{gis.napacounty.gov} plus
+the city of Napa's own). Contra Costa, San Mateo, Santa Clara and Sonoma county GIS cover
+unincorporated areas only; their cities largely self-publish. Above it all sits the CA Statewide
+Zoning layer (Gov-OPR, \texttt{gis.data.ca.gov}), one downloadable layer plus REST, reported as
+covering \textbf{535 of 539} California jurisdictions.
+
+Spatial matching is therefore a \textbf{scriptable problem}: native layers where they exist, the
+statewide layer as gap-filler for the 28 viewer-only, 13 PDF-only and 1 none-found localities, so
+no locality is a dead end for automation --- decisively better than the minutes side, where
+roughly 38\% still have unverified depth. \textbf{The one substantive risk} is that
+the statewide layer is a \textbf{2022--23 aggregated snapshot} of varying per-city fidelity,
+underpinning automation for about \textbf{54 of 109} rows once the 12 unchecked Alameda cities
+are counted; since the by-right envelope is the load-bearing right-hand-side variable, it should
+be spot-checked against each city's own viewer or PDF --- accept it as the universal first cut,
+or budget native extraction for the roughly 42 localities that natively offer only a viewer or a
+PDF. Open, cheapest first: confirm feature-service endpoints behind the 28 viewer-only sites (the
+true \texttt{gis\_layer} count is likely above 67; the exceptions are El Cerrito, Lafayette and
+Martinez on the non-ArcGIS ``CommunityView'' product); check the 12 Alameda cities natively;
+resolve the three low-confidence identifications. Caught in passing: the brief's claim that ``20
+rows already mention GIS'' in the census was a substring artefact --- the ``gis'' inside
+Le\emph{gis}tar --- so all 109 were probed fresh. Noted but not acted on: Stanford EarthWorks
+holds a \textbf{historical 2014 version of the San Mateo County planning-zones layer}, a pointer
+for the deferred historical-envelope workstream.
+
+\subsection{What the code says: NZLUD, code hosts, and the extraction pilot}
+
+\texttt{zoning\_envelope\_project/} worked the same 14-city set as the minutes pilot, asking
+whether a machine-readable by-right dataset exists, whether the envelope can be read out of
+municipal codes at acceptable cost, and whether the preemption shock can be dated: mostly no, yes
+but not mechanically, and yes cleanly.
+
+\paragraph{NZLUD covers 4 of 14, and only pre-preemption.} The National Zoning and Land Use
+Database (Mleczko and Desmond, 2023) is an NLP-derived reading of municipal codes collected
+2019--2022, replicating the 2006 Wharton WRLURI frame plus 210 supplemental municipalities; the
+full release in \texttt{\_source\_data/nzlud\_muni.csv} is 2,639 municipalities $\times$ 77
+columns, and its key field \texttt{mf\_per} is the proportion of residential districts (including
+mixed-use) permitting multifamily housing \emph{by right} --- close to the margin the model
+needs. Matching on Census place FIPS yields exactly four rows. The ten absent cities include most
+of the Peninsula and every East Bay city except Fremont --- Daly City, South San Francisco, San
+Mateo, San Bruno, Palo Alto, Mountain View, Sunnyvale, Oakland, Berkeley, Richmond --- a direct
+consequence of the WRLURI-2006 frame, which no amount of waiting will fix.
+
+\begin{center}
+\begin{tabular}{lrrrrl}
+\toprule
+\textbf{City} & \texttt{mf\_per} & \texttt{zri} & \texttt{height\_ft\_median} &
+\texttt{parking\_median} & \textbf{Snapshot} \\
+\midrule
+Burlingame   & 0.667 & 2.925 & 50 & 2 & 2021-02-19 \\
+Redwood City & 0.600 & 2.533 & 50 & 1 & 2019-10-24 \\
+Fremont      & 0.467 & 2.537 & 30 & 1 & 2019-10-15 \\
+San Jose     & 0.389 & 3.318 & 45 & 1 & 2021-12-19 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Every snapshot predates the 2023--2026 sixth-cycle Housing Element updates and predates or
+coincides with the SB-9, SB-35 and SB-423 rezonings, so NZLUD is best read as a
+\emph{pre-preemption} envelope: a limitation for measuring today's rules, an opportunity for a
+two-period design. The one available spot-check is close but not identical --- Fremont's Title 18
+codes multifamily as \texttt{P} in R-3 and R-G and prohibited in R-1 and R-2, a naive
+base-residential by-right share of $2/4 = 0.50$ against NZLUD's $0.467$, the gap being a
+denominator disagreement (NZLUD counts mixed-use districts as residential) rather than an obvious
+error in either. San Jose could not be checked at all because Municode blocked the read; its
+$0.389$ is unverified, and its Title 20 uses an \texttt{S} $=$ Special Use Permit symbol easy to
+misread as by-right.
+
+\paragraph{Half the code hosts block bots.} All 14 codes were located: Municode $\times 6$,
+eCode360 $\times 3$, public.law $\times 2$, QCode $\times 2$, American Legal $\times 1$,
+CodePublishing $\times 1$ (South San Francisco is ambiguous between QCode and eCode360 and is
+counted in both). Only \textbf{CodePublishing and public.law} returned real code text to a plain
+GET: Municode returns HTTP 200 with a roughly 6\,KB Angular shell and zero code text (the
+ordinance loads from a separate JSON API), while American Legal, eCode360 and Berkeley's host
+return 403 outright. This matches the NZLUD authors' own note that they could not use web
+scraping and downloaded codes manually.
+
+\paragraph{Two structural traps, both fatal to a naive parser.} Fremont's code is a consolidated
+use matrix defining its own symbols (\texttt{P} permitted, \texttt{C} conditional use permit,
+\texttt{Z} zoning-administrator permit, \texttt{--} prohibited) and parsed cleanly. San Mateo
+splits permitted uses (\S27.22.010) from special uses (\S27.22.020) into \emph{separate sections
+per district}, which a generic table parser would miss entirely; worse, \S27.22.055 says building
+height ``shall not exceed the standards set forth on the Building Height Plan of the General
+Plan'' --- \textbf{the height limit is not in the code text at all}. Height cannot be
+text-scraped for such cities, which also makes NZLUD's height fields unreliable wherever a code
+defers to a map. Both pilot cities carry unresolved overlay districts (Fremont: TOD, hillside,
+housing-element-sites; San Mateo: two-unit and mixed-use residential).
+
+\paragraph{The WRLURI benchmark disagrees with NZLUD.} \texttt{wrluri\_crosscheck.csv} (14 rows
+$\times$ 8 columns) shows NZLUD covering 4 of 14, WRLURI 2006 covering the \emph{same} 4 of 14
+(confirming the inherited frame), WRLURI 2018 covering 1 of 14 usable (Sunnyvale, 0.63), and all
+three overlapping on \textbf{zero} cities. Over the four-city overlap the indices are
+rank-inverted: Spearman between WRLURI 2006 and NZLUD \texttt{zri} is $-1.00$ where the expected
+sign is positive, and between WRLURI 2006 and \texttt{mf\_per} is $+0.40$ where the expected sign
+is negative, with San Jose driving it --- least restrictive of the four by the 2006 survey, most
+restrictive by NZLUD's code index. This is neither validation nor refutation: $n=4$ makes a
+$\pm 1.00$ correlation nearly meaningless, the vintages are 13--15 years apart across
+California's entire preemption shift, and the constructs differ by design. The takeaway is a
+caution --- per-cell measures such as \texttt{mf\_per} and height are more defensible to carry
+forward than either composite index.
+
+\subsection{The pre-period envelope: 15 of 25 recoverable}
+
+The difference-in-differences needs a \emph{before} picture of the envelope, but codes and zoning
+maps are published as \emph{current} documents, silently overwritten. The Wayback probe asks only
+whether a circa-2016 envelope can be \emph{located and dated} cheaply across the 25-locality
+sample. In-window means a Wayback CDX capture timestamped \textbf{2014--2018}, and the capture
+timestamp \emph{is} the vintage evidence --- the probe never infers a date from content. Two forms
+count: an archived municipal-code page (text form, whose use table is the envelope) and an
+archived zoning-map PDF (spatial form). Deep code URLs were broadened to the publisher's
+code-library root so prefix matching catches any in-window capture, and basenames were verified by
+hand because shared publisher hosts produce cross-jurisdiction matches. The standing rule is
+\texttt{none\_found} over a guess.
+
+\textbf{A usable in-window pre-period source exists for 15 of 25 localities (60\%):} 11 archived
+code-page captures, 3 archived zoning-map PDFs, and San Francisco (in hand via the project's own
+pipeline plus DataSF historical zoning layers). The remaining 10 are 9 \texttt{none\_found} plus
+Burlingame, whose only source is an NZLUD 2019--21 proxy that is post-SB-35 and therefore not a
+valid pre-period at all. \texttt{confidence} reads high for exactly 15 rows and low for 10, and
+the CSV contains \textbf{zero live false-positive source URLs}. Rejected in the first pass: an
+Oro Valley, Arizona PDF on the shared \texttt{codepublishing.com} host that had polluted both
+Solano County and Walnut Creek; Palo Alto's \texttt{Symposium.pdf}; and an SF SoMa area guide.
+Two more were killed in a second pass --- \textbf{San Ramon}, whose 2015 \texttt{rezoning.pdf} is
+a seven-page ``Rezoning to P-1 Submittal Requirements'' \emph{application}, not the citywide map
+(a lead survives: a \texttt{zoning\_ordinance\_map} page captured 2018, but it 302-redirects to
+EncodePlus and the underlying map's vintage is unverified); and \textbf{Daly City}, whose 2014
+``Zoning Ordinance.pdf'' sits under a General-Plan-Update (\texttt{/gpu/}) path and could not be
+confirmed adopted (Wayback returned 404/503). Both were reset to \texttt{none\_found}. Solano
+County (2015) and Walnut Creek (2014) survived as legitimate CodePublishing code-page captures;
+Palo Alto had already been reset.
+
+The three surviving spatial anchors are the cleanest vintages --- Sunnyvale 2014, Tiburon 2015 (a
+map effective 2006-03-31 still posted in-window, so the circa-2016 envelope was stable), San
+Leandro 2016 --- while the code-page captures are 2014 (San Carlos, Walnut Creek), 2015 (Solano
+County), 2017 (Alameda, Mountain View, Oakland, Sonoma County) and 2018 (Clayton, El Cerrito,
+Hayward, Milpitas). That 2017--2018 cluster is comfortably before SB-9, SB-423 and the builder's
+remedy but \emph{after} SB-35 (2017), so for an SB-35-specific margin those are ``early-ramp''
+rather than true pre-period and the 2014--2016 PDFs are the cleaner anchors. \textbf{The gap is
+patterned, not random}: the 9 \texttt{none\_found} localities cluster by code publisher ---
+eCode360 (Albany, Emeryville, Santa Rosa), American Legal \emph{legacy} platform (Palo Alto,
+Fairfax, whose 2016 code sits on \texttt{library.amlegal.com} while the probe queried
+\texttt{codelibrary.amlegal.com}), public.law (Petaluma), a city-site PDF case (Piedmont), plus
+the two killed above --- so the fix is a per-publisher amendment/superseded-version dig, a bounded
+build task. But the whole probe is downstream of the unmade envelope-definition decision: located
+sources are worth little until the extraction target is defined.
+
+\section{The treatment variable: builder's-remedy exposure}
+
+\texttt{hcd\_preemption\_panel/hcd\_preemption\_panel.csv} (25 $\times$ 10) is the ``preemption
+ramp'' variable that dates the shock and supplies the instrument for the reaction-function
+estimation. The measure is exposure to California's \textbf{builder's remedy}: while a locality
+lacks a Housing Element found in substantial compliance by HCD it cannot deny qualifying
+affordable projects on zoning or general-plan grounds, so exposure runs from the statutory
+adoption deadline to the HCD compliance finding --- rule-driven timing plausibly orthogonal to a
+locality's contemporaneous demand shock.
+
+The authoritative input is HCD's \emph{Housing Element Review and Compliance Report}
+(\url{https://data.ca.gov/dataset/housing-element-compliance-report}), pulled unmodified to
+\texttt{\_source\_data/hcd.csv} --- 539 rows $\times$ 10 columns, one per California jurisdiction,
+last updated 2026-06-05 --- filtered to \texttt{Record Type} $=$ \emph{Adopted}; prohousing status
+comes from HCD's \emph{Prohousing Designated Jurisdictions} list as of 2026-03-26. The sample is
+the 25 localities with a verified minutes start year of 2016 or earlier at high/medium confidence.
+Two date conventions are deliberately not collapsed: \texttt{he\_adoption\_date} (HCD's \emph{Date
+Received}, a proxy for self-adoption) and \texttt{hcd\_certification\_date} (HCD's \emph{Reviewed
+Date}, the formal finding). With the ABAG sixth-cycle deadline $T_0 = \text{2023-01-31}$,
+\[
+  \text{exposure}_j \;=\; \max\!\big\{0,\; \text{months}\big(T_0 \rightarrow
+  \text{HCD compliance finding}_j\big)\big\},
+\]
+with $\max\{0, \text{months}(T_0 \rightarrow \text{HE received}_j)\}$ recorded alongside;
+localities certified before the deadline are floored at zero, not given negative exposure.
+
+\paragraph{The variable is clean and the variation is strong.} All 25 matched an HCD
+adopted-element record, all 25 carry \texttt{confidence = high} and sourced dates, and there are
+no \texttt{no\_hcd\_match} rows. Exposure ranges from \textbf{0.0 to 38.4 months} (mean 9.9,
+median 8.6): three localities have zero exposure, 22 positive, nine exceed 12 months and two
+exceed 24 months. 13 of 25 are prohousing-designated; five have sourced designation dates
+(Mountain View and Petaluma January 2024, Walnut Creek 2024-08-01, Santa Rosa and Sonoma County
+2025) and the other eight carry \texttt{prohousing\_date\_to\_verify(HCD tracker XLS)}.
+
+\begingroup\small
+\begin{longtable}{@{}lccrl@{}}
+\caption{Builder's-remedy exposure, 25-locality estimation sample (deadline 2023-01-31
+$\rightarrow$ HCD compliance finding). ``designated'' $=$ prohousing-designated, exact date to
+verify; ``---'' $=$ not designated.}\\
+\toprule
+Locality & HE received & HCD finding & Exposure (mo.) & Prohousing \\
+\midrule
+\endfirsthead
+\toprule
+Locality & HE received & HCD finding & Exposure (mo.) & Prohousing \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Alameda        & 2022-11-16 & 2022-12-20 & 0.0  & designated \\
+San Francisco  & 2023-01-31 & 2023-02-01 & 0.0  & designated \\
+San Leandro    & 2022-12-09 & 2023-02-02 & 0.0  & designated \\
+Emeryville     & 2023-01-20 & 2023-02-03 & 0.1  & designated \\
+Oakland        & 2023-02-13 & 2023-02-17 & 0.5  & designated \\
+San Ramon      & 2023-02-06 & 2023-02-27 & 0.9  & --- \\
+Milpitas       & 2023-05-16 & 2023-05-17 & 3.5  & --- \\
+Petaluma       & 2023-03-22 & 2023-05-18 & 3.6  & 2024-01 \\
+Mountain View  & 2023-04-26 & 2023-05-26 & 3.8  & 2024-01 \\
+Hayward        & 2023-06-07 & 2023-07-27 & 5.9  & designated \\
+El Cerrito     & 2023-08-17 & 2023-08-22 & 6.7  & designated \\
+Albany         & 2023-08-16 & 2023-09-08 & 7.2  & --- \\
+Tiburon        & 2023-09-22 & 2023-10-18 & 8.6  & --- \\
+Walnut Creek   & 2023-08-25 & 2023-10-24 & 8.8  & 2024-08-01 \\
+Sonoma County  & 2023-08-30 & 2023-10-26 & 8.8  & 2025 \\
+Piedmont       & 2023-09-11 & 2023-11-09 & 9.3  & --- \\
+Sunnyvale      & 2024-02-29 & 2024-03-06 & 13.2 & designated \\
+Burlingame     & 2024-03-15 & 2024-03-20 & 13.6 & --- \\
+Fairfax        & 2024-03-14 & 2024-04-08 & 14.2 & --- \\
+Solano County  & 2024-02-09 & 2024-04-09 & 14.3 & --- \\
+San Carlos     & 2024-04-19 & 2024-04-25 & 14.8 & --- \\
+Palo Alto      & 2024-07-26 & 2024-08-20 & 18.6 & --- \\
+Daly City      & 2024-11-13 & 2024-12-03 & 22.1 & --- \\
+Santa Rosa     & 2025-07-28 & 2025-09-12 & 31.4 & 2025 \\
+Clayton        & 2026-02-12 & 2026-04-13 & 38.4 & --- \\
+\end{longtable}
+\endgroup
+
+\paragraph{The earlier 14-city panel is not a subset of this one.}
+\texttt{zoning\_envelope\_project/hcd\_preemption\_exposure\_panel.csv} holds 14 rows, all
+planning period \texttt{6S}, record type \texttt{Adopted}, current compliance \texttt{In},
+anchored at \textbf{2023-02-01} rather than 2023-01-31, with exposure spanning \textbf{0.5 to
+40.0 months}: Oakland 0.5 (found compliant 2023-02-17), Berkeley 0.9 (2023-02-28), Fremont 1.6
+(2023-03-22), Redwood City 1.8 (2023-03-27), Mountain View 3.8 (2023-05-26), Richmond 8.0
+(2023-10-02), South San Francisco 9.6 (2023-11-20), San Jose 11.9 (2024-01-29), Sunnyvale 13.1
+(2024-03-06), Burlingame 13.6 (2024-03-20), Palo Alto 18.6 (2024-08-20), San Bruno 20.7
+(2024-10-21), Daly City 22.1 (2024-12-03), San Mateo 40.0 (2026-06-01). Eight localities ---
+Berkeley, Fremont, Redwood City, Richmond, San Bruno, San Jose, San Mateo and South San Francisco
+--- appear \emph{only} in this 14-row file, the two files use different column schemas, and they
+anchor exposure differently, so neither should be deleted and the anchor convention must be
+unified before they are used together. San Mateo is the striking case: roughly 3.3 years of
+continuous exposure, certifying only in mid-2026 while its Peninsula neighbours cleared in months
+--- an attractive treatment case, provided the minutes side can retrieve its hearings, which the
+minutes pilot could not even confidently classify.
+
+\paragraph{Caveats.} The \textbf{snapshot caveat} is the main analytical limitation: the HCD
+dataset is a \emph{current-status} snapshot and all 25 read as ``In'' compliance today, so any
+decertification-then-recertification sequence during the ramp is invisible and exposure would be
+understated; \texttt{status\_sequence} flags this on every row, and verifying contested cases is
+the one substantive \texttt{to\_verify}. At the full ABAG level \texttt{hcd.csv} shows 108 In and
+one Out (Half Moon Bay, reviewed 2026-02-02). Also open: whether exposure ends at self-adoption
+or at HCD's finding (the gap is material --- Solano County 2024-02-09 vs.\ 2024-04-09); the eight
+unsourced prohousing dates; the 25-versus-36 sample width; and a possible \emph{second} preemption
+series from HCD's SB-35/SB-423 Statutory Determinations, RHNA-progress-based and not built here.
+
+\section{Data inventory}
+
+Bulk data lives on Dropbox; everything here is a small derived table, a script, or a narrative
+report. Status is \emph{current} (believe it), \emph{provenance} (kept for the record, do not
+cite), \emph{superseded}, \emph{input} (unmodified third-party), or \emph{broken} (will not run
+as written; \S7). Rows are grouped by the probe directory that produced them.
+
+\begingroup\small
+\begin{longtable}{@{}p{0.30\textwidth} p{0.41\textwidth} p{0.22\textwidth}@{}}
+\toprule
+\textbf{File} & \textbf{What it is} & \textbf{Status} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{File} & \textbf{What it is} & \textbf{Status} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{3}{@{}l}{\textbf{\texttt{bay\_area\_census/}} --- the frame} \\
+\texttt{bay\_area\_locality\_census.csv} & 109 $\times$ 20; platform, URL, access, solution class,
+tier, confidence, both sides & \textbf{current} (the spine) \\
+\texttt{raw/*.json}, \texttt{ca\_place\_geoid.json} & 8 per-county surveys (108 localities);
+Gazetteer name $\rightarrow$ GEOID & provenance / current \\
+\texttt{consolidate.py} & Builds the CSV, appends SF, attaches GEOIDs & current \\
+\texttt{bay\_area\_locality\_census\_report.md} & Narrative roll-up, 2026-06-08 & provenance;
+differs from CSV in 4 places \\
+\texttt{akamai\_civicplus\_probe\_finding.md} & The 28-host CivicPlus sweep table & current \\
+\texttt{sample\_saratoga\_pc\_}\newline\texttt{minutes\_2026-04-08.pdf} & 19\,KB; the one document
+retrieved end-to-end & evidence \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{archive\_depth\_probe/}} --- the time dimension} \\
+\texttt{archive\_depth.csv} & 109 $\times$ 10; post-merge authority on minutes depth &
+\textbf{current} \\
+\texttt{archive\_depth\_api.csv} & 55 $\times$ 11; API depth-read detail & current \\
+\texttt{consolidate.py} & Builds the CSV from \texttt{raw/} $+$ census GEOIDs & current;
+``verified'' filter is buggy \\
+\texttt{api\_probe.py} & Live API client (Legistar, CivicClerk, PrimeGov, Granicus RSS) & broken
+(\texttt{/tmp/} I/O) \\
+\texttt{assemble\_api.py} & Merges 19 verified years in; results transcribed literally & current \\
+\texttt{raw/*.json} & 8 per-county shallow-probe observations & provenance \\
+\texttt{archive\_depth\_report.md} & Shallow-probe narrative; carries a banner & superseded \\
+\texttt{archive\_depth\_api\_report.md} & API-pass narrative; \emph{no} banner & superseded (says
+64/32, not 68/36) \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{civicplus\_depth\_probe/}} --- AgendaCenter depth} \\
+\texttt{civicplus\_depth.csv} & 14 $\times$ 8; 2 resolved, 12 honest \texttt{unknown} &
+\textbf{current} \\
+\texttt{final\_pass.py} & Single-year Search probes; supersedes \texttt{probe.py} & current \\
+\texttt{probe.py} & First pass, wide 2004--2018 query & broken (hard-coded
+\texttt{/Users/danpost/}) \\
+\texttt{\_results.json} & Raw first-pass output & provenance; contradicts CSV twice \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{migration\_cliffs\_probe/}} --- the 2024 portal moves} \\
+\texttt{migration\_cliffs.csv} & 3 $\times$ 8; legacy platform, reachability, legacy depth &
+\textbf{current} (no script) \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{minutes\_platform\_pilot/}} --- the 14-city pilot} \\
+\texttt{minutes\_platform\_pilot\_report.md} & Platform table, scrape results, transfer test, 13
+review items & current on transfer; superseded on coverage \\
+\texttt{pilot\_scrape.py} & Daly City CivicClerk OData retrieval; stdlib only & current \\
+\texttt{jurisdiction\_mappings.py} & Proposed additive vocabulary layer; not wired in & current;
+path constant is depth-sensitive \\
+\texttt{sample\_dalycity\_pc\_}\newline\texttt{2023-12-05\_minutes.txt} & 4.4\,KB; the document the
+transfer test rests on & evidence \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{zoning\_map\_form\_probe/}} --- spatial form} \\
+\texttt{zoning\_map\_form.csv} & 109 $\times$ 8; form, URL, source type, download flag &
+\textbf{current} \\
+\texttt{consolidate.py}, \texttt{raw/*.json} & Assembles the CSV; 8 per-county form probes &
+current / provenance \\
+\texttt{zoning\_map\_form\_report.md} & Narrative; no banner, numbers agree with the CSV & stale
+in status only \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{preperiod\_envelope\_probe/}} --- the 2016 envelope} \\
+\texttt{preperiod\_envelope.csv} & 25 $\times$ 9; 15 usable, zero live false positives &
+\textbf{current} \\
+\texttt{wayback\_probe.py}, \texttt{\_wayback\_results.json} & Wayback CDX query 2014--2018; raw
+output, 25 records & current / provenance \\
+\texttt{finalize.py} & Applies hand corrections and writes the CSV & broken (regenerates 17/25) \\
+\texttt{preperiod\_envelope\_report.md} & Original write-up; carries a correction note &
+superseded on 17/25 \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{hcd\_preemption\_panel/}} --- the treatment variable} \\
+\texttt{hcd\_preemption\_panel.csv} & 25 $\times$ 10; exposure 0.0--38.4 months & \textbf{current,
+load-bearing} \\
+\texttt{build\_hcd\_panel.py} & Deterministic builder; prints the exposure summary & broken
+(\texttt{/tmp/} sample list) \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{zoning\_envelope\_project/}} --- the 14-city assessment} \\
+\texttt{zoning\_envelope\_assessment.md} & NZLUD coverage, 14-city code table, extraction pilot,
+panel, 15 review items & superseded on coverage; one claim contradicted \\
+\texttt{nzlud\_14city\_subset.csv} & The 4 matching NZLUD rows $\times$ 19 columns & current \\
+\texttt{hcd\_preemption\_exposure\_panel.csv} & 14 rows; exposure 0.5--40.0 mo., anchored
+2023-02-01 & current; \emph{not} a subset of the 25-row panel \\
+\texttt{pilot\_extract.py} & Fremont/San Mateo code read; documents the Municode block & current
+(network-dependent) \\
+\texttt{wrluri\_crosscheck.py} / \texttt{.csv} & 14 $\times$ 8; NZLUD vs.\ WRLURI 2006/2018 & CSV
+current; script broken \\
+\addlinespace
+\multicolumn{3}{@{}l}{\textbf{\texttt{\_source\_data/}} --- unmodified third-party releases} \\
+\texttt{nzlud\_muni.csv} & Full NZLUD: 2,639 municipalities $\times$ 77 columns & input \\
+\texttt{hcd.csv} & Full HCD compliance report: 539 rows $\times$ 10 columns, updated 2026-06-05 &
+input \\
+\end{longtable}
+\endgroup
+
+\noindent Several scripts reach sideways with \texttt{HERE.parent / "sibling"}
+(\texttt{archive\_depth\_probe/consolidate.py}, \texttt{archive\_depth\_probe/assemble\_api.py}
+and \texttt{zoning\_map\_form\_probe/consolidate.py} $\rightarrow$ \texttt{bay\_area\_census/};
+\texttt{hcd\_preemption\_panel/build\_hcd\_panel.py} $\rightarrow$ \texttt{\_source\_data/}), so
+moving this group as a unit is safe and splitting it is not.
+\texttt{minutes\_platform\_pilot/jurisdiction\_mappings.py} additionally counts \texttt{.parent}
+up to the repo root and must be re-counted on any change of depth --- when that constant is wrong
+the import of the canonical enums fails silently and the validation degrades to a no-op.
+
+\section{Known contradictions and stale artifacts}
+
+The most actionable section in the sprint: places where two files in the repository disagree, or
+where a script would not reproduce the file it supposedly builds. None has been silently fixed.
+
+\subsection{Artifacts that contradict each other}
+
+\begin{enumerate}
+
+\item \textbf{The archive-depth \texttt{.md} reports understate their own CSV.}
+\texttt{archive\_depth\_api\_report.md} says known depth is \textbf{64 of 109} and $\leq$2016
+breadth is \textbf{32}, whereas \texttt{archive\_depth.csv} gives \textbf{68} and \textbf{36}
+after the CivicPlus and migration-cliff merges --- and it carries \emph{no} supersession banner.
+\texttt{archive\_depth\_report.md} is the older shallow snapshot (55 unknown, 27 verified, Marin
+County at 2024, gaps 2) and does carry one. Believe the CSV.
+
+\item \textbf{\texttt{consolidate.py}'s ``verified'' filter wrongly rejects API-verified rows.} It
+defines the verified subset by rejecting any row whose \texttt{flags} contain
+\texttt{minutes\_type\_unverified} or \texttt{oldest\_year\_minutes\_unverified}. The API merge
+added \texttt{api\_verified} to those rows but never cleared the old shallow-probe flags, so the
+filter now rejects rows that were in fact document-verified --- Alameda 2005, Oakland 2014,
+Hayward 2015 and Santa Rosa 2016 among them. Re-running it yields \textbf{38 of 109} ``verified''
+rows, an artefact of stale flags rather than a real count. \emph{Use the \texttt{confidence}
+column, not the flag filter.}
+
+\item \textbf{\texttt{civicplus\_depth\_probe/\_results.json} says Campbell 2018; the CSV says
+2006.} The JSON records ``21 Minutes files, years 2018--2018'' from the wide 2004--2018 query.
+The CSV's 2006 is the later and correct value --- the wide query returned a truncated or
+most-recent slice, which is exactly why the second pass switched to single-year probes, and the
+year-by-year hits support 2006. The same JSON also records Los Altos Hills as \texttt{unknown}
+with \texttt{cid\_not\_found} where the CSV records 2022 from the static-HTML floor. Both stale
+values remain in the JSON.
+
+\item \textbf{Millbrae's flag contradicts its own method field.} Its \texttt{method} says
+``CID=8 found but Search returned no minutes 2008--2016'' --- the CID \emph{was} discoverable and
+the window came back empty --- but its \texttt{flags} value is
+\texttt{civicengage\_js\_gated(CID\_not\_static)}, which describes the other eleven. Millbrae is
+a different failure mode and should be re-probed on its own terms, including whether
+\texttt{CID=8} is actually the planning body.
+
+\item \textbf{The census report disagrees with the census CSV in four places.} Real discrepancies,
+not rounding; the CSV is authoritative:
+
+\begin{center}
+\small
+\begin{tabular}{p{0.27\textwidth} p{0.29\textwidth} p{0.29\textwidth}}
+\toprule
+\textbf{Quantity} & \textbf{Report says} & \textbf{CSV says (authoritative)} \\
+\midrule
+\texttt{civicplus\_clean} / \texttt{civicplus\_akamai} & 27 / 1 & 26 / 2 \\
+Overall tractability tier & \texttt{needs\_adapter} 70, \texttt{access\_blocked} 2 &
+\texttt{needs\_adapter} 69, \texttt{access\_blocked} 3 \\
+\texttt{minutes\_access} (report \S B) & \texttt{clean} 66, \texttt{unknown} 23,
+\texttt{akamai\_403} 2 & \texttt{clean} 78, \texttt{unknown} 10, \texttt{akamai\_403} 3 \\
+\texttt{in\_nzlud} filled & 8 pilot cities, 4 yes / 4 no & 11 rows filled, 4 yes / 7 no \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The third row is the report contradicting \emph{itself}: its own methods caveat already carries
+the post-sweep numbers while its summary \S B was never updated. Its \S A table sums the
+CivicPlus class to 28 either way.
+
+\item \textbf{The zoning assessment's ``4 of 109 met the deadline'' is not reproducible from
+\texttt{hcd.csv}.} \texttt{zoning\_envelope\_assessment.md} writes that only four Bay Area
+jurisdictions met the 2023-01-31 deadline --- Alameda, Emeryville, San Francisco, San Leandro ---
+and that \emph{none of the 14} did. Filtering \texttt{hcd.csv} to the 109 ABAG rows gives neither
+reading. \textbf{Seven} jurisdictions have a \texttt{Date Received} strictly before the deadline
+(Alameda 2022-11-16, San Leandro 2022-12-09, Sebastopol 2023-01-09, Emeryville 2023-01-20,
+Fremont 2023-01-23, Berkeley 2023-01-24, Rohnert Park 2023-01-26), with San Francisco landing
+exactly on 2023-01-31; and only \textbf{one} --- Alameda --- has an HCD \texttt{Reviewed Date}
+before the deadline (2022-12-20). Two of the seven, Berkeley and Fremont, are in the 14-city set,
+so the claim that none of the 14 adopted in time is contradicted by the data file. The
+substantive point survives either way, since HCD's \emph{finding} is what ends exposure and only
+Alameda had one before the deadline --- but the sentence should be corrected.
+
+\item \textbf{The two HCD panels disagree by construction.} The 25-row panel anchors at
+2023-01-31 and spans 0.0--38.4 months; the 14-row panel anchors at 2023-02-01 and spans
+0.5--40.0 months, with eight localities appearing only in the smaller file (\S5).
+
+\end{enumerate}
+
+\subsection{Scripts that will not reproduce their own output}
+
+\begin{enumerate}
+\setcounter{enumi}{7}
+
+\item \textbf{\texttt{build\_hcd\_panel.py} reads a \texttt{/tmp/} file that no longer exists.} It
+takes its sample definition from \texttt{/tmp/preperiod\_sample.json}, a path outside the repo, so
+the script is not re-runnable end-to-end. The 25-locality list should be committed alongside it
+before the panel is rebuilt.
+
+\item \textbf{\texttt{preperiod\_envelope\_probe/finalize.py} never encoded the
+17$\rightarrow$15 correction.} The San Ramon and Daly City kills were applied to
+\texttt{preperiod\_envelope.csv} \emph{in place}, not through the script: \texttt{finalize.py}
+still sets San Ramon to \texttt{confidence = med} and Daly City to a valid text source, so
+re-running it as written would regenerate the stale 17/25 file. Fold the two corrections into its
+\texttt{CORR} table first. (It also reads \texttt{/tmp/preperiod\_sample.json}.) The original
+report's headline ``17/25 (68\%)'' is superseded; a one-line correction note pointing to 15/25
+sits at its top, and the rest of its method and platform diagnosis still stands.
+
+\item \textbf{Three more hard-coded paths.} \texttt{archive\_depth\_probe/api\_probe.py} writes to
+\texttt{/tmp/api\_probe\_results.json} and \texttt{assemble\_api.py} reads
+\texttt{/tmp/api\_targets.json}, neither in the repo --- though the verified results are
+transcribed literally into \texttt{assemble\_api.py}, so the merge itself is auditable. Both
+CivicPlus scripts read their 14-locality target list from \texttt{/tmp/cp14.json}, and
+\texttt{probe.py} additionally writes to a \texttt{/Users/danpost/\dots} path that does not exist
+on this machine, so it is broken as written (\texttt{final\_pass.py}, writing to
+\texttt{/tmp/cp14\_final.json}, is fine). \texttt{wrluri\_crosscheck.py} hard-codes the same
+defunct \texttt{/Users/danpost/\dots} Dropbox root and needs the data root taken from the
+environment.
+
+\item \textbf{Two reports are stale in status rather than content.}
+\texttt{zoning\_map\_form\_report.md} carries no supersession banner, but its numbers ---
+67/28/13/1, the 55-versus-12 split, 71 apparent downloads --- all re-derive from the CSV.
+\texttt{minutes\_platform\_pilot\_report.md}'s platform calls are superseded by the census
+wherever they differ, and its Akamai framing is narrower than what was later measured: the
+28-host sweep found only two blocked CivicPlus sites region-wide, so Fremont is an exception
+rather than evidence about the platform. Fremont's own 403 is confirmed in both. The two
+consolidating documents these probes originally reported into ---
+\texttt{output/DATA\_STATUS.md} and \texttt{output/final\_recon\_bundle\_report.md} --- were
+deleted on 2026-08-30; their content is folded into this memo.
+
+\end{enumerate}
+
+\subsection{What is unverified across the board}
+
+No minutes document was retrieved anywhere in the recon except the two evidence files (the
+Saratoga PDF and the Daly City text). Every depth year in \texttt{archive\_depth.csv} rests on a
+listing or an API metadata record --- the 54 \texttt{low}-confidence rows and the 30
+\texttt{type\_ambiguous} rows have never been checked against an actual document, and the
+migration-cliff years likewise rest on feed entries. No zoning layer in
+\texttt{zoning\_map\_form.csv} has been downloaded, opened, or joined to a parcel;
+\texttt{download\_apparent} records that a path \emph{looked} available, not that it works. Four
+localities may have no written minutes online at all --- Vallejo (agendas and video to 2006, no
+minutes-type files), Sebastopol (video only), Benicia (council minutes not located) and Dixon
+(1998--2009 on DVD at City Hall) --- candidates for the deferred physical-records workstream. The
+remaining access-blocked or unreachable sites are Fremont, Portola Valley and San Jose (Akamai),
+Redwood City and South San Francisco (unsupported platform), Fairfield and Suisun (403), and
+American Canyon and Calistoga (refused connections, possibly transient). Also unverified: San
+Jose's by-right read (blocked by Municode; the city posts a static Title 20 PDF that would
+resolve it), the QCode paths for South San Francisco and Burlingame, every NZLUD height field for
+a city whose code defers height to a General Plan map, all overlay districts, Berkeley's and the
+City of San Mateo's minutes platforms, Cupertino's true minutes source, the city of Sonoma's
+exact pre-2017 year, and whether Daly City genuinely seldom posts minutes or merely posts them
+elsewhere.
+
+\end{document}

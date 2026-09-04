@@ -1,0 +1,12 @@
+{
+  "round": 2,
+  "seed": 20260903,
+  "documents": 20,
+  "note": "Extraction rules frozen at this state for the round-2 held-out test. Re-hash these files before scoring to confirm nothing changed.",
+  "sha256_16": {
+    "assign_meeting_dates.py": "e6ab9e126e2aecba",
+    "meeting_headers.py": "6349a683b843be16",
+    "parse_sf_meeting_minutes.py": "7d4035a15ab9c1c5"
+  },
+  "combined": "cefdc6701ea7596e"
+}

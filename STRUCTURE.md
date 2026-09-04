@@ -20,7 +20,7 @@ market-for-housing-regulation/
 ├── environment-notes.md         # interpreter, system deps, flagged issues
 ├── code/commission_minutes_processing/   # the minutes pipeline (below)
 ├── demand_estimation/           # Layer I demand-side data collection (below)
-├── output/                      # reports, toy model, proposals
+├── output/                      # reports & memos: pipeline specs, toy model, Bay Area recon (below)
 ├── notes/                       # commission_members.{xlsx,docx}
 └── (data/ lives on Dropbox — not in repo)
 ```
@@ -66,24 +66,51 @@ Area), not per-locality, so its data sits at the **data root** under
 | `collectors/` | One module per source: `tiger`, `lodes`, `acs` (PUMS+tables), `ssurgo` (the instrument), `hazard`, `zoning`, `amenities`, `migration_irs`. |
 | `stubs.py` | Manual licensed sources (CoreLogic, RS Means, Infutor/Verisk) → `_stubs/<name>/README.md`. |
 | `build.py` | `python -m demand_estimation.build` — collect → build (BG↔jurisdiction crosswalk, job access, soil extract, controls, PUMS, design matrix). Idempotent, failure-isolated. |
-| `report/` | `demand_data_report.tex` (+ `.pdf`) — provenance + manual hand-offs. |
+| `report/` | `demand_data_report.tex` (+ `.pdf`) — provenance + manual hand-offs — and `demand_memo.pdf`, the Layer-I sorting-model spec (BLP/Bayer, soil cost-shifter instrument). |
 
 ## `output/`
 
+Reports, memos, figures, small derived tables — never bulk data. **Each project line carries a
+standing `memo.tex`**: the edit-in-place summary of what it holds and what is still open. The
+nine `bay_area_recon/` probes share a single memo at the sprint root rather than one apiece.
+`output/README.md` is the entry point; it says where to look, the memos say what is there.
+
 ```
 output/
-├── planning_commission_project/
+├── README.md                          # start here — layout + where to look first
+├── planning_commission_project/       # the SF minutes pipeline (LIVE; code links here by path)
 │   ├── minutes_data_availability.md   # what the raw files contain, by era
 │   ├── processing_review.md           # code review + hand-label audit
 │   ├── data_infrastructure.md         # schema + worked examples
 │   ├── labeling_rules.md              # SF-specific coding manual (label/review spec)
 │   ├── hand_label_review_guide.md     # app workflow for reviewing labels
-│   ├── proposal/                      # research_proposal.tex
-│   └── graphics/
-└── political_economic_housing_model/
-    ├── toy_model.tex (+ .pdf)         # formal toy model + minutes mapping
-    └── proposal/
+│   ├── schema_enrichment_recommendation.md  # ADOPT/DEFER/REJECT on candidate fields
+│   ├── memo.tex                       # pipeline status + preliminary results
+│   └── meeting_level_info.tex    # how items are matched to meetings; error rates
+├── political_economic_housing_model/  # the theory (LIVE)
+│   ├── toy_model.tex (+ .pdf, .bib)   # formal toy model + minutes mapping
+│   ├── operationalization_memo.pdf    # three-layer estimation blueprint
+│   ├── guren_meeting_slides.tex (+ .pdf)
+│   └── memo.tex                       # what the model says
+├── bay_area_recon/                    # June-2026 Bay Area feasibility sprint (closed)
+│   ├── memo.tex                       # ONE memo for all nine probes (findings + contradictions)
+│   ├── README.md                      # what each probe asked; the sideways path constants
+│   ├── bay_area_census/               # the 109-locality frame (everything joins to it)
+│   ├── archive_depth_probe/           # earliest posted MINUTES year per locality
+│   ├── zoning_map_form_probe/         # how each locality publishes its zoning map
+│   ├── preperiod_envelope_probe/      # datable ~2016 pre-period envelope (15/25)
+│   ├── hcd_preemption_panel/          # the TREATMENT variable (25 localities)
+│   ├── migration_cliffs_probe/        # 2024 portal migrations kept their history
+│   ├── civicplus_depth_probe/         # CivicPlus depth (2 of 14 resolved)
+│   ├── minutes_platform_pilot/        # earlier 14-city pilot; autoextract does NOT transfer
+│   ├── zoning_envelope_project/       # 14-city by-right envelope assessment
+│   └── _source_data/                  # raw third-party releases: nzlud_muni.csv, hcd.csv
+└── _archive/                          # superseded: 2 research proposals, minutes_data_sources.docx,
+                                       #   OUTPUT_INVENTORY.md (pre-reorg audit)
 ```
+
+The demand-estimation line keeps its documents in `demand_estimation/report/`
+(`demand_data_report.tex/.pdf`, `demand_memo.pdf`), not in `output/`.
 
 ## Data (on Dropbox, not in git)
 

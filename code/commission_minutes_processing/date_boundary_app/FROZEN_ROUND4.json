@@ -1,0 +1,11 @@
+{
+  "round": 4,
+  "seed": 20260904,
+  "documents": 10,
+  "tests": "meeting-level fields with MACHINE-anchored windows (snap_to_header), the configuration that would run over all 818 meetings without hand-marking",
+  "sha256_16": {
+    "assign_meeting_dates.py": "e6ab9e126e2aecba",
+    "meeting_headers.py": "819dfc8d5f21e54c",
+    "parse_sf_meeting_minutes.py": "7d4035a15ab9c1c5"
+  }
+}

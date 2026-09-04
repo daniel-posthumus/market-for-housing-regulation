@@ -28,22 +28,51 @@ code/commission_minutes_processing/labeling_app/labels.db*.bak
 /data
 /data/
 
-# LaTeX build artifacts (regenerable from .tex; keep .tex/.pdf/.bib tracked)
+# ── LaTeX ────────────────────────────────────────────────────────────────────
+# Standard practice for this repo: for any .tex, track ONLY the .tex itself, the
+# compiled .pdf, and its .bib. Everything else a TeX run emits is regenerable and
+# stays out of git. Compile with:  PATH=/Library/TeX/texbin:$PATH pdflatex <file>.tex
 *.aux
 *.bbl
 *.blg
+*.bcf
+*.brf
+*.dvi
 *.fdb_latexmk
 *.fls
-*.synctex.gz
-*.run.xml
-*.toc
-*.out
+*.idx
+*.ilg
+*.ind
+*.loa
 *.lof
 *.lot
-# LaTeX .log only under output/ (avoids catching non-LaTeX logs elsewhere)
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.xdv
+*.auxlock
+# .nav/.snm/.vrb above are beamer's; gitignore has no trailing comments, so they
+# must sit on their own lines
+# .log is scoped rather than global, so non-LaTeX logs elsewhere are not swallowed
 output/**/*.log
 
 # demand_estimation: build run logs (regenerable) + report LaTeX .log.
 # Note: the demand data itself lives on Dropbox (/data above), never in git.
 demand_estimation/_logs/
 demand_estimation/report/*.log
+# date-boundary gold standard + audit outputs (local, like labels.db)
+code/commission_minutes_processing/date_boundary_app/date_gold.db
+code/commission_minutes_processing/date_boundary_app/date_gold_score.csv
+code/commission_minutes_processing/date_assignment_audit.csv
+
+.DS_Store
+code/commission_minutes_processing/date_boundary_app/meetings_pilot.csv
+
+code/commission_minutes_processing/meetings_all.csv
+
+# figures are committed as PDF; the PNG twins are for quick viewing only
+output/**/*.png
