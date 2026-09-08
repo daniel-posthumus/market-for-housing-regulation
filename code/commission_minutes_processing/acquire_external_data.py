@@ -2149,6 +2149,26 @@ def write_readme(ctx: dict):
                      f"sfplanning.org / web.archive.org | {p.stat().st_size:,} bytes | "
                      f"{ctx['probe'].get('retrieved','')} | "
                      f"`fees/impact_fee_register_{y}.pdf` |")
+    for lab, path in (("Parcel-year zoning panel (derived, `spatial`)", PANEL),
+                      ("Spatial-join coverage by layer (derived)", PANEL_COVERAGE),
+                      ("Parcel-year price panel, observed + imputed (derived, `report`)",
+                       PRICE_PANEL)):
+        if path.exists():
+            try:
+                n = len(pd.read_parquet(path, columns=[pd.read_parquet(
+                    path).columns[0]])) if path.suffix == ".parquet" \
+                    else sum(1 for _ in path.open()) - 1
+            except Exception:
+                n = 0
+            L.append(f"| {lab} | — | derived | {n:,} | "
+                     f"{pd.Timestamp(path.stat().st_mtime, unit='s').date()} | "
+                     f"`{path.relative_to(EXT)}` |")
+    if POLY_DIR.exists():
+        gj = sorted(POLY_DIR.glob("*.geojson"))
+        if gj:
+            L.append(f"| Zoning / height / SUD / fee-area polygons | — | {SOCRATA_HOST} | "
+                     f"{len(gj)} layers | {ctx['probe'].get('retrieved','')} | "
+                     f"`{POLY_DIR.relative_to(EXT)}/` |")
     L += ["",
           "Two directories here predate this script and are written by others:",
           "`cpc_packets/` (`analyze_conditions.py`) and `datasf/dbi_permits.csv.gz`",
@@ -3146,6 +3166,7 @@ def _followup_macros(ctx) -> dict:
             "acqPanelYears": str(len(sp["years"])),
             "acqPanelZoned": f"{100*by.zoned.sum()/by.parcels.sum():.1f}",
             "acqSpatialYears": str(len(sp["spatial_years"])),
+            "acqPolyLayers": str(len(sp["coverage"])),
             "acqSnapshotYears": str(len(sp["snapshot_years"])),
             "acqSnapshotFirst": str(min(sp["snapshot_years"])) if sp["snapshot_years"]
             else "---",
