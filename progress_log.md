@@ -1,5 +1,78 @@
 # Progress Log
 
+## 2026-09-08 (later) — External data acquisition: a denominator, a clock, a price, and two corrections to our own keys
+
+**Goal**: Execute `.claude/instructions/data_acquisition_brief.md` — find, verify and cache the
+five categories of external data the real-options frame needs — then
+`.claude/instructions/acquisition_followup_brief.md`, which closes the five gaps that memo left
+open.
+
+**What was done**:
+- **`acquire_external_data.py`** (new, ~2,400 lines): five cached stages — `sync` (materialise
+  Dropbox online-only files), `probe` (resolve every identifier against the live catalogue),
+  `fetch` (19 Socrata tables + 19 GeoJSON layers + Zillow + 8 impact-fee registers + the
+  Cotality SF slice), `spatial` (point-in-polygon → the parcel-year zoning panel), `report`
+  (joins, funnel, price surface, figures, tables, `external/README.md`).
+- **`data_acquisition_memo`** (new, 31 pp, 21 tables, 4 figures): 0 undefined references,
+  0 overfull boxes. Every measurement in the prose is a `\newcommand` written by `report`;
+  §9 enumerates the handful of numerals typed by hand and why each is exempt.
+- **Caches under `$MFHR_DATA_ROOT/external/`**: parcels, assessor roll (3.9M parcel-years),
+  nine parcel-keyed historic zoning vintages, planning records, pipeline, prices, fees, plus
+  two derived panels — `parcel_zoning_panel.parquet` (5.8M rows) and
+  `parcel_year_price.parquet` (3.9M rows, observed and imputed flagged apart).
+- **Corrected the conditions memo** (§5.1, dated, quoting what it withdraws): the
+  `building_permits` bridge reaches 46.3% of conditional-use items, so the two routes do
+  overlap.
+- **Corrected this memo twice**, both dated and quoting the withdrawn text.
+- Eight follow-up tasks: spatial joins, fee schedule structure, risk-set definition, price
+  surface, pre-2002 recovery, two clocks, selectivity cross-tab, hand pass.
+
+**Key decisions / findings**:
+- **Two of our own join keys were wrong, and both were diagnosed as data problems first.**
+  `'17A'.zfill(3)` is a no-op, so all 27,822 lettered lots failed to join, and multi-block
+  items were concatenated into nonsense keys — fixing both took the parcel join from 89.5% to
+  **97.7%**, meeting the ≥95% criterion the memo had reported as failed. And the department
+  writes `1998.505C` where the minutes print `98.505C`: expanding the year against the hearing
+  year recovers **527 of 530** pre-2002 cases with zero century ambiguity, lifting the case
+  join to **98.7%**. The memo had said the records "simply do not go back that far under any
+  key."
+- **A Dropbox subtree that has never been materialised is invisible to `ls` and `find`.** The
+  first pass reported the whole 4.92 GB `demand/` tree as lost. It was dehydrated. `sync` now
+  reports nominal bytes against bytes on disk, and Cotality's SF APN turns out to *be*
+  `blklot`, so the licensed prices join at parcel level, not block group.
+- **The fee brief's premise was wrong**: a year fixed effect absorbs 3.0% of log-rate
+  variance, not most of it. Fees identify cross-sectionally.
+- **The risk set is defined, not just available**: 173,325 parcels, 4.26M parcel-years, 9,240
+  events, 21.7 per 10,000. The condominium rule costs 1,301 real hearings and was not tuned
+  away.
+- **Coverage is not missing at random**: conditioned items carry a usable parcel key on 92.9%
+  against 78.5% for unconditioned ones — a differential in the outcome of interest.
+- The first price surface carried a **+0.90 log bias** (a factor of 2.5) from adding the
+  characteristics level where the model was fitted on within-cell deviations. It produced
+  plausible-looking series and was badly wrong; held-out scoring caught it.
+- The hand pass found **0 extraction errors** in the block-matched residual: 46 of 50 are lots
+  that predate the parcel layer's mid-1998 epoch, with the extraction matching the minutes.
+
+**Next steps**:
+- Adjudicate the 34 items with block and lot transposed — the swap joins, but a rule that
+  swaps whenever the swap joins will also swap correct pairs by coincidence.
+- Decide whether the condominium restriction stands for a DR-volume question (it should not).
+- Zoning after 2015 is a carried-forward snapshot; a rezoning panel for 2016–2026 would
+  remove the last assumption in the zoning series.
+- CoStar remains an access question for BU in the autumn; Cotality is frozen at 2024-05-16.
+- The corpus memo's 8,295 distinct parcels is superseded by 8,980 and should be regenerated.
+
+**Files touched**:
+- `code/commission_minutes_processing/acquire_external_data.py` — created (five stages, all cached)
+- `output/planning_commission_project/data_acquisition/` — created (memo `.tex`/`.pdf`,
+  4 figures, `acquisition_tables.tex`, `acquisition_macros.tex`, `handpass_sample.csv`)
+- `output/planning_commission_project/conditions_of_approval/conditions_of_approval.{tex,pdf}` —
+  modified (dated correction at §5.1, narrowed §8 item 5)
+- `output/planning_commission_project/README.md`, `output/README.md`, `STRUCTURE.md` — modified
+  (the eighth memo and the new stages)
+- `$MFHR_DATA_ROOT/external/` — 10 new source directories plus `README.md` (provenance table),
+  out of git
+
 ## 2026-09-08 — Memo reorganisation, three new memos, and the packet pull finished
 
 **Goal**: Execute `.claude/instructions/next_analyses_brief.md` — reorganise
