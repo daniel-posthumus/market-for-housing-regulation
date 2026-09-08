@@ -1036,7 +1036,7 @@ def corelogic_status() -> dict:
             "demand_online_only": len(dehydrated(root)) if root.exists() else None}
 
 
-def corelogic_sf(it: pd.DataFrame) -> dict:
+def corelogic_sf(it: pd.DataFrame, real: set[str] | None = None) -> dict:
     """What the licensed price data actually buys, measured against the item table rather
     than asserted. Three questions: does it join on the parcel key, on how much of the risk
     set, and --- the one that matters for a filing threshold --- did the parcel trade near
@@ -1049,7 +1049,12 @@ def corelogic_sf(it: pd.DataFrame) -> dict:
             & sf.sale_amount.gt(1000) & sf.sale_date.notna()]
     res = al[al.is_residential.astype("boolean").fillna(False)]
     have = set(al.blklot.dropna())
+    # The item key is a cross-product for multi-block items, so some candidates are
+    # combinations the city never recorded. The denominator here is the parcels that
+    # actually exist, not the candidates.
     keys = {p for ps in it.parcels for p in ps}
+    if real is not None:
+        keys &= real
     wp = it[it.has_parcel]
     ever = wp.parcels.map(lambda ps: bool(ps & have))
     by = {k: g.sale_date.values for k, g in al.groupby("blklot")}
@@ -1301,7 +1306,8 @@ def join_parcels(it: pd.DataFrame, par: pd.DataFrame) -> dict:
     wp = it[it.has_parcel]
     n_par = len({p for ps in it.parcels for p in ps})
     return {"items": len(it), "with_key": int(it.has_parcel.sum()),
-            "distinct_keys": n_par,
+            "distinct_keys": n_par, "distinct_real": len({p for ps in it.parcels
+                                                            for p in ps} & keys),
             "joined": int(wp.par_hit.sum()),
             "joined_map": int(wp.par_hit_map.sum()),
             "joined_active": int(wp.par_active.sum()),
@@ -1488,7 +1494,7 @@ def fig_case_join(cases: pd.DataFrame):
     g = cases.groupby("year")
     n = g.size()
     fig, ax = plt.subplots(figsize=(7.2, 3.4))
-    for col, lab, c in (("j_any", "case number or its stem found in a planning record",
+    for col, lab, c in (("j_any", "any rule: stem, or the two-digit year expanded",
                          "#2f6f4f"),
                         ("j_norm", "case number found (normalised)", "#5b7fa6"),
                         ("j_raw", "case number found (raw string)", "#a33")):
@@ -1500,8 +1506,8 @@ def fig_case_join(cases: pd.DataFrame):
     ax.set_xlabel("hearing year")
     ax.set_ylim(0, 105)
     ax.legend(frameon=False, fontsize=7.5, loc="lower right")
-    ax.set_title("Planning Department records reach back further than the modern case "
-                 "format does\n(years with fewer than 10 cases are left blank)", loc="left")
+    ax.set_title("The pre-2002 gap was a case-number format, not missing records\n"
+                 f"(years with fewer than {MIN_CASES_FIG} cases are left blank)", loc="left")
     fig.tight_layout()
     fig.savefig(FIG / "fig_case_join.pdf")
     plt.close(fig)
@@ -1655,8 +1661,9 @@ def write_tables(ctx: dict):
     # ── T2 the parcel join ──────────────────────────────────────────────
     a(r"\begin{table}[htbp]\centering")
     a(r"\caption{The parcel join, and what the residual is. The item table's key is "
-      r"\texttt{assessor\_block} plus each entry of \texttt{lot\_number}, zero-padded to "
-      r"DataSF's 4+3 \texttt{blklot} form; an item joins if any of its lots does. "
+      r"\texttt{assessor\_block} crossed with each entry of \texttt{lot\_number}, with the "
+      r"\emph{digits} of each padded to DataSF's 4+3 \texttt{blklot} form and any letter "
+      r"kept (lot 17A is \texttt{017A}, not \texttt{17A}); an item joins if any lot does. "
       r"Percentages are of the %s items that carry a parcel key at "
       r"all.}\label{tab:parceljoin}" % N(P["with_key"]))
     a(r"\begin{tabular}{lrr}\toprule")
@@ -1957,6 +1964,7 @@ def write_tables(ctx: dict):
           r"of the item rather than the parcel-year. The loss is spread rather than "
           r"concentrated, which is the reason it is acceptable: no single kind of case is "
           r"being defined out of the sample.}\label{tab:funnelrt}")
+        a(r"\resizebox{\textwidth}{!}{%")
         a(r"\begin{tabular}{lrrr}\toprule")
         a(r"Request type & Items on a panel parcel-year & Kept & Dropped\\\midrule")
         for rt, (tot, kept) in sorted(rs["by_request_type"].items(),
@@ -1966,7 +1974,7 @@ def write_tables(ctx: dict):
         a(r"\midrule")
         a(rf"All & {N(rs['items_in_panel'])} & {N(rs['items_kept'])} & "
           rf"{100*(rs['items_in_panel']-rs['items_kept'])/rs['items_in_panel']:.1f}\%\\")
-        a(r"\bottomrule\end{tabular}\end{table}")
+        a(r"\bottomrule\end{tabular}}\end{table}")
 
     if fs:
         a("")
@@ -2634,7 +2642,7 @@ def report():
     br = permit_bridge(it, rec, stems)
     it = br["frame"]
     it = units_from_records(it)
-    cl_sf = corelogic_sf(it)
+    cl_sf = corelogic_sf(it, set(par.blklot.dropna()))
     if cl_sf:
         _have = set(pd.read_parquet(CL_CACHE, columns=["blklot"]).blklot.dropna())
         it["cl_ever"] = it.parcels.map(lambda ps: bool(ps & _have))
@@ -2858,11 +2866,17 @@ def report():
          f"the roll starts at {min(asr['years'])}; no earlier vintage is published"),
         ("Parcel-keyed zoning for 1999", "DataSF historic zoning series",
          "1998 and 2000 exist; 1999 does not"),
-        ("Parcel-keyed zoning after 2008", "DataSF historic zoning series",
-         "2009--2015 are polygon layers only"),
-        ("A time-varying height and bulk layer keyed on parcel",
+        ("\\emph{Resolved 2026-09-08.} Parcel-keyed zoning after 2008",
+         "DataSF historic zoning series",
+         "the polygon layers are now joined spatially; see Table~\\ref{tab:panel}"),
+        ("\\emph{Resolved 2026-09-08.} A time-varying height and bulk layer keyed on parcel",
          "DataSF historic height and bulk series",
-         "2009--2014 published as polygons; no parcel-keyed vintage"),
+         "polygon-only as published, and now joined spatially onto the same panel"),
+        ("\\emph{Resolved 2026-09-08.} Planning records for the pre-2002 era",
+         "\\texttt{y673-d69b}, records opened 1996--2002",
+         "they exist; the department writes a four-digit year where the minutes print two"),
+        ("A zoning vintage published after 2015", "DataSF historic zoning series",
+         "none; the panel carries the current layer forward, flagged"),
         (f"A market price after {cl_sf['max_date']}" if cl_sf else "CoreLogic extracts",
          TT("$MFHR_DATA_ROOT/demand/corelogic"),
          (f"the Cotality pull ends there, two years short of the corpus; Zillow covers the "
@@ -3202,6 +3216,26 @@ def _followup_macros(ctx) -> dict:
         m["acqClockTailHigh"] = f"{t['median'].iloc[-1]:.0f}"
         m["acqClockOneRec"] = N(int(t.n.iloc[0]))
         m["acqClockManyRec"] = N(int(t.n.iloc[-1]))
+    sel = ctx.get("sel")
+    if sel is not None and len(sel):
+        def cell(dim, lvl, col):
+            r = sel[(sel.dimension == dim) & (sel.level == lvl)]
+            return f"{r.iloc[0][col]:.1f}" if len(r) and pd.notna(r.iloc[0][col]) else "---"
+        m.update({
+            "acqSelCondParcel": cell("Conditions", "conditioned", "parcel join"),
+            "acqSelUncondParcel": cell("Conditions", "not conditioned", "parcel join"),
+            "acqSelPcaParcel": cell("Request type", "planning_code_amendment",
+                                    "parcel join"),
+            "acqSelOtherParcel": cell("Outcome", "other", "parcel join"),
+            "acqSelApprovedParcel": cell("Outcome", "approved", "parcel join"),
+            "acqSelUnitsEarly": cell("Era", "1998--2007", "non-zero units"),
+            "acqSelUnitsLate": cell("Era", "2017--2026", "non-zero units"),
+            "acqSelBridgeEarly": cell("Era", "1998--2007", "permit bridge"),
+            "acqSelBridgeLate": cell("Era", "2017--2026", "permit bridge"),
+            "acqSelParcelEraOne": cell("Era", "1998--2007", "parcel join"),
+            "acqSelParcelEraTwo": cell("Era", "2008--2016", "parcel join"),
+            "acqSelParcelEraThree": cell("Era", "2017--2026", "parcel join"),
+        })
     if hp and isinstance(hp, dict):
         m.update({"acqHandResidual": N(hp["residual"]),
                   "acqHandTransposed": N(hp["transposed"]),
@@ -3318,7 +3352,8 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
         "acqParcelRetired": N(P["retired_only"]),
         "acqParcelNoLot": N(P["block_exists_lot_not"]),
         "acqParcelNoBlock": N(P["no_block_at_all"]),
-        "acqDistinctParcelKeys": N(P["distinct_keys"]),
+        "acqDistinctParcelKeys": N(P["distinct_real"]),
+        "acqDistinctCandidateKeys": N(P["distinct_keys"]),
         "acqAsrRows": N(asr["rows"]),
         "acqAsrParcels": N(asr["distinct_parcels"]),
         "acqAsrFirst": str(min(asr["years"])),

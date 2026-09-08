@@ -31,7 +31,7 @@ Dataset & Identifier & Rows & Distinct key & Key unique & Date range\\\midrule
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{The parcel join, and what the residual is. The item table's key is \texttt{assessor\_block} plus each entry of \texttt{lot\_number}, zero-padded to DataSF's 4+3 \texttt{blklot} form; an item joins if any of its lots does. Percentages are of the 13{,}620 items that carry a parcel key at all.}\label{tab:parceljoin}
+\caption{The parcel join, and what the residual is. The item table's key is \texttt{assessor\_block} crossed with each entry of \texttt{lot\_number}, with the \emph{digits} of each padded to DataSF's 4+3 \texttt{blklot} form and any letter kept (lot 17A is \texttt{017A}, not \texttt{17A}); an item joins if any lot does. Percentages are of the 13{,}620 items that carry a parcel key at all.}\label{tab:parceljoin}
 \begin{tabular}{lrr}\toprule
 Items & Count & Share\\\midrule
 All items in the corpus & 16{,}199 & 100.0\%\\
@@ -232,8 +232,10 @@ Condition-of-approval text & DBI Building Permits (\texttt{i98e-djp9}) & 87 of 1
 A commission-actions dataset & DataSF catalogue & does not exist --- conditions memo \S4, not re-run\\[2pt]
 Assessor roll before 2007 & \texttt{wv5m-vpq2} & the roll starts at 2007; no earlier vintage is published\\[2pt]
 Parcel-keyed zoning for 1999 & DataSF historic zoning series & 1998 and 2000 exist; 1999 does not\\[2pt]
-Parcel-keyed zoning after 2008 & DataSF historic zoning series & 2009--2015 are polygon layers only\\[2pt]
-A time-varying height and bulk layer keyed on parcel & DataSF historic height and bulk series & 2009--2014 published as polygons; no parcel-keyed vintage\\[2pt]
+\emph{Resolved 2026-09-08.} Parcel-keyed zoning after 2008 & DataSF historic zoning series & the polygon layers are now joined spatially; see Table~\ref{tab:panel}\\[2pt]
+\emph{Resolved 2026-09-08.} A time-varying height and bulk layer keyed on parcel & DataSF historic height and bulk series & polygon-only as published, and now joined spatially onto the same panel\\[2pt]
+\emph{Resolved 2026-09-08.} Planning records for the pre-2002 era & \texttt{y673-d69b}, records opened 1996--2002 & they exist; the department writes a four-digit year where the minutes print two\\[2pt]
+A zoning vintage published after 2015 & DataSF historic zoning series & none; the panel carries the current layer forward, flagged\\[2pt]
 A market price after 2024-05-16 & \texttt{\$MFHR\_\allowbreak DATA\_\allowbreak ROOT/\allowbreak demand/\allowbreak corelogic} & the Cotality pull ends there, two years short of the corpus; Zillow covers the tail at ZIP level only\\[2pt]
 Impact fee registers before 2019 & sfplanning.org and the Wayback Machine & the register is republished at one URL; no snapshot before 2019-09-15\\[2pt]
 A unit count for the early docket & every scale source in Table~\ref{tab:scale} & a non-zero count reaches 20.3\% of conditional uses heard before 2005 against 30.9\% after\\[2pt]
@@ -289,6 +291,7 @@ Every parcel-year in which the parcel existed & 236{,}552 & 5{,}824{,}609 & 11{,
 
 \begin{table}[htbp]\centering
 \caption{What the preferred denominator discards, by request type, at the level of the item rather than the parcel-year. The loss is spread rather than concentrated, which is the reason it is acceptable: no single kind of case is being defined out of the sample.}\label{tab:funnelrt}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrr}\toprule
 Request type & Items on a panel parcel-year & Kept & Dropped\\\midrule
 \texttt{conditional\_use} & 4{,}770 & 4{,}425 & 7.2\%\\
@@ -303,7 +306,7 @@ Request type & Items on a panel parcel-year & Kept & Dropped\\\midrule
 \texttt{conditional\_use\_modification} & 254 & 230 & 9.4\%\\
 \midrule
 All & 12{,}688 & 11{,}987 & 5.5\%\\
-\bottomrule\end{tabular}\end{table}
+\bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
 \caption{The fee register as a structured schedule, and how much variation survives conditioning. The decomposition is on the log rate. A year fixed effect absorbs almost nothing because the dispersion is \emph{across} fees, not over time; what a project-level design can use is what remains inside a year and a fee, across land uses and size bands.}\label{tab:feestruct}
