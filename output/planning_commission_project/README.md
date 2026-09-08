@@ -21,6 +21,7 @@ names the script that regenerates it.
 | [`permit_linkage/`](permit_linkage/) | How far the entitlement can be followed to a real building permit in DBI's records, and what the match buys. | `analyze_permits.py` |
 | [`conditions_of_approval/`](conditions_of_approval/) | Whether the *content* of the Commission's conditions can be recovered, given that `conditions_imposed` is only a yes/no flag. | `analyze_conditions.py` |
 | [`predicting_delay/`](predicting_delay/) | How much of elapsed hearing time is forecastable from what a developer can observe at the first hearing — in sample and out. | `analyze_delay.py` |
+| [`data_acquisition/`](data_acquisition/) | The five external datasets the real-options frame needs and the item panel does not have: a parcel risk set, filing dates and the conditional-use→permit bridge, project scale, prices, fee schedules. Carries the correction that overturns the conditions memo's non-overlap claim. | `acquire_external_data.py` |
 
 ## `notes/`
 

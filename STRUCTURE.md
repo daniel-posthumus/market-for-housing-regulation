@@ -41,6 +41,7 @@ market-for-housing-regulation/
 | `analyze_permits.py` | The permit-linkage memo: parses the four printed permit-number forms out of the request text, matches them against a local cache of DataSF's Building Permits (`i98e-djp9`, 1.3M rows), scores a block+lot fallback against the permit-number subset, and writes `permit_summary.json` next to the extraction so the corpus memo's linkage table cannot drift. |
 | `analyze_conditions.py` | The conditions memo: `probe` (is a Commission packet published for this case?), `fetch` (pull it, keep only the motion's Exhibit A), `report` (coverage, a block-text sweep, and a twelve-category taxonomy). Both network stages cache to `$MFHR_DATA_ROOT/external/cpc_packets/`. |
 | `analyze_delay.py` | The delay memo: builds the case panel from `chains()`, joins DBI for the supervisor district, and runs OLS / LPM / quantile regressions plus a temporal out-of-sample test. |
+| `acquire_external_data.py` | The data-acquisition memo: `probe` (resolve every DataSF identifier against the live catalogue), `fetch` (cache the parcel layer, assessor roll, historic zoning, planning records, pipeline, Zillow and the impact-fee registers under `$MFHR_DATA_ROOT/external/`), `report` (join rates against the item table, figures, tables, and the `external/README.md` provenance table). Establishes the filing-to-hearing clock and the `building_permits` bridge that overturns the conditions memo's non-overlap claim. |
 | `build_adjudication.py` | Queues every gold-vs-model disagreement for a three-way verdict (gold right / model right / both wrong) and mirrors it into `review_queue`. Some measured "model error" is gold error. |
 | `autoextract.py` | Regex/heuristic best-guess extraction from a raw block (form pre-fill + builder derivations). |
 | `minutes_scraping/scrape_minutes.py` | Consolidated, idempotent scraper (S3 HTML 1998–2014; live archive PDFs 2015–present). Legacy scrapers deprecated alongside. |
@@ -103,7 +104,7 @@ output/
 │   └── <one folder per memo>/         # each: <name>.{tex,pdf} + figures/ + tables/
 │       meeting_level_info, extraction_method_comparison,
 │       discretionary_review_patterns, permit_linkage,
-│       conditions_of_approval, predicting_delay
+│       conditions_of_approval, predicting_delay, data_acquisition
 ├── political_economic_housing_model/  # the theory (LIVE)
 │   ├── toy_model.tex (+ .pdf, .bib)   # formal toy model + minutes mapping
 │   ├── operationalization_memo.pdf    # three-layer estimation blueprint

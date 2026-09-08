@@ -23,11 +23,13 @@ output/
 
 - **`planning_commission_project/`** — the live project line, and the one with its own
   `README.md`: start there. It is **one folder per memo**, each holding `<name>.{tex,pdf}`
-  with its own `figures/` and `tables/`. Seven of them: `memo/` (standing pipeline status),
+  with its own `figures/` and `tables/`. Eight of them: `memo/` (standing pipeline status),
   `meeting_level_info/`, `extraction_method_comparison/`, `discretionary_review_patterns/`
   (what the 16,199-item corpus contains), `permit_linkage/` (following the entitlement to
   DBI's building permits), `conditions_of_approval/` (recovering what was conditioned, not
-  just that it was), and `predicting_delay/` (how much elapsed hearing time is forecastable).
+  just that it was), `predicting_delay/` (how much elapsed hearing time is forecastable), and
+  `data_acquisition/` (the external data the real-options frame needs: a parcel risk set,
+  filing dates, project scale, prices, fee schedules).
   The spec/reference docs the pipeline code links to by path — `labeling_rules.md`,
   `data_infrastructure.md`, `minutes_data_availability.md`, `processing_review.md`,
   `schema_enrichment_recommendation.md`, `hand_label_review_guide.md`,

@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-09-08 — Memo reorganisation, permit linkage, conditions of approval, predicting delay
+## 2026-09-08 — Memo reorganisation, three new memos, and the packet pull finished
 
 **Goal**: Execute `.claude/instructions/next_analyses_brief.md` — reorganise
 `output/planning_commission_project/` into one folder per memo, then write three new memos on
@@ -21,8 +21,8 @@ permit linkage, the content of conditions of approval, and what predicts delay.
   in the corpus memo.
 - **New scripts**: `analyze_permits.py`, `analyze_conditions.py`, `analyze_delay.py` — one per
   memo, in the pattern `analyze_corpus.py` set. `statsmodels` added to `requirements.txt`.
-- **Three memos** written and compiled: `permit_linkage` (10pp), `conditions_of_approval`
-  (9pp), `predicting_delay` (10pp).
+- **Three memos** written and compiled: `permit_linkage` (9pp), `conditions_of_approval`
+  (12pp), `predicting_delay` (10pp).
 
 **Key decisions / findings**:
 - **The permit route was never dead after 2019 — the parser was.** Around 2017 the minutes
@@ -38,9 +38,14 @@ permit linkage, the content of conditions of approval, and what predicts delay.
 - **A guard was needed on the seven-digit form.** "No. + seven digits" also catches notices of
   violation, DBI complaint numbers and a State Clearinghouse number; eight were entering the
   join. Requiring a permit word in the preceding 70 characters removes them.
-- **The two linkage routes are exact complements.** The permit join reaches **83.8% of
-  discretionary reviews and under 2% of everything else**; the conditions route reaches
-  conditional use and nothing else. They never cover the same item.
+- **The two linkage routes are complements as the minutes print them.** The permit join
+  reaches **83.8% of discretionary reviews and under 2% of everything else**; the conditions
+  route reaches conditional use (89 of 101 packets) and little else (1 of 41 DRs). I wrote
+  that they therefore "never cover the same item" — **that was wrong**, and a concurrent
+  session's data-acquisition work showed why: DataSF's Planning Records carry a
+  `building_permits` field, which reaches a DBI permit on 46% of conditional-use items. The
+  claim was about what the minutes print, not about what is knowable. The correction is in
+  `conditions_of_approval.tex` §5.1.
 - **Conditions of approval are in the Commission packet, and it is addressable by case
   number** — `commissions.sfplanning.org/cpcpackets/<case>.pdf` for 2010–2021 and
   `citypln-m-extnl.sfgov.org/.../<M>_<D>_<YYYY>/Commission Packet/<case>.pdf` for 2022 on.
@@ -90,8 +95,8 @@ permit linkage, the content of conditions of approval, and what predicts delay.
   (b = −0.355) because half of all cases have no speakers and half of those were continued at
   that hearing — the count marks whether the item was substantively heard.
 - **Geography barely matters**: adding zoning district and supervisor district (recovered by
-  joining the parcel to DBI, which carries a district on 99.9% of permits) moves R² from 0.121
-  to 0.128.
+  joining the parcel to DBI, which carries a district on 99.8% of its rows) moves R² from
+  0.121 to 0.128.
 
 **Next steps**:
 - **Probe every case rather than 20 a year** — the pull is finished, the probe is what is still
@@ -108,6 +113,37 @@ permit linkage, the content of conditions of approval, and what predicts delay.
   end it later by joining DBI's issuance date — the current measure is hearing-to-hearing only.
 - Validate the parcel-fallback rule outside discretionary review, where its 0.70 precision was
   measured and where the ground truth happens to live.
+
+**Files touched**:
+- `code/commission_minutes_processing/analyze_permits.py` — created (parses four printed permit
+  forms, caches DBI, matches, scores the parcel fallback, writes `permit_summary.json`)
+- `code/commission_minutes_processing/analyze_conditions.py` — created (`probe` / `fetch` /
+  `report`; both network stages cache under `$MFHR_DATA_ROOT/external/cpc_packets/`)
+- `code/commission_minutes_processing/analyze_delay.py` — created (case panel, OLS / LPM /
+  quantile regressions, temporal out-of-sample test)
+- `code/commission_minutes_processing/analyze_corpus.py` — modified (paths repointed;
+  `main()` now calls `write_tables()` instead of pickling to a dead scratch path; cohort
+  labels and the corpus-end date generated rather than hard-coded)
+- `code/commission_minutes_processing/{bakeoff_memo,plot_meeting_timeseries,plot_extraction_accuracy}.py`
+  — modified (output paths repointed to the per-memo `figures/` and `tables/`)
+- `code/commission_minutes_processing/link_permits.py` — modified (header notes what
+  `analyze_permits.py` supersedes and what this pilot still does that it does not)
+- `code/commission_minutes_processing/labeling_app/README.md` — modified (relative links into
+  `notes/`)
+- `output/planning_commission_project/` — reorganised into one folder per memo, each with
+  `figures/` and `tables/`; the seven reference docs moved to `notes/` (all via `git mv`)
+- `output/planning_commission_project/{permit_linkage,conditions_of_approval,predicting_delay}/`
+  — created (`.tex` + `.pdf` + generated `figures/` and `tables/`)
+- `output/planning_commission_project/README.md` — created (one line per memo)
+- `output/planning_commission_project/{memo/memo,meeting_level_info/meeting_level_info,discretionary_review_patterns/discretionary_review_patterns}.tex`
+  — modified (new figure/table paths, stale permit numbers corrected, table columns widened,
+  `fig_citations.pdf` given a home)
+- `output/README.md`, `STRUCTURE.md` — modified (new layout, the four analysis scripts)
+- `requirements.txt` — modified (`statsmodels`)
+- `progress_log.md` — modified (this entry)
+- Not in git: `$MFHR_DATA_ROOT/external/datasf/dbi_permits.csv.gz` (1.3M DBI rows),
+  `$MFHR_DATA_ROOT/external/cpc_packets/` (probe + 225 extracted condition texts),
+  `$MFHR_DATA_ROOT/extraction/corpus_v2_g3/{permit_matches.csv,permit_summary.json}`
 
 ## 2026-09-07 — Schema v2, gold set finished and adjudicated, corpus extracted, two memos
 

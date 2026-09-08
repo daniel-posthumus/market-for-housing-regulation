@@ -1,0 +1,678 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+
+% Every number in this document --- prose included --- is defined by
+% acquire_external_data.py in these two generated files. Nothing is typed by hand.
+\input{tables/acquisition_macros}
+
+\title{Locating the Next Tranche:\\
+\large A denominator, a clock, a scale, a price and a fee schedule for the
+item panel}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The paper is moving to a real-options frame, and that changes what the data has to do. The
+outcome of interest becomes the \emph{filing} decision, which needs a denominator --- the
+parcels that could have produced a case and did not --- and the developer's clock starts at
+filing, not at the first hearing. The item table is a numerator measured from the wrong
+instant. This memo finds, verifies, caches and measures the five categories of data that fix
+that, and records the negatives so nobody runs these searches again.
+
+\medskip\noindent
+Five results.
+
+\medskip\noindent
+\textbf{First, the parcel risk set exists and the panel is shorter than the corpus.} DataSF's
+parcel layer holds \acqParcelRows\ parcels, active and retired, on a unique
+\texttt{blklot} key, and \acqParcelJoinN\ of the \acqWithParcel\ items that carry a parcel
+key --- \acqParcelJoin\% --- join to it. That is below the 95\% the brief asked for, and the
+shortfall is not formatting: \acqParcelNoLot\ items name a block that exists and a lot that
+never did. The value side is the assessor's secured roll (\texttt{wv5m-vpq2}, the proposed
+identifier, verified): \acqAsrRows\ parcel-years over \acqAsrParcels\ parcels --- but roll
+years \acqAsrFirst--\acqAsrLast, not \acqCorpusSpan. \textbf{\acqAsrGapYears\ years of the
+corpus have no assessed value at all}, and that is the binding constraint on the risk set, not a scrape
+artefact. Zoning is better than expected: \acqZoningParcelYears\ vintages,
+\acqZoningParcelSpan, are
+published \emph{parcel-keyed} and join directly; \acqZoningPolygonYears\ more are polygons.
+
+\medskip\noindent
+\textbf{Second, the case number joins the Planning Department's records at \acqCaseAny\%},
+and that buys the pre-hearing wait. Raw string equality reaches only \acqCaseRaw\%; stripping
+the case-number suffix reaches \acqCaseStem\%. For the \acqLagN\ cases that join,
+\textbf{the median wait from filing to first hearing is \acqLagMedian\ days}, the 90th
+percentile \acqLagPninety\ and the 99th \acqLagPninetynine. The delay memo reports a
+\acqDelayIssueMedian-day median from hearing to permit issuance, with a 90th percentile of
+\acqDelayIssuePninety, and has nothing before the hearing. The wait it could not see has a
+smaller median and essentially the same 90th percentile --- so, relative to its own centre, it
+is the more dispersed of the two, which is exactly the quantity a real-options threshold
+responds to.
+
+\medskip\noindent
+\textbf{Third --- the most consequential finding --- the \texttt{building\_permits} bridge
+works, and it overturns the conditions memo.} That memo (\S5.1) concludes that the permit
+route reaches discretionary review and the conditions route reaches conditional use, and that
+``they never cover the same item.'' Following a conditional use through its planning record to
+the permit numbers the department itself attaches, \textbf{\acqBridgeCUN\ of \acqBridgeCUTotal\
+conditional-use items --- \acqBridgeCU\% --- reach a permit that is present in DBI},
+against the \acqPrintedCU\% that print one in the minutes. The non-overlap is not a property
+of the world; it was a property of the one route we had. Across the whole docket
+\acqEitherRoute\% of items now reach a real building permit by some route.
+
+\medskip\noindent
+\textbf{Fourth, project scale is reachable but thin where it matters.} A unit count is
+attached to \acqCuUnits\% of conditional-use items through the Projects table --- and is
+\emph{non-zero} on \acqCuUnitsNZ\%. The purpose-built pipeline datasets are worse: the
+Development Pipeline reaches \acqCuPipeline\% and is a current snapshot, and Housing
+Production reaches \acqCuHousingProd\% by parcel.
+
+\medskip\noindent
+\textbf{Fifth, on prices, the important finding is an absence.} The CoreLogic pull did
+happen --- it is documented as complete, \acqCoreLogicSales\ San Francisco sales --- and
+\textbf{the extracts are not under the data root}. That is a human action item, not a search
+result. What is cached instead: Zillow ZHVI and ZORI for San Francisco, and the assessor's
+assessed values with the Proposition~13 caveat stated. On fees, \acqFeeRegisters\ annual
+Citywide Development Impact Fee Registers, \acqFeeFirst--\acqFeeLast, parsed to
+\acqFeeRates\ dated rate observations keyed by Planning Code section --- the Transportation
+Sustainability Fee for residential projects over 99 units runs \$\acqTsfNinetyNineFirst\ to
+\$\acqTsfNinetyNineLast\ per gross square foot over those \acqFeeRegisters\ years, and the
+inclusionary
+fee \$\acqInclusionaryFirst\ to \$\acqInclusionaryLast\ per square foot.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{What this memo is for, and what ``found'' means in it}
+
+A developer sinks entitlement cost before the hearing outcome resolves. Dispersion in delay
+and in conditions raises the rent threshold at which filing is worth doing at all, so the
+observable consequence of a demanding Commission is not worse projects but \emph{fewer and
+higher-value} ones. Two things follow for the data, and everything below serves one of them.
+
+\begin{enumerate}
+\item The outcome is the \textbf{filing decision}, so the analysis needs a population at
+risk. The item table is a numerator: it holds the requests that were made. The denominator is
+every parcel in the city that could have produced a request and did not.
+\item The developer's clock starts at \textbf{filing}. Every delay measure in the pipeline
+today starts at the first hearing, which is well downstream of the decision being modelled.
+\end{enumerate}
+
+\paragraph{Found, usable, and the difference.} This memo reports a source as \emph{usable}
+only when the join key is present \emph{and} the join rate has been measured against the item
+table. A file that downloaded is not a result. Where a dataset's documentation promises a
+field and the rows are empty, the empty rate is reported and not the documentation ---
+Table~\ref{tab:recordfields} is that table, and \S\ref{sec:scale} contains the sharpest
+instance of it.
+
+\paragraph{Two identifier facts that will bite anyone reusing this.} Both were found by the
+probe stage and neither could have been assumed.
+
+\begin{itemize}
+\item \textbf{DataSF's Socrata domain is now \texttt{data.sf.gov}.} The old
+\texttt{data.sfgov.org} still answers the \emph{resource} endpoint --- which is why
+\texttt{analyze\_permits.py} keeps working --- but the \emph{catalogue} API indexes only the
+new domain. A catalogue search against the old host returns zero hits and looks exactly like
+``the dataset does not exist.'' Every dataset in this memo was resolved against the live
+catalogue on \acqRetrieved\ and the identifier reported in Table~\ref{tab:inventory} is the
+one actually used.
+\item \textbf{\texttt{wv5m-vpq2} is the right assessor identifier} --- the brief's proposed
+ID, verified --- \textbf{but the roll starts at \acqAsrFirst}. That is not a gap in a scrape; no
+earlier vintage is published. It is reported as a negative in
+Table~\ref{tab:negatives} because the temptation to go looking again will be strong.
+\end{itemize}
+
+\input{tables/acquisition_tables}
+
+Table~\ref{tab:inventory} is the inventory: resolved identifier, host, row count, distinct
+count on the key we join on, whether that key is actually unique, and the date range. Key
+uniqueness is tested rather than assumed, because the last time it was assumed --- DBI's
+\texttt{permit\_number} --- 145{,}795 rows turned out to repeat one, once per lot the permit
+touched. Three of the sources here are also not unique on their intended key and are marked
+as such.
+
+\section{The parcel risk set}
+\label{sec:riskset}
+
+\subsection{Geometry and identifiers}
+
+The layer is \textbf{Parcels --- Active and Retired} (\texttt{acdm-wktn}): \acqParcelRows\
+rows, one per parcel that has ever existed in the city's records, unique on \texttt{blklot},
+and carrying \texttt{mapblklot} (the surviving map parcel a retired lot was folded into),
+an \texttt{active} flag, and four dated fields --- when the parcel was added to and dropped
+from the recorder's file and from the map. That last group is what makes it a risk set rather
+than a snapshot: a parcel can enter and leave, and the dates say when.
+
+The item table's key is \texttt{assessor\_block} plus each entry of \texttt{lot\_number},
+zero-padded to DataSF's four-plus-three \texttt{blklot} form. \acqWithParcel\ items ---
+\acqParcelShare\% --- carry one, covering \acqDistinctParcelKeys\ distinct parcels.\footnote{%
+The corpus memo reports 8{,}295 distinct parcels for the same corpus. The difference is one
+key: an item with a block and an \emph{empty} lot, which the corpus memo's rule zero-pads
+into the plausible-looking parcel \texttt{0168000}. A blank lot is not lot~0, so it is
+dropped here.}
+
+Table~\ref{tab:parceljoin} is the join, and the residual is characterised rather than
+dropped:
+
+\begin{itemize}
+\item \textbf{\acqParcelJoin\% join} --- \acqParcelJoinN\ of \acqWithParcel.
+\item \acqParcelActive\% join to a parcel that is \emph{still active}; \acqParcelRetired\
+items join only to a parcel that has since been retired. This is the substantively
+interesting part of the residual, not noise: a lot that was merged away after its hearing is
+frequently a lot that was merged \emph{because} of it.
+\item \textbf{\acqParcelNoLot\ items name a block that exists and a lot that does not.} That
+is the bulk of the failure and it is not a formatting problem --- the block matched.
+\item \acqParcelNoBlock\ items name no block the city has ever recorded.
+\end{itemize}
+
+\textbf{The brief's acceptance criterion was a join on $\geq$95\% of items carrying a parcel
+key. It is not met: the rate is \acqParcelJoin\%.} Saying so is cheaper than discovering it in
+a hazard model. The upper panel of Figure~\ref{fig:riskset} shows that the rate is flat in
+time --- this is not an era effect --- so the shortfall is a property of how the minutes print
+lots, and the \acqParcelNoLot\ block-matched failures are the population worth a hand pass.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_parcel_riskset.pdf}
+\caption{Top: the share of items carrying a parcel key that join the parcel layer, that join
+a parcel still active, and that appear on the assessor's roll, by hearing year. Bottom:
+parcels on the assessor's secured roll per roll year --- the panel is
+\acqAsrFirst--\acqAsrLast, and the bars are flat, so nothing is missing \emph{within} it.}
+\label{fig:riskset}
+\end{figure}
+
+\subsection{Value: the assessor's secured roll}
+
+\textbf{Assessor Historical Secured Property Tax Rolls} (\texttt{wv5m-vpq2}) is the value
+side: \acqAsrRows\ parcel-years over \acqAsrParcels\ distinct parcels, carrying assessed land
+value, improvement value, fixtures, use code and definition, property class, year built, lot
+area, property area, number of units and stories --- a parcel-year panel in the shape the
+hazard needs. Table~\ref{tab:assessor} gives it.
+
+The constraint is the period. \textbf{The roll runs \acqAsrFirst--\acqAsrLast\
+(\acqAsrNYears\ years)}, and the corpus runs \acqCorpusSpan. The lower panel of
+Figure~\ref{fig:riskset} shows the roll is flat inside its window --- a median of
+\acqAsrParcelsPerYear\ parcels a year, every year, with no hole --- so this is a genuine start
+date and not the 2018 problem again. Of the \acqAsrSought\ item parcel keys, \acqAsrFound\ appear on the roll at
+some point, and \acqAsrJoin\% of items with a parcel key reach it. Of the item parcels that
+do appear, \acqAsrBalanced\ appear in every one of the \acqAsrNYears\ years; the rest enter
+or leave, so the panel is unbalanced by construction and has to be treated that way.
+
+\paragraph{What this costs.} A parcel-year hazard can be estimated for
+\acqAsrFirst--\acqAsrLast. That is within the brief's acceptance range (2005--2026 was asked
+for, 1998 was the ideal) but it excludes the first \acqAsrGapYears\ years of the corpus,
+which is
+precisely the era in which the corpus memo's substitution --- denial falling to zero,
+conditioning tripling --- begins. Anything that wants pre-period variation in assessed value
+will have to come from somewhere else, and \S\ref{sec:prices} is the only candidate.
+
+\subsection{Zoning, and the one genuinely good surprise}
+
+The brief asked whether any \emph{time-varying} zoning exists, expecting a current snapshot.
+It does, and the shape of the publication is the finding. Table~\ref{tab:zoning} is the
+inventory.
+
+\begin{itemize}
+\item \textbf{\acqZoningParcelYears\ vintages, spanning \acqZoningParcelSpan, are published
+\emph{parcel-keyed}}, one row per \texttt{blklot} with the zoning district, the height limit,
+the land use and, in the earlier years, unit counts and building square footage. These join to
+the item table on the same key as everything else in \S\ref{sec:riskset} and need no spatial
+work at all.
+\item \textbf{\acqZoningPolygonYears\ more --- the remaining years and the three current
+layers (districts, height and bulk, special use) --- are polygon-only.} They are inventoried in
+Table~\ref{tab:zoning} with row counts and identifiers and deliberately not cached: turning
+them into a parcel panel is a spatial join, which this memo does not do and which should not be
+done accidentally.
+\item \textbf{One year in the middle of the parcel-keyed run is not published in either
+form}, and Table~\ref{tab:zoning} names it.
+\end{itemize}
+
+There is also a free current snapshot: \texttt{acdm-wktn} carries \texttt{zoning\_code} and
+\texttt{zoning\_district} on every parcel. So current zoning is parcel-keyed,
+\acqZoningParcelSpan\ is parcel-keyed, and the years between them are the polygon-only gap in
+the middle. That is an odd shape but
+it is a far better one than a snapshot, and it means pre-period zoning variation is
+available for exactly the era the assessed values are not.
+
+\textbf{Height and bulk is worse.} The historic height-and-bulk series is polygon-only in
+every year it is published; there is no parcel-keyed vintage (Table~\ref{tab:negatives}).
+Height therefore has to come either from the \acqZoningParcelSpan\ zoning tables'
+\texttt{height\_lim} column or from a spatial join.
+
+\textbf{Land use} (\texttt{c5ge-t6pj}) is available as a cross-check on the assessor's use
+codes, with one wrinkle: its key is \texttt{mapblklot}, and \acqLandUseMulti\ of its rows
+describe a \emph{group} of parcels (\texttt{geography\_type} = \texttt{multiple\_parcels},
+with a list of \texttt{mapblklot} values in one cell) rather than a single parcel. That is few
+enough to handle as an exception rather than as a design constraint.
+
+\section{Filing dates and the conditional-use-to-permit bridge}
+\label{sec:filing}
+
+\subsection{Does the case number join?}
+
+The two Planning Department Records tables --- \texttt{y673-d69b} (Non-Projects,
+\acqNonProjRows\ rows) and \texttt{qvu5-m3a2} (Projects, \acqProjRows\ rows) --- are the
+department's own
+application record. Both identifiers were verified and both are unique on
+\texttt{record\_id}. Table~\ref{tab:casejoin} tests the join three ways against all
+\acqCases\ distinct cases in the item table.
+
+\begin{itemize}
+\item \textbf{Raw string equality: \acqCaseRaw\%.}
+\item \textbf{Normalised (upper-case, whitespace stripped): \acqCaseNorm\%.} Normalisation
+buys almost nothing here, which is a small vindication of the extraction --- the case numbers
+come out clean.
+\item \textbf{Suffix-stripped stem: \acqCaseStem\%.} Stripping the letter suffix
+(\texttt{2014.0400CUA} $\to$ \texttt{2014.0400}) is what does the work, because it is how a
+suffixed case reaches its umbrella project record. \acqCaseAnyN\ of \acqCases\ cases join.
+\end{itemize}
+
+Figure~\ref{fig:casejoin} gives it by hearing year, and the residual has one cause.
+\textbf{Coverage does not start late; it starts abruptly.} From \acqCaseJoinBreakYear\
+onward the annual join rate never falls below \acqCaseJoinLateMin\%. Before that it
+collapses, and
+Table~\ref{tab:casejoin}'s last block says why: the minutes of that era print the case number
+in the two-digit-year form (\texttt{98.426D}), and \textbf{the Planning Department's records
+contain no identifier in that format at all --- \acqOldFormatMatched\ of \acqOldFormatCases\
+such cases match}. Of the modern-format cases only \acqModernUnmatched\ fail to join. The
+residual is a format, not a coverage rate, and no amount of fuzzy matching fixes it: the
+records simply do not go back that far under any key.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_case_join.pdf}
+\caption{Share of cases heard each year whose case number is found in a Planning Department
+record, three ways. The early collapse is the two-digit-year case-number format, which the
+department's records do not use.}
+\label{fig:casejoin}
+\end{figure}
+
+\subsection{What \texttt{open\_date} buys: the wait before the hearing}
+
+\texttt{open\_date} is populated on \acqNpOpenDate\% of non-project records
+(Table~\ref{tab:recordfields}), so every joined case has one. Collapsing both sides to one row
+per case --- earliest open date, earliest hearing --- gives the elapsed time a developer
+actually experiences before the Commission first looks at the project.
+Table~\ref{tab:filinglag} and Figure~\ref{fig:filinglag} report it.
+
+\begin{itemize}
+\item \textbf{Median \acqLagMedian\ days.} 90th percentile \acqLagPninety;
+99th \acqLagPninetynine. Coverage \acqLagCoverage\% of all \acqCases\ cases.
+\item By request type the ordering is the one the theory wants:
+\textbf{variance \acqLagVar\ days, conditional use \acqLagCU, discretionary review
+\acqLagDR}. A discretionary review is filed against someone else's pending permit and is
+heard quickly; a conditional use is the developer's own application and waits.
+\item \acqLagNegative\% of observations are negative --- a record opened after the hearing.
+Those are follow-on records, and they are the reason the \emph{earliest} open date of the case
+is the one used. They are reported rather than trimmed.
+\end{itemize}
+
+\textbf{This is the memo's answer to the delay memo's blind spot.} That memo measures
+hearing-to-issuance at a \acqDelayIssueMedian-day median with a \acqDelayIssuePninety-day
+90th percentile --- both recomputed here from the artefact that memo wrote, and both
+reproduced exactly. The pre-hearing wait is a median of \acqLagMedian\ days with a 90th
+percentile of \acqLagPninety: a shorter typical wait and an almost identical tail, and
+therefore a markedly larger ratio of tail to centre. A real-options model in which dispersion
+is what raises the filing threshold has been ignoring the more dispersed of the two waits, and
+starting its clock after the more dispersed one had already run.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_filing_lag.pdf}
+\caption{Left: the distribution of days from filing to first hearing, truncated at
+\acqLagTrunc\ days for display;
+the median line is computed on the untruncated data. Right: the median by
+hearing year with the interquartile range behind it, years with fewer than
+\acqMinCasesFig\ cases omitted.}
+\label{fig:filinglag}
+\end{figure}
+
+\subsection{The bridge, and a correction to the conditions memo}
+\label{sec:bridge}
+
+This was the highest-value question in the brief and the answer is yes.
+
+\texttt{building\_permits} is a field on both records tables, populated on
+\acqNpBuildingPermits\% of non-project rows and \acqPrBuildingPermits\% of project rows
+(Table~\ref{tab:recordfields}). For each item, the
+permit numbers were read from the case's own record, from its parent \texttt{PRJ} record where
+\texttt{parent\_id} names one, and from any record sharing its stem; each was normalised to
+digits exactly as \texttt{analyze\_permits.py} normalises a printed one --- no zero-padding,
+because DBI does not pad the serial --- and matched against the cached Building Permits table.
+Table~\ref{tab:bridge} is the result.
+
+\begin{itemize}
+\item \textbf{Conditional use: \acqBridgeCU\% of \acqBridgeCUTotal\ items reach a permit
+present in DBI}, against \acqPrintedCU\% that print a permit number in the minutes. The
+route the permit memo had was blind to this part of the docket almost completely; the bridge
+is not.
+\item Discretionary review reaches \acqBridgeDR\% through the bridge --- \emph{lower} than the
+\acqPrintedDR\% that print a number --- so the two routes are complements, not substitutes.
+Taking either, \acqEitherDR\% of discretionary reviews reach a permit.
+\item \textbf{Across the whole docket, \acqEitherRoute\% of items reach a building permit by
+one route or the other}, against \acqBridgeDbiShare\% by the bridge alone and
+\acqPrintedAll\% by the printed number alone.
+\item Large project authorization (\acqBridgeLpa\%), variance (\acqBridgeVar\%) and
+downtown project (\acqBridgeDnt\%) were all effectively unreachable before and are now
+reachable. Legislative items (planning code amendment, \acqBridgePca\%) remain unreachable,
+correctly --- they are not about a building.
+\end{itemize}
+
+\paragraph{Correction.} The conditions memo, \S5.1, concludes:
+
+\begin{quote}\small
+``The permit route reaches discretionary review (83.8\% of DR items match a DBI permit) and
+essentially nothing else; the conditions route reaches conditional use and essentially nothing
+else. Between them they cover most of the docket, but they never cover the same item, so an
+analysis that wants both construction outcomes and condition content on one project cannot
+have them from these two sources.''
+\end{quote}
+
+\noindent
+\textbf{That conclusion no longer holds.} \acqBridgeCUN\ conditional-use items --- the exact
+population the packet route reaches --- now also reach a building permit in DBI. The
+non-overlap was a property of the route, not of the docket: the minutes do not print a permit
+number on a conditional use, but the Planning Department records one anyway. Construction
+outcomes and condition content \emph{can} be had on the same project, for
+\acqBridgeCU\% of conditional uses. \textbf{The conditions memo has been amended
+accordingly}: \S5.1 now carries a dated correction paragraph quoting the sentence it
+withdraws, and its \S8 item~5 (``the exact complement of the permit route'') has been
+narrowed to a claim about what the minutes print rather than about what is knowable.
+
+\subsection{What else the records carry}
+
+Table~\ref{tab:recordfields} inventories the fields the item table does not have, with the
+share of rows on which each is actually populated. \texttt{close\_date} (\acqNpCloseDate\%),
+\texttt{record\_status} (\acqNpRecordStatus\%), \texttt{applicant} (\acqNpApplicant\%),
+\texttt{assigned\_to\_planner} (\acqNpPlanner\%) and \texttt{applicant\_org}
+(\acqNpApplicantOrg\%) are all substantially populated and all are new information. Two are
+not what their names suggest: \texttt{project\_decision} is populated on \acqPrDecision\% of
+project rows, so the department's own decision field is not a substitute for the extraction,
+and \texttt{inclusionary} is a flag on \acqPrInclFlag\%.
+
+\section{Project scale}
+\label{sec:scale}
+
+Table~\ref{tab:scale} is the answer, and it contains the memo's clearest instance of the
+difference between a field existing and a field carrying information.
+
+\textbf{The Projects table is the spine.} Its \texttt{number\_of\_units\_prop} reaches
+\acqCuUnits\% of conditional-use items through the case-number stem, over a date range that
+starts long before any purpose-built pipeline dataset. But the field is never null and is
+\emph{zero} on most rows: \textbf{it is non-zero on only \acqCuUnitsNZ\% of conditional-use
+items}. Reporting the first number alone would be reporting the documentation. The right
+statement is that a unit count is \emph{attached} to the great majority of conditional uses
+and is \emph{informative} on well under a third of them --- which is consistent with the
+docket, most of which is not residential construction, but which caps what a revenue measure
+built on it can do.
+
+The purpose-built datasets are weaker than the brief hoped:
+
+\begin{itemize}
+\item \textbf{SF Development Pipeline} (\texttt{6jgi-cpb4}) does carry a planning case number
+--- \texttt{case\_no} --- which is what the brief flagged as a potential P0 find. It is the
+\texttt{PRJ} umbrella number, so it reaches the item table only through the stem, and it is a
+\textbf{current snapshot}: \acqPipelineRows\ rows, the projects in the pipeline now. It
+reaches
+\acqCuPipeline\% of conditional-use items. It is a good source for scale on live projects and
+not a panel.
+\item \textbf{Housing Production 2005--present} (\texttt{xdht-4php}) carries
+\texttt{ppts\_project\_id} in the old \texttt{YYYY.NNNN} form, which joins to the item table's
+stem, and \texttt{blocklot}. It reaches \acqCuHousingProd\% of conditional-use items by
+parcel. It is completions, so it observes only projects that were built.
+\item \textbf{MOHCD Affordable Housing Pipeline} (\texttt{aaxw-2cb8}) carries
+\texttt{planning\_case\_number} explicitly and is \acqMohcdRows\ rows. It reaches
+\acqCuMohcd\% of
+conditional-use items. It is the right source for the affordability channel and it is small.
+\item \textbf{Dwelling Unit Completion Counts} (\texttt{j67f-aayr}) is keyed on the building
+permit number, so it is reachable only through \S\ref{sec:bridge}'s bridge --- which is now a
+reason it is reachable at all.
+\end{itemize}
+
+\textbf{And none of it reaches the early docket well.} Every purpose-built scale dataset
+begins in \acqScaleEarliest\ or later, and the consequence is measurable rather than
+rhetorical: a non-zero unit count reaches \acqCuUnitsNZearly\% of conditional uses heard
+before \acqScaleEarliest\ against \acqCuUnitsNZlate\% of those heard after.
+
+\section{Prices and rents}
+\label{sec:prices}
+
+Table~\ref{tab:prices} is the fallback chain. The top of it is the finding.
+
+\paragraph{CoreLogic / Cotality: the pull happened and the files are gone.} The brief asked
+whether the pull went through before Stanford access lapsed on 1 July. It did.
+\texttt{demand\_estimation/stubs.py} records the source's status as \texttt{landed} with a
+full provenance note --- pulled from Stanford Libraries' Redivis ``Data Farm'', filtered
+server-side to the Bay Area county FIPS, PII excluded at query time --- and the summary
+tables it produced are still in the repository:
+\acqCoreLogicSales\ San Francisco sales, with a median price and a median price per square
+foot, and a parcel file carrying year built, bedrooms, bathrooms, living area, lot size,
+assessed value and annual property tax.
+
+\textbf{The extracts themselves are not under \texttt{\$MFHR\_DATA\_ROOT}.} Neither is the
+rest of the \texttt{demand/} subtree the demand pipeline writes. The most likely explanation
+is the machine loss that cost the corpus and the hand labels and from which the labels were
+recovered by content-matching; the CoreLogic extracts had no such second copy. \textbf{This is
+a human action item, not a search result}: either the Redivis extracts are re-exported (the
+query templates and column choices are documented in the stub), or the demand-side price spine
+is re-requested through BU. It should not be looked for again on disk.
+
+\paragraph{CoStar} is an access question and is reported as one. Nothing was attempted and
+nothing was scraped.
+
+\paragraph{What is cached instead.} Zillow's research files, filtered to San Francisco County
+and stored with the national row counts recorded so the filter is auditable:
+\textbf{ZHVI on \acqZhviZips\ ZIP codes, \acqZhviFirst\ to \acqZhviLast}, and
+\textbf{ZORI on \acqZoriZips\ ZIP codes, \acqZoriFirst\ to \acqZoriLast}. These are
+market-level indices; the item table has no ZIP, so using them means going parcel $\to$
+address $\to$ ZIP, or falling back to the supervisor district and analysis neighbourhood the
+parcel layer already carries. They are a price \emph{environment}, not a project price.
+
+\paragraph{The fallback.} Assessed land and improvement value from \S\ref{sec:riskset},
+parcel-year, \acqAsrFirst--\acqAsrLast, universal within that window. It is a weak price:
+Proposition~13 makes assessed value a function of how long the current owner has held the
+parcel rather than of what the parcel is worth. It is worth having with that caveat stated in
+every table it appears in, and it is not a substitute for a transaction price.
+
+\section{Fee and exaction schedules}
+\label{sec:fees}
+
+The conditions memo finds that most staff-imposed conditions are obligation-imposing rather
+than project-changing, and that the largest recurring headings --- Transportation Sustainability Fee, inclusionary,
+impact fees --- have posted dollar schedules. This section converts those headings into
+dollars.
+
+\paragraph{The document.} The \textbf{San Francisco Citywide Development Impact Fee Register}
+is a multi-page landscape schedule, republished each January, giving for every fee: the city
+area subject to it, the ordinance reference, the uses it applies to, the rate, the threshold,
+the controlling entity, the unit, and the effective date. It is exactly the object the brief
+asked for.
+
+\paragraph{The problem, and the route around it.} The register is republished at \emph{one
+URL}, so the department's site only ever holds the current year. \acqFeeRegisters\ dated
+copies were assembled --- \acqFeeFirst\ through \acqFeeLast\ --- from the Wayback Machine's
+snapshots of that URL and from the year-stamped URLs the department left behind.
+\textbf{No snapshot exists before \acqFeeEarliestSnapshot}, under that URL or any other
+tried, so the
+fee panel starts at \acqFeeFirst\ (Table~\ref{tab:negatives}).
+
+\paragraph{The parse.} Table~\ref{tab:fees} reports what came out of each register:
+\acqFeeRates\ dated rate observations in total, keyed to the Planning Code (or State
+Education Code) section of the register row they sit in, and to the land-use or size band the
+register prints on the same line. The section is the key because it is the only column that
+survives PDF text extraction intact; the fee \emph{name} wraps across several lines and the
+columns interleave. Effective dates are read from the register's own cover line, not inferred
+from when the file was retrieved.
+
+Table~\ref{tab:feerates} is the result: \textbf{a rate keyed by year, by fee and, where the
+register labels it, by land use}. The Transportation Sustainability Fee for residential
+projects over 99 units runs \$\acqTsfNinetyNineFirst\ per gross square foot in \acqFeeFirst\
+to \$\acqTsfNinetyNineLast\ in \acqFeeLast; the inclusionary fee under \S415 runs
+\$\acqInclusionaryFirst\ to \$\acqInclusionaryLast\ per square foot of residential gross floor
+area. A named condition heading in a Commission motion can now be priced.
+
+\paragraph{What is not here.} The register's \emph{district} dimension is a free-text column
+(``Eastern Neighborhoods Mixed Use Districts: RED, RED-MX, SPD, MUG\ldots'') and is not parsed
+into a key. Neighborhood-Specific Impact Fee Areas (\texttt{ntc3-dd64}, \acqFeeAreaRows\
+rows) is cached and
+is the geographic side of that, but joining a fee area to a parcel is a spatial join and is
+not done here. The inclusionary \emph{requirement percentages} under \S415 --- as distinct
+from the in-lieu fee --- and their amendment history are legislative and are not in the
+register; that remains open.
+
+\section{Established, and not established}
+
+\textbf{Established.}
+\begin{enumerate}
+\item A parcel-year risk set can be built. \texttt{acdm-wktn} is unique on \texttt{blklot} and
+\acqParcelJoin\% of items carrying a parcel key join to it; the residual is
+\acqParcelNoLot\ block-matched lot failures and \acqParcelNoBlock\ unmatched blocks, not a
+formatting problem.
+\item The value side of that risk set is \acqAsrFirst--\acqAsrLast\ and no earlier.
+\acqAsrRows\ parcel-years, flat across the window, \acqAsrJoin\% of keyed items reached.
+\item Zoning is time-varying and parcel-keyed for \acqZoningParcelYears\ vintages spanning
+\acqZoningParcelSpan, and polygon-only for \acqZoningPolygonYears\ more.
+\item The case number joins the Planning Department's records on \acqCaseAny\% of
+\acqCases\ cases, via the suffix-stripped stem, and never below \acqCaseJoinLateMin\% in any
+year from \acqCaseJoinBreakYear\ on. The earlier residual is entirely the two-digit-year
+case-number format.
+\item Filing to first hearing is measurable on \acqLagCoverage\% of cases: median
+\acqLagMedian\ days, 90th percentile \acqLagPninety, 99th \acqLagPninetynine.
+\item The \texttt{building\_permits} bridge reaches \acqBridgeCU\% of conditional-use items
+through to a permit present in DBI, and \acqEitherRoute\% of the docket reaches a permit by
+some route. The conditions memo's non-overlap claim (\S5.1) is overturned.
+\item A unit count is attached to \acqCuUnits\% of conditional-use items and is non-zero on
+\acqCuUnitsNZ\%.
+\item The CoreLogic pull was completed and its output is absent from the data root.
+\item An annual dollar fee schedule exists for \acqFeeFirst--\acqFeeLast, keyed by Planning
+Code section and land-use band, \acqFeeRates\ rate observations.
+\end{enumerate}
+
+\textbf{Not established.}
+\begin{enumerate}
+\item Whether the \acqParcelNoLot\ block-matched, lot-unmatched items are extraction errors or
+lots the recorder never carried. The block matched, so both are live; a hand pass on a sample
+would settle it and has not been done.
+\item Whether a case's \emph{earliest} \texttt{open\_date} is the filing date a developer
+would recognise. A case can have several records opened under one stem --- environmental,
+preliminary project assessment, the entitlement itself --- and the earliest is the earliest
+\emph{administrative} act, which may pre-date the application the hearing is about. The
+\acqLagPninetynine-day 99th percentile is the visible symptom.
+\item Whether the permit a conditional use reaches through the bridge is the permit the
+hearing was \emph{about}. The bridge returns every permit the department associates with the
+project; no adjudication of which one is the entitlement's permit has been done, and the
+permit memo's parcel-window-type rule is the obvious tool for it.
+\item Whether \texttt{number\_of\_units\_prop} means the same thing across the Projects
+table's full span. It is zero on most rows and the zero is not distinguishable from an
+unfilled field.
+\item Anything about fee levels before \acqFeeFirst. The register panel starts there and the
+earlier schedules are not on the site or in the archive under any URL tried.
+\item Anything causal. Every number in this memo is a coverage rate or a descriptive
+distribution.
+\end{enumerate}
+
+\section{Limitations}
+
+\paragraph{Coverage rates resting on a small denominator.} The MOHCD pipeline is
+\acqMohcdRows\ rows and
+reaches \acqCuMohcd\% of conditional-use items --- that is a handful of items, and a rate
+computed on it should not be reported to one decimal place anywhere but the table it comes
+from. The Development Pipeline's \acqCuPipeline\% rests on \acqPipelineRows\ rows. The
+request-type breakdown in Table~\ref{tab:bridge} suppresses types with fewer than
+\acqMinItemsBridge\ items, and Table~\ref{tab:filinglag} suppresses groups with fewer than
+\acqMinCasesFig\ cases with a lag.
+
+\paragraph{Current snapshots that are not panels.} The Development Pipeline is the projects in
+the pipeline \emph{now}; a project entitled a decade ago and long since built is not in it.
+The
+current zoning, height-and-bulk and special-use layers are snapshots. \texttt{acdm-wktn}'s
+\texttt{zoning\_code} is current zoning attached to every parcel including retired ones, which
+is a snapshot wearing a panel's clothes and must not be used as the zoning \emph{at} the time
+of an early hearing --- that is what the \acqZoningParcelSpan\ vintages are for. San Francisco Land Use is
+one \texttt{data\_as\_of} date.
+
+\paragraph{Periods that do not line up.} The corpus is \acqCorpusSpan. Assessed values are
+\acqAsrFirst--\acqAsrLast. Parcel-keyed zoning is \acqZoningParcelSpan. Fee rates are
+\acqFeeFirst--\acqFeeLast. \textbf{No single window has all of them}, and a specification
+wanting both an assessed value and the zoning in force is confined to the overlap of the
+second and third unless the polygon zoning years are joined spatially.
+
+\paragraph{Access questions left open.} CoreLogic (re-export from Redivis, or a BU request).
+CoStar (BU Questrom holdings, unchecked by design). The \S415 inclusionary requirement
+percentages and their amendment history. Fee registers before \acqFeeFirst.
+
+\paragraph{Source quirks worth carrying.} Dwelling Unit Completion Counts contains a
+\texttt{date\_issued} in \acqUcMaxYear, marked \emph{(sic)} in Tables~\ref{tab:inventory}
+and~\ref{tab:scale}; it is a typo in the source, not the end of the file's coverage. The MOHCD
+pipeline's dates run to \acqMohcdMaxYear\ because they are estimated construction completions,
+which is
+correct. \acqNonUniqueSources\ of the \acqSourcesCached\ cached sources are not unique on
+their intended key and are marked so in Table~\ref{tab:inventory}. The Planning Department's non-project table has an
+\texttt{open\_date} in \acqNpMinYear, which is real in the sense that the row says so and has
+not been audited.
+
+\paragraph{One measurement not attempted.} The brief asks for a sample of non-joining parcel
+keys with the reason. Table~\ref{tab:parceljoin} gives the reasons as a partition ---
+retired-only, block-matched-lot-unmatched, no-such-block --- which is the aggregate version of
+that, and the sample of individual keys is left for the hand pass in ``Not established''
+item~1.
+
+\section{Reproducing this}
+
+\texttt{code/commission\_minutes\_processing/acquire\_external\_data.py} runs in three stages,
+each cached so no network stage repeats by accident:
+
+\begin{verbatim}
+python acquire_external_data.py probe            # resolve every identifier, live
+python acquire_external_data.py fetch            # download and cache each source
+python acquire_external_data.py fetch --refresh  # re-download everything
+python acquire_external_data.py fetch --only assessor   # or one source
+python acquire_external_data.py report           # joins, figures, tables, README
+\end{verbatim}
+
+\texttt{probe} writes \texttt{\$MFHR\_DATA\_ROOT/external/\_acquisition/probe.json} --- the
+resolved identifier, row count, column list and update time for every dataset, the catalogue
+searches that produced them, and an HTTP check on every non-Socrata file. \texttt{fetch}
+writes one directory per source under \texttt{\$MFHR\_DATA\_ROOT/external/}
+(\texttt{parcels}, \texttt{assessor}, \texttt{zoning}, \texttt{planning\_records},
+\texttt{pipeline}, \texttt{prices}, \texttt{fees}) and skips anything already on disk.
+\texttt{report} regenerates the three figures, \texttt{tables/acquisition\_tables.tex},
+\texttt{tables/acquisition\_macros.tex}, and \texttt{external/README.md}, which records per
+source the resolved identifier, retrieval date and row count so a later run can tell whether
+the cache is stale.
+
+The item table is the same extraction the other memos read
+(\texttt{\$MFHR\_DATA\_ROOT/}\allowbreak\texttt{extraction/corpus\_v2\_g3/clean/*.jsonl}),
+and the permit
+normalisation and the printed-permit parser are imported from
+\texttt{analyze\_permits.py} rather than re-implemented, so the two memos cannot report
+different numbers for the same question.
+
+\textbf{No number in this memo is hand-placed}, and here that is literal rather than
+conventional. Every measurement in the prose is a \texttt{\textbackslash newcommand} defined
+in \texttt{tables/acquisition\_macros.tex}, written by \texttt{report}; the tables are
+\texttt{tables/acquisition\_tables.tex}, written by the same function; both are
+\texttt{\textbackslash input} at the top of the \texttt{.tex}. Changing a figure in this
+document means changing the script.
+
+The only numerals typed into the \texttt{.tex} are: section and item cross-references;
+identifiers and dataset names (\texttt{2014.0400CUA}, \texttt{98.426D}, Housing
+Production 2005--present); the register's own printed land-use bands
+(``over 99 units''); named prior facts (Proposition~13, the 2018 hole in the meeting corpus);
+two figures quoted from the brief itself (the $\geq$95\% acceptance
+criterion and the 1 July access lapse); and three figures quoted from sibling memos, each
+attributed where it appears --- the corpus memo's 8{,}295 distinct parcels, the permit memo's
+145{,}795 duplicate \texttt{permit\_number} rows, and the 83.8\% inside the block quotation
+from the conditions memo. The delay memo's hearing-to-issuance median is \emph{not} in that
+list: \texttt{report} recomputes it from \texttt{permit\_matches.csv} and it appears here as
+\texttt{\textbackslash acqDelayIssueMedian}, which is one way of checking that this memo and
+that one still agree.
+
+\end{document}
