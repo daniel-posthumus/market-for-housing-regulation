@@ -50,60 +50,60 @@ All years & 578 & 225 & 39\% & \\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{Of the packets pulled, which kinds of case actually carry a motion with an Exhibit A. A discretionary review does not: its packet is a staff analysis and its outcome is a Discretionary Review Action, so the empty cell is the correct answer rather than a parser failure.}\label{tab:kinds}
-\begin{tabular}{lrrr}\toprule
-Case family & Packets pulled & With an Exhibit A & Median headings\\\midrule
-Conditional use & 64 & 55 & 15\\
-Discretionary review & 28 & 0 & ---\\
-Environmental & 7 & 0 & ---\\
-Legislative & 14 & 0 & ---\\
-Other & 28 & 6 & 15\\
-Variance & 5 & 0 & ---\\
-\midrule All & 146 & 61 & \\
+\caption{Of the packets pulled, which kinds of case carry a conditions section --- in a conditional-use motion, Exhibit A. A discretionary review normally does not: its packet is a staff analysis and its outcome is a Discretionary Review Action, not a conditioned authorisation, so the empty cell is the correct answer rather than a parser failure. `Not read' is packets the probe found but \texttt{fetch} has not opened; they are excluded from the rate rather than counted as negatives.}\label{tab:kinds}
+\begin{tabular}{lrrrrr}\toprule
+Case family & Pulled & Not read & Read & Conditions section & Median numbered\\\midrule
+Conditional use & 101 & 0 & 101 & 89 & 15\\
+Discretionary review & 41 & 0 & 41 & 1 & 5\\
+Environmental & 7 & 0 & 7 & 0 & ---\\
+Legislative & 25 & 0 & 25 & 1 & 0\\
+Other & 42 & 0 & 42 & 13 & 17\\
+Variance & 9 & 0 & 9 & 2 & 2\\
+\midrule All & 225 & 0 & 225 & 106 & \\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{The twenty most frequent condition headings across the 146 packets pulled, of which 60 carried a parsable Exhibit A. The Commission's conditions are written from a template, and the template is the finding.}\label{tab:titles}
+\caption{The twenty most frequent condition headings across the 225 packets read, of which 103 yielded at least one numbered condition heading. The Commission's conditions are written from a template, and the template is the finding.}\label{tab:titles}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrlr}\toprule
 Condition & Packets & Condition & Packets\\\midrule
-Enforcement & 55 & Revocation due to Violation of Conditions & 52\\
-Extension & 51 & Community Liaison & 42\\
-Conformity with Current Law & 39 & Sidewalk Maintenance & 38\\
-Expiration and Renewal & 36 & Validity & 36\\
-Garbage, composting and recycling storage & 24 & Diligent pursuit & 24\\
-Bicycle Parking & 21 & Validity and Expiration & 19\\
-Garbage, Recycling, and Composting Receptacles & 19 & Final Materials & 16\\
-Diligent Pursuit & 14 & Interior alterations to publicly accessible spaces & 14\\
-Rooftop Mechanical Equipment & 12 & Monitoring & 10\\
-Lighting & 10 & Managing Traffic During Construction & 10\\
+Enforcement & 88 & Revocation due to Violation of Conditions & 84\\
+Extension & 84 & Conformity with Current Law & 75\\
+Validity & 74 & Community Liaison & 71\\
+Expiration and Renewal & 70 & Sidewalk Maintenance & 62\\
+Diligent Pursuit & 46 & Final Materials & 36\\
+Bicycle Parking & 31 & Project Description & 28\\
+Surrounding Properties and Neighborhood & 28 & Site Description and Present Use & 27\\
+Planning Code Compliance & 26 & Garbage, composting and recycling storage & 24\\
+Planning Code Section 101 & 24 & Diligent pursuit & 24\\
+Garbage, Composting and Recycling Storage & 24 & General Plan Compliance & 23\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{A thirteen-category scheme, tested against the two sources of condition text that exist: the numbered condition headings of the packet motions (166 distinct headings over 928 occurrences) and the \texttt{modifications} field of the item table ($N=1735$ items). Headings are reported both by distinct heading and weighted by how often each is imposed; the weighted column is the share of \emph{conditions} the scheme reaches. Categories are indicators, not a partition: one condition can carry two.}\label{tab:taxonomy}
+\caption{A thirteen-category scheme, tested against the two sources of condition text that exist: the numbered condition headings of the packet motions (216 distinct headings over 1622 occurrences) and the \texttt{modifications} field of the item table ($N=1735$ items). Headings are reported both by distinct heading and weighted by how often each is imposed; the weighted column is the share of \emph{conditions} the scheme reaches. Categories are indicators, not a partition: one condition can carry two.}\label{tab:taxonomy}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llrrr}\toprule
 Family & Category & \multicolumn{2}{c}{Packet condition headings} & Minutes modifications\\
 \cmidrule(lr){3-4} & & distinct & weighted & \\\midrule
-Changes the project & Massing and envelope & 0.0\% & 0.0\% & 28.5\%\\
- & Unit count and mix & 0.6\% & 0.1\% & 5.2\%\\
- & Design and materials & 8.4\% & 8.2\% & 25.9\%\\
- & Use and operations & 10.8\% & 6.7\% & 8.8\%\\
+Changes the project & Massing and envelope & 0.9\% & 0.2\% & 28.5\%\\
+ & Unit count and mix & 1.9\% & 0.4\% & 5.2\%\\
+ & Design and materials & 6.9\% & 7.4\% & 25.9\%\\
+ & Use and operations & 9.3\% & 4.9\% & 8.8\%\\
 \midrule
-Changes its obligations & Affordability & 1.2\% & 0.2\% & 3.6\%\\
- & Fees and exactions & 4.8\% & 3.7\% & 2.3\%\\
- & Transport and parking & 9.6\% & 10.2\% & 12.4\%\\
- & Open space and streetscape & 3.6\% & 7.0\% & 5.7\%\\
- & Monitoring and reporting & 8.4\% & 21.7\% & 11.7\%\\
- & Environmental mitigation & 1.2\% & 0.5\% & 2.9\%\\
- & Historic preservation & 1.2\% & 0.2\% & 2.1\%\\
- & Validity and timing & 4.2\% & 19.5\% & 3.9\%\\
+Changes its obligations & Affordability & 3.2\% & 0.6\% & 3.6\%\\
+ & Fees and exactions & 3.7\% & 2.9\% & 2.3\%\\
+ & Transport and parking & 7.4\% & 8.9\% & 12.4\%\\
+ & Open space and streetscape & 3.2\% & 5.3\% & 5.7\%\\
+ & Monitoring and reporting & 8.3\% & 21.2\% & 11.7\%\\
+ & Environmental mitigation & 0.9\% & 0.4\% & 2.9\%\\
+ & Historic preservation & 0.9\% & 0.1\% & 2.1\%\\
+ & Validity and timing & 3.7\% & 19.7\% & 3.9\%\\
 \midrule
-Neither & Procedural and findings & 7.2\% & 8.0\% & 7.3\%\\
+Neither & Procedural and findings & 13.0\% & 14.9\% & 7.3\%\\
 \midrule
-\multicolumn{2}{l}{\emph{Any project-changing}} & 19.9\% & 15.0\% & 52.6\%\\
-\multicolumn{2}{l}{\emph{Any obligation-imposing}} & 32.5\% & 62.3\% & 34.8\%\\
-\multicolumn{2}{l}{\textbf{Any category at all}} & \textbf{58.4\%} & \textbf{84.9\%} & \textbf{72.3\%}\\
+\multicolumn{2}{l}{\emph{Any project-changing}} & 18.5\% & 12.8\% & 52.6\%\\
+\multicolumn{2}{l}{\emph{Any obligation-imposing}} & 29.6\% & 58.4\% & 34.8\%\\
+\multicolumn{2}{l}{\textbf{Any category at all}} & \textbf{58.8\%} & \textbf{85.6\%} & \textbf{72.3\%}\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering

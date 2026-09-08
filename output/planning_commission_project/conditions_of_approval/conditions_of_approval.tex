@@ -40,20 +40,21 @@ at all.
 number on two city hosts. On a stratified sample of 20 cases per hearing year, a packet exists
 for 0\% of cases heard before 2010 and roughly 50--90\% of cases heard from 2011 on. The
 packet carries the draft motion, whose \emph{Exhibit A --- Conditions of Approval} enumerates
-and \emph{names} each condition. It is a conditional-use instrument: in a pilot pull of 146
-packets, 55 of 64 conditional-use cases yield an Exhibit A with a median of fifteen named
-conditions, and all 28 discretionary reviews yield none, because a DR produces a Discretionary
-Review Action rather than a conditioned authorisation.
+and \emph{names} each condition. It is a conditional-use instrument: across every one of the 225
+packets the probe found, \textbf{89 of 101 conditional-use cases} carry a conditions section
+with a median of fifteen numbered, named conditions, against \textbf{1 of 41 discretionary
+reviews}, because a DR produces a Discretionary Review Action rather than a conditioned
+authorisation.
 
 \medskip\noindent
-\textbf{The conditions are templated, and a small scheme spans them.} The 146 packets yield
-166 distinct condition headings over 928 impositions, and a thirteen-category keyword scheme
---- split into conditions that change the \emph{project} and conditions that change its
-\emph{obligations} --- reaches \textbf{84.9\% of those impositions} and 72.3\% of the
-\texttt{modifications} field, the one place the existing dataset already holds condition
+\textbf{The conditions are templated, and a small scheme spans them.} The 225 packets yield
+216 distinct condition headings over \textbf{1{,}622 impositions}, and a thirteen-category
+keyword scheme --- split into conditions that change the \emph{project} and conditions that
+change its \emph{obligations} --- reaches \textbf{85.6\% of those impositions} and 72.3\% of
+the \texttt{modifications} field, the one place the existing dataset already holds condition
 content. The split between the families is the sharpest result in the memo: weighted by how
-often they are imposed, \textbf{62\% of staff's conditions change the project's obligations
-and 15\% change the project}, while in the Commission's own amendments the proportions are
+often they are imposed, \textbf{58.4\% of staff's conditions change the project's obligations
+and 12.8\% change the project}, while in the Commission's own amendments the proportions are
 reversed.
 \end{abstract}
 
@@ -189,27 +190,58 @@ that span. Any claim about how the \emph{content} of conditions changed will be 
 2011 onwards.
 
 \subsection{What the packet yields, by kind of case}
+\label{sec:complement}
 
-Table~\ref{tab:kinds} reports a pilot pull of \textbf{146 packets}, of which 61 carried an
-Exhibit A. The split by kind of case is clean and it is not a parser artefact:
+Table~\ref{tab:kinds} reports \textbf{every one of the 225 packets the probe found}, all of
+them read; 106 carry a conditions section. The split by kind of case is sharp and it is not a
+parser artefact:
 
 \begin{itemize}
-\item \textbf{Conditional use: 55 of 64}, with a median of \textbf{fifteen} named conditions.
-\item \textbf{Discretionary review: 0 of 28.} Their packet is a ``Discretionary Review
+\item \textbf{Conditional use: 89 of 101 (88\%)}, with a median of \textbf{fifteen} numbered,
+named conditions.
+\item \textbf{Discretionary review: 1 of 41 (2\%).} Their packet is a ``Discretionary Review
 Analysis'' --- a staff memo with no draft motion in it --- because a DR ends in a
 Discretionary Review Action, not a conditioned authorisation. One was read end to end to
 confirm: it contains no occurrence of ``conditions of approval'', ``Exhibit A'' or ``draft
-motion''.
-\item \textbf{Variance 0 of 5, environmental 0 of 7, legislative 0 of 14.} None of these ends
-in a conditioned authorisation either.
+motion''. The single exception, a mandatory DR of a cannabis dispensary, is instructive
+rather than anomalous: staff recommended conditions on the \emph{use} there, so the packet
+carries them.
+\item \textbf{Environmental 0 of 7, legislative 1 of 25, variance 2 of 9.} None of these
+families ends in a conditioned authorisation, and the three exceptions are prose about
+conditions set by \emph{another} case's motion rather than a motion of their own --- which is
+why Table~\ref{tab:kinds} reports the count of numbered conditions separately: all three
+yield a heading and none yields a numbered list.
+\item \textbf{`Other': 13 of 42.} A residual of downtown-project, office-allocation and
+large-project authorisations, which \emph{are} conditioned authorisations. Their inclusion is
+a reminder that the addressable set is not literally ``conditional use'' but ``any case that
+ends in a motion''.
 \end{itemize}
 
+The pull is complete in the sense that matters: every packet the availability probe found has
+been opened. Reaching the last of them needed two fixes worth recording, because both were
+silently producing wrong answers rather than errors. \texttt{fetch} was deriving the hearing
+date for the date-keyed URL differently from \texttt{probe} --- the earliest hearing of the
+case rather than the earliest within the sampled year --- so for a case heard in two years it
+built a URL that 404s; and a failed download was writing an empty file, which then read as
+``this packet has no conditions''. Transport failures now leave no file, and ``read'' means
+``a file exists'', so a packet that was never opened is excluded from the denominator instead
+of counted as a negative.
+
 This is the mirror image of the permit-linkage result, and the two memos should be read
-together. \textbf{The permit route reaches discretionary review (83.8\% of DR items match a
-DBI permit) and essentially nothing else; the conditions route reaches conditional use and
-essentially nothing else.} Between them they cover most of the docket, but they never cover
-the same item, so an analysis that wants both construction outcomes and condition content on
-one project cannot have them from these two sources.
+together. \textbf{The permit route as the minutes print it reaches discretionary review
+(83.8\% of DR items match a DBI permit) and essentially nothing else; the conditions route
+reaches conditional use and essentially nothing else.}
+
+\paragraph{Correction, 2026-09-08.} This paragraph originally continued: ``Between them they
+cover most of the docket, but they never cover the same item, so an analysis that wants both
+construction outcomes and condition content on one project cannot have them from these two
+sources.'' \textbf{That is wrong, and the data-acquisition memo (\S3.3) shows why.} The claim
+was about what the \emph{minutes} print, not about what is knowable. The Planning
+Department's own records carry a \texttt{building\_permits} field, and following a conditional
+use through it reaches a permit present in DBI on \textbf{46.0\% of the 5{,}074
+conditional-use items} --- against the 0.3\% that print a permit number in the minutes. The
+two routes do overlap, on nearly half of the conditional-use docket, and construction outcomes
+and condition content \emph{can} be had on the same project.
 
 A second constraint: the packet is published \emph{before} the hearing, so its motion is a
 \textbf{draft} and its conditions are what staff proposed. What the Commission actually adopted
@@ -220,9 +252,10 @@ motion.
 
 \section{The conditions are templated}
 
-Table~\ref{tab:titles} lists the most frequent condition headings across the packets pulled.
-They yielded \textbf{166 distinct headings over 928 impositions} --- 15 conditions per motion,
-drawn from a vocabulary of under two hundred. The template is immediately visible.
+Table~\ref{tab:titles} lists the most frequent condition headings across the packets read.
+They yielded \textbf{216 distinct headings over 1{,}622 impositions} --- about 16 conditions
+per motion, drawn from a vocabulary of a couple of hundred. The template is immediately
+visible.
 Conditions are numbered, named, and grouped under standing section headings --- Performance,
 Design, Parking and Traffic, Provisions, Operation, Monitoring after Entitlement --- and the
 names repeat across projects: \emph{Validity}, \emph{Expiration and Renewal}, \emph{Diligent
@@ -270,30 +303,34 @@ Kept separate so that ``covered by the scheme'' does not quietly take credit for
 furniture.
 \end{description}
 
-Applied to the two sources of text, the scheme reaches \textbf{84.9\% of the 928 condition
+Applied to the two sources of text, the scheme reaches \textbf{85.6\% of the 1{,}622 condition
 impositions} in the packets and \textbf{72.3\% of the 1{,}735 \texttt{modifications} texts}.
-Coverage of \emph{distinct} headings is much lower, 58.4\%, and the gap is informative rather
-than embarrassing: 45 of the 69 uncovered headings appear exactly once. The template is a small
+Coverage of \emph{distinct} headings is much lower, 58.8\%, and the gap is informative rather
+than embarrassing: 58 of the 89 uncovered headings appear exactly once. The template is a small
 recurring core plus a long tail of one-off, project-specific conditions, and no fixed scheme
 will span the tail. Weighting by how often a condition is actually imposed is the right measure
 of what a scheme reaches, and it is reported alongside the unweighted one in
-Table~\ref{tab:taxonomy}.
+Table~\ref{tab:taxonomy}. Both coverage figures moved by less than a point when the pull went
+from 146 packets to all 225, which is the best evidence available that the vocabulary really
+does saturate.
 
 \textbf{The split between the two families is the substantive result.} Weighted by imposition,
-\textbf{62.3\% of the packet conditions change the project's obligations and 15.0\% change the
+\textbf{58.4\% of the packet conditions change the project's obligations and 12.8\% change the
 project}; in the Commission's own \texttt{modifications} the proportions reverse, to 34.8\%
 and 52.6\%. The detail is sharper still: \emph{massing and envelope} matches
-\textbf{0.0\%} of packet condition headings and 28.5\% of modifications. Staff's conditions
-do not name heights and setbacks at all --- the building's shape is fixed by the plans in
-Exhibit B, not by a named condition --- while a third of what the Commission adds from the
-dais is exactly that. \textbf{Staff write the obligations; the Commission reshapes the
-building.} If that holds on a full pull it is a finding about who exercises which margin of
+\textbf{0.2\%} of packet conditions by imposition and 28.5\% of modifications. Staff's
+conditions essentially never name heights and setbacks --- the building's shape is fixed by
+the plans in Exhibit B, not by a named condition --- while more than a quarter of what the
+Commission adds from the dais is exactly that. \textbf{Staff write the obligations; the
+Commission reshapes the building.} That is a finding about who exercises which margin of
 discretion, and it is invisible in a yes/no flag.
 
 The two largest single categories in the staff template are \emph{monitoring and reporting}
-(21.7\% of impositions) and \emph{validity and timing} (19.5\%) --- enforcement, revocation,
-expiry, extension, diligent pursuit. Two fifths of the conditions a project receives are about
-the conditions themselves.
+(21.2\% of impositions) and \emph{validity and timing} (19.7\%) --- enforcement, revocation,
+expiry, extension, diligent pursuit. \textbf{Two fifths of the conditions a project receives
+are about the conditions themselves.} A further 14.9\% is procedural boilerplate, which is
+why that family is scored apart: counting it as ``covered'' would flatter both the scheme and
+the apparent burden.
 
 \textbf{This coverage is in-sample and should be read as such.} The categories are hand-written
 keyword patterns, drafted by reading the packet headings and a sample of the modifications
@@ -302,7 +339,7 @@ again, so the numbers above are one round of tuning away from naive, not zero --
 they support is the one the question asks, that a small scheme spans most of the vocabulary,
 not that they constitute a validated classifier.
 
-\section{What this establishes, and what a pilot would need}
+\section{What this establishes, and what is left}
 
 \textbf{Established.}
 \begin{enumerate}
@@ -312,27 +349,34 @@ content.
 \item The minutes are not a hidden source. 15 blocks in 25{,}927 enumerate a condition, all
 from 1998--2001, all dais amendments.
 \item Neither DataSF's planning records nor DBI's permit records carry conditions.
-\item The Commission packet does, addressably, by case number on two hosts --- for roughly two
-thirds of cases from 2011 on and none before 2010.
-\item The packet route is a conditional-use instrument. Discretionary review has no motion and
-no Exhibit A. This is the exact complement of the permit route.
+\item The Commission packet does, addressably, by case number on two hosts --- for 70.1\% of
+sampled cases from 2011 on and none before 2010.
+\item The packet route is a conditional-use instrument: 89 of 101 conditional-use packets carry
+a conditions section against 1 of 41 discretionary reviews. This is the exact complement of the
+permit route \emph{as the minutes print it} --- but not of the permit route as such: see the
+correction in \S\ref{sec:complement}, which the data-acquisition memo forced.
 \item The conditions are templated, named and enumerable, and a thirteen-category scheme spans
 most of the observed vocabulary in both sources.
 \end{enumerate}
 
-\textbf{What a full pilot would need.} The pull done here is a sample sized to answer the
-availability question, not to build the measure. To go from here to an indicator matrix:
+\textbf{What is left.} Every packet the probe found has now been read, so the pull is
+finished; what remains a sample is the \emph{probe}, which drew 20 cases per hearing year.
+To go from here to an indicator matrix:
 
 \begin{enumerate}
-\item \textbf{Enumerate rather than sample.} 8{,}987 cases, of which the conditional-use family
-heard from 2011 on is the addressable set; probe all of them and pull what exists. The probe is
-one HEAD request per case and costs minutes; the pull is the expensive step, at roughly eight
-megabytes and several seconds a packet, and it should be run once and cached, as the two
-network stages of \texttt{analyze\_conditions.py} already are.
+\item \textbf{Probe every case, not twenty a year.} 8{,}987 cases, of which the families that
+end in a motion --- conditional use plus the downtown, office-allocation and large-project
+authorisations that fall into `Other' in Table~\ref{tab:kinds} --- heard from 2011 on are the
+addressable set. The probe is one or two HEAD requests per case and costs under an hour. The
+pull is the expensive step and the cost is now measured rather than guessed: the 225 packets
+here came to over 3\,GB, and the binding constraint is not bandwidth but
+\texttt{pdfplumber}, which takes minutes per scanned plan set. Budget an overnight run,
+resume it with \texttt{-{}-n}, and raise \texttt{-{}-max-mb} only for the tail.
 \item \textbf{Extract to a condition list, not a blob.} The Exhibit A parser already recovers
 numbered headings. The next step is one row per (case, condition number, heading, body), which
 makes the count of conditions a variable in its own right --- the simplest measure of
-stringency available and one nothing in the current dataset can compute.
+stringency available, and one nothing in the current dataset can compute. The 225 packets read
+here already carry \textbf{1{,}622 of them}.
 \item \textbf{Validate against the minutes.} For items where the minutes record
 \texttt{modifications}, the packet's proposed conditions and the Commission's amendments can be
 compared directly. That is the only available check on whether the draft motion is a good proxy
@@ -353,6 +397,7 @@ cached so neither network stage repeats by accident:
 \begin{verbatim}
 python analyze_conditions.py probe --per-year 20  # is a packet published?
 python analyze_conditions.py fetch --n 225        # pull it, keep Exhibit A
+python analyze_conditions.py fetch --max-mb 250   # ...the scanned ones too
 python analyze_conditions.py report               # figures + tables
 \end{verbatim}
 

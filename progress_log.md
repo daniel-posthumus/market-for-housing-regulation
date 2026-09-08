@@ -50,18 +50,33 @@ permit linkage, the content of conditions of approval, and what predicts delay.
   (0.06%)** both use condition language and enumerate — all 1998–2001, all dais amendments.
   DataSF has no commission-actions dataset, and 87 of DBI's 1,295,048 rows mention a Commission
   condition or motion at all.
-- **The conditions are templated**, numbered and named. A pilot pull of 146 packets yields
-  **166 distinct condition headings over 928 impositions** — 15 conditions per motion from a
-  vocabulary under two hundred — and a thirteen-category scheme reaches **84.9% of the
-  impositions** and 72.3% of the `modifications` field. Weighted by imposition, **62.3% of
-  staff's conditions change the project's obligations and 15.0% change the project**; in the
+- **The conditions are templated**, numbered and named. All 225 packets yield **216 distinct
+  condition headings over 1,622 impositions** — about 16 conditions per motion from a
+  vocabulary of a couple of hundred — and a thirteen-category scheme reaches **85.6% of the
+  impositions** and 72.3% of the `modifications` field. Weighted by imposition, **58.4% of
+  staff's conditions change the project's obligations and 12.8% change the project**; in the
   Commission's own amendments the proportions reverse (34.8% / 52.6%), and *massing and
-  envelope* matches **0.0%** of staff headings against 28.5% of modifications. Staff write the
-  obligations; the Commission reshapes the building.
-- **The packet pull is slow and needs a size guard.** Packets run to 90 MB of scanned plans that
-  pdfplumber chews on for many minutes and that never contain an Exhibit A; `fetch` now skips
-  anything over 40 MB using the content-length the probe already recorded. The pilot stopped at
-  146 of the 225 available packets; `fetch` is resumable and picks up where it left off.
+  envelope* matches **0.2%** of staff conditions against 28.5% of modifications. Staff write
+  the obligations; the Commission reshapes the building. Two fifths of what a project receives
+  — monitoring and reporting (21.2%) plus validity and timing (19.7%) — is about the
+  conditions themselves.
+- **The packet pull is complete: all 225 packets the probe found have been read.** Finishing it
+  cost three fixes, all of which were producing wrong answers rather than errors. (1) `fetch`
+  derived the hearing date for the date-keyed citypln URL as the case's *global* first hearing
+  while `probe` used its first hearing *within the sampled year*, so a case heard in two years
+  got a URL that 404s; `probe` now records the date it used. (2) A failed download wrote an
+  empty file, which then read as "this packet has no conditions"; transport errors now leave no
+  file so the next run retries, and "read" means "a file exists". (3) pdfplumber caches every
+  page's objects on the parent, so a 210 MB scanned packet grew until the process was killed;
+  flushing per page fixed it. A `--max-mb` flag replaces the hard-coded size guard.
+- **The completed pull corrected one claim and confirmed the rest.** Discretionary review is
+  not 0-for-all: it is **1 of 41**, a mandatory DR of a cannabis dispensary where staff
+  recommended conditions on the use. Conditional use is **89 of 101**. The three other
+  non-zero families (legislative 1 of 25, variance 2 of 9) are prose about *another* case's
+  conditions, which is why the tables now count the conditions section and the numbered
+  conditions separately. Coverage figures barely moved between 146 and 225 packets — 84.9% →
+  85.6% weighted, 58.4% → 58.8% distinct — which is the best available evidence that the
+  condition vocabulary saturates.
 - **Delay is predictable in level and not in tail.** Everything observable at the first hearing
   gives **R² = 0.169 in sample and 0.096 out of sample** on log(days+1); on
   1[days > 365] it gives **0.054 in and 0.032 out**. Sorting cases into deciles of predicted
@@ -79,10 +94,12 @@ permit linkage, the content of conditions of approval, and what predicts delay.
   to 0.128.
 
 **Next steps**:
-- **Enumerate the packets rather than sampling them** — probe all conditional-use-family cases
-  heard from 2011, pull what exists, and extract one row per (case, condition number, heading,
-  body). The count of conditions is then a variable, which is the simplest stringency measure
-  available and one nothing in the dataset can currently compute.
+- **Probe every case rather than 20 a year** — the pull is finished, the probe is what is still
+  a sample. Then extract one row per (case, condition number, heading, body); the 225 packets
+  already read carry 1,622 of them. The count of conditions is then a variable, which is the
+  simplest stringency measure available and one nothing in the dataset can currently compute.
+  Budget an overnight run: 225 packets came to over 3 GB and pdfplumber, not bandwidth, is the
+  constraint.
 - **Hand-code a few hundred conditions** so the taxonomy can be scored on a frozen split like
   every other field, in-sample and out-of-sample separately.
 - **Adjudicate the 56 unmatched permit numbers** before any analysis treats non-match as an

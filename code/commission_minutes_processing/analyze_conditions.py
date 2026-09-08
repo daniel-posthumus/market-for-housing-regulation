@@ -137,7 +137,8 @@ def probe(per_year: int, seed: int = 7):
 
     def save():                                     # write as we go: a probe is slow enough
         with AVAIL.open("w", newline="") as f:      # that losing it to an interrupt hurts
-            w = csv.DictWriter(f, fieldnames=["case_number", "year", "found", "route", "bytes"])
+            w = csv.DictWriter(f, fieldnames=["case_number", "year", "date", "found",
+                                              "route", "bytes"])
             w.writeheader()
             w.writerows(rows)
 
@@ -154,8 +155,8 @@ def probe(per_year: int, seed: int = 7):
             if r.status_code == 200:
                 route, size = name, r.headers.get("content-length") or ""
                 break
-        rows.append({"case_number": cn, "year": y, "found": int(bool(route)),
-                     "route": route or "none", "bytes": size})
+        rows.append({"case_number": cn, "year": y, "date": dt.date().isoformat(),
+                     "found": int(bool(route)), "route": route or "none", "bytes": size})
         if i % 25 == 0:
             save()
             print(f"  [{i}/{len(todo)}] {y} {cn} → {route or 'none'}", flush=True)
@@ -171,6 +172,11 @@ def probe(per_year: int, seed: int = 7):
 # a conditioned authorisation --- so an empty extraction there is the right answer, not a
 # parser failure. `packet_kinds()` reports which is which.
 START = re.compile(r"(?i)conditions of approval,?\s*(?:compliance|\n)")
+# What START finds is a *conditions section*. In a conditional-use motion that section is
+# Exhibit A and its conditions are numbered and named; on a legislative item or a resolution
+# the same heading can introduce prose about someone else's conditions. The tables therefore
+# report the section and the count of numbered conditions separately, and never treat the
+# presence of the heading as proof of a motion.
 STOP = re.compile(r"(?i)^\s*(exhibit\s+b\b|attachment\s+checklist|parcel\s+map\b)")
 TITLE = re.compile(r"(?m)^\s*(\d{1,2})\.\s+([A-Z][A-Za-z0-9 ,/&'’\-]{2,58})[.:]")
 HEADING = re.compile(r"(?m)^([A-Z][A-Za-z\- ]{3,45})\s*$")
@@ -186,6 +192,10 @@ def extract_conditions(pdf_path: Path) -> str:
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages[:60]:
             full += (page.extract_text() or "") + "\n"
+            # pdfplumber caches every page's objects on the parent; on a 200 MB scanned
+            # packet that grows until the process is killed. Drop each page as we pass it.
+            page.flush_cache()
+            page.get_textmap.cache_clear()
             m = START.search(full)
             if m:                                   # stop as soon as the exhibit has ended:
                 tail = full[m.start():]             # the rest of a packet is plans and photos
@@ -204,28 +214,36 @@ def fetch(n: int):
     todo = [r for r in found if not (COND / f"{r['case_number']}.txt").exists()][:n]
     print(f"{len(found)} packets known, {len(todo)} to fetch")
     it = load_items()
+    # the probe records the date it used; for rows written before it did, reproduce its rule
+    # (earliest hearing of that case *within the sampled year*) rather than the global
+    # earliest, or the citypln URL --- which is keyed on the hearing date --- will 404
+    by_year = it.groupby(["cn", "year"]).meeting_date.min()
     when = it.groupby("cn").meeting_date.min()
     urls = dict(PACKET_ROUTES)
     s = sess()
     tmp = STORE / "_tmp.pdf"
-    skipped = 0
+    skipped = failed = 0
     for i, r in enumerate(todo, 1):
         cn = r["case_number"]
-        dt = when[cn]
+        dt = (pd.Timestamp(r["date"]) if r.get("date") else
+              by_year.get((cn, int(r["year"])), when[cn]))
         size = int(r["bytes"]) if str(r.get("bytes", "")).isdigit() else 0
         if size > MAX_PACKET_BYTES:
-            (COND / f"{cn}.txt").write_text("")     # recorded, not retried
-            skipped += 1
-            continue
+            skipped += 1                            # leave no file: "read" is then exactly
+            continue                                # "a file exists", with nothing to infer
         try:
             resp = s.get(urls[r["route"]].format(case=cn, m=dt.month, d=dt.day, y=dt.year),
                          timeout=300)
             resp.raise_for_status()
             tmp.write_bytes(resp.content)
             txt = extract_conditions(tmp)
+        except requests.RequestException as e:      # transport failure: leave no file, so
+            print(f"  [{i}/{len(todo)}] {cn}: {type(e).__name__} — will retry", flush=True)
+            failed += 1                             # the next run retries rather than
+            continue                                # recording it as "no Exhibit A"
         except Exception as e:                      # a bad PDF is data, not a crash
             txt = ""
-            print(f"  [{i}/{len(todo)}] {cn}: {type(e).__name__}")
+            print(f"  [{i}/{len(todo)}] {cn}: {type(e).__name__}", flush=True)
         (COND / f"{cn}.txt").write_text(txt)
         if i % 10 == 0:
             print(f"  [{i}/{len(todo)}] {cn}: {len(txt):,} chars")
@@ -233,6 +251,8 @@ def fetch(n: int):
     tmp.unlink(missing_ok=True)
     if skipped:
         print(f"skipped {skipped} packets over {MAX_PACKET_BYTES/1e6:.0f} MB")
+    if failed:
+        print(f"{failed} packets failed to download; re-run `fetch` to retry them")
 
 
 # ── stage 3: do the minutes themselves ever enumerate a condition? ───────────
@@ -266,12 +286,17 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("probe"); p.add_argument("--per-year", type=int, default=20)
-    f = sub.add_parser("fetch"); f.add_argument("--n", type=int, default=150)
+    f = sub.add_parser("fetch")
+    f.add_argument("--n", type=int, default=150)
+    f.add_argument("--max-mb", type=int, default=MAX_PACKET_BYTES // 1_000_000,
+                   help="skip packets larger than this (scanned plan sets are slow and "
+                        "carry no Exhibit A); raise it to read them anyway")
     sub.add_parser("report")
     a = ap.parse_args()
     if a.cmd == "probe":
         probe(a.per_year)
     elif a.cmd == "fetch":
+        globals()["MAX_PACKET_BYTES"] = a.max_mb * 1_000_000
         fetch(a.n)
     else:
         report()
@@ -330,7 +355,18 @@ PROCEDURAL = {
 TAXONOMY = {**PROJECT_CHANGING, **OBLIGATION_IMPOSING, **PROCEDURAL}
 
 
-def condition_titles() -> tuple[Counter, int, int]:
+def not_read(avail: pd.DataFrame) -> set[str]:
+    """Cases the probe found a packet for but `fetch` has not opened --- because it is over
+    the size cap, or because the download failed. They are not evidence that the packet has
+    no Exhibit A and must be kept out of that denominator. `fetch` writes no file for them,
+    so their absence is the record."""
+    if not len(avail):
+        return set()
+    found = set(avail.loc[avail.found == 1, "case_number"])
+    return {c for c in found if not (COND / f"{c}.txt").exists()}
+
+
+def condition_titles(skip: set[str] = frozenset()) -> tuple[Counter, int, int]:
     """Numbered condition headings across the fetched Exhibit A sections. The motions number
     and *name* each condition ('7. Rooftop Mechanical Equipment.'), which is what makes the
     template testable at all."""
@@ -338,6 +374,8 @@ def condition_titles() -> tuple[Counter, int, int]:
     if not COND.exists():
         return titles, 0, 0
     for f in sorted(COND.glob("*.txt")):
+        if f.stem in skip:
+            continue
         n_files += 1
         txt = f.read_text()
         found = {m.group(2).strip() for m in TITLE.finditer(txt)}
@@ -386,16 +424,19 @@ SUFFIX_FAMILY = [
 ]
 
 
-def packet_kinds() -> pd.DataFrame:
+def packet_kinds(avail: pd.DataFrame) -> pd.DataFrame:
     """Which kinds of case actually yield an Exhibit A. A discretionary review produces a
     Discretionary Review Action, not a conditioned authorisation, and its packet is a staff
-    analysis with no motion in it --- so an empty extraction there is the correct answer."""
+    analysis with no motion in it --- so an empty extraction there is the correct answer.
+    Built from the probe rather than from the files on disk, so packets that were found but
+    not read are attributed to a family instead of vanishing."""
     rows = []
-    for f in sorted(COND.glob("*.txt")) if COND.exists() else []:
-        cn = f.stem
+    for cn in sorted(avail.loc[avail.found == 1, "case_number"]):
+        f = COND / f"{cn}.txt"
         fam = next((lab for rx, lab in SUFFIX_FAMILY if rx.search(cn)), "Other")
-        txt = f.read_text()
+        txt = f.read_text() if f.exists() else ""
         rows.append({"case_number": cn, "family": fam, "chars": len(txt),
+                     "skipped": int(not f.exists()),
                      "exhibit_a": int(len(txt) > 0),
                      "titles": len({m.group(2).strip() for m in TITLE.finditer(txt)})})
     return pd.DataFrame(rows)
@@ -558,24 +599,33 @@ def write_tables(it, sweep, avail, titles, n_files, n_with, pk, mo, unreach, kin
     a("")
 
     a(r"\begin{table}[htbp]\centering")
-    a(r"\caption{Of the packets pulled, which kinds of case actually carry a motion with an "
-      r"Exhibit A. A discretionary review does not: its packet is a staff analysis and its "
-      r"outcome is a Discretionary Review Action, so the empty cell is the correct answer "
-      r"rather than a parser failure.}\label{tab:kinds}")
-    a(r"\begin{tabular}{lrrr}\toprule")
-    a(r"Case family & Packets pulled & With an Exhibit A & Median headings\\\midrule")
+    a(r"\caption{Of the packets pulled, which kinds of case carry a conditions section --- in "
+      r"a conditional-use motion, Exhibit A. A discretionary review normally does not: its "
+      r"packet is a staff analysis and its outcome is a Discretionary Review Action, not a "
+      r"conditioned authorisation, so the empty cell is the correct answer rather than a "
+      r"parser failure. `Not read' is packets the probe found but \texttt{fetch} has not "
+      r"opened; they are excluded from the rate rather than counted as "
+      r"negatives.}\label{tab:kinds}")
+    a(r"\begin{tabular}{lrrrrr}\toprule")
+    a(r"Case family & Pulled & Not read & Read & Conditions section & Median numbered\\"
+      r"\midrule")
     for fam, g in kinds.groupby("family"):
-        med = g.loc[g.exhibit_a == 1, "titles"].median()
-        a(rf"{T(fam)} & {len(g):,} & {int(g.exhibit_a.sum()):,} & "
+        read = g[g.skipped == 0]
+        med = read.loc[read.exhibit_a == 1, "titles"].median()
+        a(rf"{T(fam)} & {len(g):,} & {int(g.skipped.sum()):,} & {len(read):,} & "
+          rf"{int(read.exhibit_a.sum()):,} & "
           rf"{'---' if pd.isna(med) else f'{med:.0f}'}\\")
-    a(rf"\midrule All & {len(kinds):,} & {int(kinds.exhibit_a.sum()):,} & \\")
+    rd = kinds[kinds.skipped == 0]
+    a(rf"\midrule All & {len(kinds):,} & {int(kinds.skipped.sum()):,} & {len(rd):,} & "
+      rf"{int(rd.exhibit_a.sum()):,} & \\")
     a(r"\bottomrule\end{tabular}\end{table}")
     a("")
 
     a(r"\begin{table}[htbp]\centering")
-    a(r"\caption{The twenty most frequent condition headings across the %d packets pulled, of "
-      r"which %d carried a parsable Exhibit A. The Commission's conditions are written from a "
-      r"template, and the template is the finding.}\label{tab:titles}" % (n_files, n_with))
+    a(r"\caption{The twenty most frequent condition headings across the %d packets read, of "
+      r"which %d yielded at least one numbered condition heading. The Commission's "
+      r"conditions are written from a template, and the template is the "
+      r"finding.}\label{tab:titles}" % (n_files, n_with))
     a(r"\resizebox{\textwidth}{!}{%")
     a(r"\begin{tabular}{lrlr}\toprule")
     a(r"Condition & Packets & Condition & Packets\\\midrule")
@@ -649,10 +699,11 @@ def report():
     TAB.mkdir(parents=True, exist_ok=True)
     it = load_items()
     sweep = sweep_blocks()
-    avail = pd.read_csv(AVAIL) if AVAIL.exists() else pd.DataFrame(
-        columns=["case_number", "year", "found", "route", "bytes"])
-    titles, n_files, n_with = condition_titles()
-    kinds = packet_kinds()
+    avail = pd.read_csv(AVAIL, dtype={"case_number": str, "bytes": str}) if AVAIL.exists() \
+        else pd.DataFrame(columns=["case_number", "year", "found", "route", "bytes"])
+    skip = not_read(avail)
+    titles, n_files, n_with = condition_titles(skip)
+    kinds = packet_kinds(avail)
     pk = classify(titles.keys())
     mo = classify(it.loc[it.modifications_text, "modifications"].astype(str))
     unreach = int((it.conditions & ~it.has_number).sum())
@@ -663,8 +714,9 @@ def report():
                  w, datasf_counts())
     print(f"{len(it):,} items | conditions flag {100*it.conditions.mean():.1f}% | "
           f"instrument no {100*it.has_number.mean():.1f}% | unreachable {unreach:,}")
-    print(f"packets: {int(avail.found.sum())}/{len(avail)} probed; {n_files} pulled, "
-          f"{n_with} with a parsable Exhibit A, {len(titles)} distinct condition headings")
+    print(f"packets: {int(avail.found.sum())}/{len(avail)} probed; {n_files} read "
+          f"({len(skip)} found but not read), {n_with} with numbered conditions, "
+          f"{len(titles)} distinct condition headings")
     cov = pk.any(axis=1).values
     print(f"taxonomy covers {100*cov.mean():.1f}% of distinct headings, "
           f"{100*w[cov].sum()/w.sum():.1f}% weighted by occurrence, "
