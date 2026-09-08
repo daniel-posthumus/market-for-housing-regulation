@@ -240,9 +240,29 @@ FEE_REGISTERS = {
 }
 FEES_DIR = EXT / "fees"
 
-# Licensed products. Not scraped, not searched for a back door; reported as access questions.
-# CoreLogic's status is a *finding*, not an assumption --- see `corelogic_status()`.
-CORELOGIC_EXPECTED = DATA_ROOT / "demand" / "corelogic"
+# ── 2.4 prices: the licensed extract that is already on disk ─────────────
+# CoreLogic/Cotality is licensed and is never scraped. It does not have to be: the June 2026
+# Redivis pull is on Dropbox under the data root, written by `demand_estimation/corelogic.py`.
+#
+# It went missing once, and the reason is worth recording. Dropbox's macOS file provider
+# keeps files "online-only": the directory entry reports the full size while the file
+# occupies zero blocks, and an un-materialised *directory* does not show up in `ls` at all.
+# The first pass of this memo therefore reported the whole `demand/` subtree as absent. It
+# was not; it was dehydrated. `sync` is the fix, and it is a stage of this script so the
+# mistake is not repeatable.
+CORELOGIC = DATA_ROOT / "demand" / "corelogic"
+CORELOGIC_TX = CORELOGIC / "clean" / "corelogic_transactions_bg.parquet"
+CORELOGIC_PROPERTY = CORELOGIC / "cotality_property_filtered.csv"
+CL_CACHE = EXT / "prices" / "corelogic_sf_transactions.parquet"
+CL_META = EXT / "prices" / "corelogic_sf_meta.json"
+SF_FIPS = "06075"
+# Cotality prints San Francisco's APN as "0836 003" --- block and lot in DataSF's own 4+3
+# form with a separator. Strip the separator and it *is* `blklot`, which is what makes this a
+# parcel-level price and not a block-group one.
+APN_COL = "APN__PARCEL_NUMBER_UNFORMATTED_"
+TRADE_WINDOW_DAYS = 1095        # +/- 3 years of the hearing: "did this parcel trade near the
+                                # decision", the price a real-options threshold is measured at
+DENSE_YEAR_SALES = 1000         # fewest sales a year needs before the series is called usable
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -562,6 +582,89 @@ def fetch(only: str | None, refresh: bool):
         fetch_zillow(refresh)
     if not only or only == "fees":
         fetch_fees(refresh)
+    if not only or only == "corelogic":
+        fetch_corelogic(refresh)
+
+
+# ── the local licensed extract ───────────────────────────────────────────
+def dehydrated(root: Path) -> list[Path]:
+    """Files Dropbox is holding online-only: the size is in the directory entry but no
+    blocks are allocated. Reading one materialises it; there is no supported API."""
+    out = []
+    for p in root.rglob("*"):
+        if p.is_file():
+            st = p.stat()
+            if st.st_size and st.st_blocks * 512 < st.st_size * 0.5:
+                out.append(p)
+    return out
+
+
+def sync(root: Path | None = None):
+    """Materialise every online-only file under the demand subtree. Cheap when there is
+    nothing to do, and the only way to tell a missing directory from a dehydrated one."""
+    root = root or (DATA_ROOT / "demand")
+    if not root.exists():
+        sys.exit(f"{root} does not exist. If Dropbox has it, it has not been created "
+                 f"locally at all --- this is not a hydration problem.")
+    todo = dehydrated(root)
+    total = sum(p.stat().st_size for p in todo)
+    print(f"{root}: {len(todo)} file(s) online-only, {total/1e9:.2f} GB")
+    for i, p in enumerate(todo, 1):
+        t = time.time()
+        try:
+            with p.open("rb") as fh:
+                while fh.read(1 << 22):
+                    pass
+        except OSError as e:
+            print(f"  [{i}/{len(todo)}] {p.name}: {type(e).__name__}: {e}")
+            continue
+        print(f"  [{i}/{len(todo)}] {p.relative_to(root)} in {time.time()-t:.0f}s")
+    left = dehydrated(root)
+    nom = sum(p.stat().st_size for p in root.rglob("*") if p.is_file())
+    act = sum(p.stat().st_blocks * 512 for p in root.rglob("*") if p.is_file())
+    print(f"{nom/1e9:.2f} GB nominal, {act/1e9:.2f} GB on disk, {len(left)} still online-only")
+
+
+def fetch_corelogic(refresh: bool):
+    """Slice the Bay-Area-wide Cotality extract down to San Francisco and attach the parcel
+    key, once, so `report` does not re-read two gigabytes on every run. Nothing is downloaded
+    here --- the extract is licensed and already on disk."""
+    if CL_CACHE.exists() and not refresh:
+        return
+    if not CORELOGIC_TX.exists():
+        print(f"CoreLogic extract absent at {CORELOGIC_TX}; run `sync` first, and if it is "
+              f"still absent it is genuinely not there")
+        return
+    for p in (CORELOGIC_TX, CORELOGIC_PROPERTY):
+        if p.exists() and p.stat().st_blocks * 512 < p.stat().st_size * 0.5:
+            print(f"  materialising {p.name} …")
+            with p.open("rb") as fh:
+                while fh.read(1 << 22):
+                    pass
+    print("  reading the Cotality property extract for San Francisco APNs …", flush=True)
+    keep = []
+    for ch in pd.read_csv(CORELOGIC_PROPERTY, usecols=["CLIP", "FIPS_CODE", APN_COL],
+                          dtype=str, chunksize=400_000, low_memory=False):
+        keep.append(ch[ch.FIPS_CODE.fillna("").str.zfill(5).eq(SF_FIPS)])
+    apn = pd.concat(keep, ignore_index=True)
+    apn["blklot"] = (apn[APN_COL].fillna("").str.replace(r"[^0-9A-Za-z]", "", regex=True)
+                     .str.upper())
+    apn = apn[apn.blklot.str.len().between(7, 9)]
+    print(f"  {len(apn):,} San Francisco parcels with a usable parcel key", flush=True)
+
+    tx = pd.read_parquet(CORELOGIC_TX, columns=[
+        "clip", "fips", "sale_date", "sale_amount", "price_per_sqft", "arms_length",
+        "is_residential", "living_sqft", "units", "year_built", "GEOID"])
+    sf = tx[tx["fips"].fillna("").str.zfill(5).eq(SF_FIPS)].copy()
+    sf["blklot"] = sf["clip"].astype(str).map(dict(zip(apn.CLIP.astype(str), apn.blklot)))
+    sf["sale_date"] = pd.to_datetime(sf.sale_date, errors="coerce")
+    CL_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    sf.to_parquet(CL_CACHE, index=False)
+    CL_META.write_text(json.dumps({
+        "source": str(CORELOGIC_TX), "bay_area_rows": int(len(tx)),
+        "sf_rows": int(len(sf)), "sf_parcels_in_property_file": int(len(apn)),
+        "built": pd.Timestamp.today().date().isoformat()}, indent=2) + "\n")
+    print(f"  cached {len(sf):,} San Francisco transactions → {CL_CACHE}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -569,23 +672,71 @@ def fetch(only: str | None, refresh: bool):
 # ═══════════════════════════════════════════════════════════════════════════
 def corelogic_status() -> dict:
     """The brief asks whether the CoreLogic pull actually happened before Stanford access
-    lapsed. It did --- `demand_estimation/stubs.py` records it as `landed`, and the summary
-    tables it produced are still in the repo --- but the extracts themselves are not under
-    the current data root. Report both halves; a documented pull whose files are gone is a
-    different problem from a pull that never happened."""
+    lapsed. It did, and the extract is on disk: `demand_estimation/stubs.py` records the
+    status as `landed` and `demand/corelogic/` holds both the raw Cotality files and the
+    cleaned parquet the demand pipeline built from them."""
     rep = HERE.parents[1] / "demand_estimation"
     stub = (rep / "stubs.py").read_text() if (rep / "stubs.py").exists() else ""
     m = re.search(r'STUBS\["corelogic"\][\s\S]{0,400}?\*\*Status:\*\*\s*`([a-z_]+)`', stub)
-    tab = rep / "report" / "corelogic_tab_county.tex"
-    sf_sales = None
-    if tab.exists():
-        mm = re.search(r"San Francisco & ([\d,]+)", tab.read_text())
-        sf_sales = int(mm.group(1).replace(",", "")) if mm else None
+    root = DATA_ROOT / "demand"
+    files = [p for p in root.rglob("*") if p.is_file()] if root.exists() else []
     return {"documented_status": m.group(1) if m else "unknown",
-            "expected_path": str(CORELOGIC_EXPECTED),
-            "present": CORELOGIC_EXPECTED.exists(),
-            "demand_root_present": (DATA_ROOT / "demand").exists(),
-            "sf_sales_in_pulled_extract": sf_sales}
+            "path": str(CORELOGIC),
+            "present": CORELOGIC_TX.exists(),
+            "demand_root_present": root.exists(),
+            "demand_files": len(files),
+            "demand_bytes": sum(p.stat().st_size for p in files),
+            "demand_online_only": len(dehydrated(root)) if root.exists() else None}
+
+
+def corelogic_sf(it: pd.DataFrame) -> dict:
+    """What the licensed price data actually buys, measured against the item table rather
+    than asserted. Three questions: does it join on the parcel key, on how much of the risk
+    set, and --- the one that matters for a filing threshold --- did the parcel trade near
+    the hearing, so there is a price contemporaneous with the decision."""
+    if not CL_CACHE.exists():
+        return {}
+    sf = pd.read_parquet(CL_CACHE)
+    sf["sale_date"] = pd.to_datetime(sf.sale_date, errors="coerce")
+    al = sf[sf.arms_length.astype("boolean").fillna(False)
+            & sf.sale_amount.gt(1000) & sf.sale_date.notna()]
+    res = al[al.is_residential.astype("boolean").fillna(False)]
+    have = set(al.blklot.dropna())
+    keys = {p for ps in it.parcels for p in ps}
+    wp = it[it.has_parcel]
+    ever = wp.parcels.map(lambda ps: bool(ps & have))
+    by = {k: g.sale_date.values for k, g in al.groupby("blklot")}
+    w = np.timedelta64(TRADE_WINDOW_DAYS, "D")
+
+    def near(r):
+        for p in r.parcels:
+            d = by.get(p)
+            if d is not None and np.any(np.abs(d - np.datetime64(r.meeting_date)) <= w):
+                return True
+        return False
+
+    n3 = [near(r) for r in wp.itertuples()]
+    yr = al.sale_date.dt.year
+    n_by_year = al.groupby(yr).size()
+    # A handful of deeds carry a placeholder date back to 1900. The year the series actually
+    # becomes usable is the first with a real volume of sales, and that is what is reported;
+    # the raw minimum is kept beside it so the artefact is visible rather than hidden.
+    dense = n_by_year[n_by_year >= DENSE_YEAR_SALES]
+    return {"rows": int(len(sf)), "priced": int(len(al)), "residential": int(len(res)),
+            "dense_first": int(dense.index.min()) if len(dense) else int(yr.min()),
+            "last_full": int(dense.index.max()) if len(dense) else int(yr.max()),
+            "max_date": str(al.sale_date.max().date()),
+            "parcels": int(al.blklot.nunique()),
+            "first": int(yr.min()), "last": int(yr.max()),
+            "keyed": float(sf.blklot.notna().mean()),
+            "item_keys": len(keys), "item_keys_traded": len(keys & have),
+            "items_with_key": int(len(wp)), "items_ever_traded": int(sum(ever)),
+            "items_traded_near": int(sum(n3)),
+            "median_recent": float(al.loc[yr.eq(yr.max()), "sale_amount"].median()),
+            "series": al.groupby(yr).sale_amount.median(),
+            "series_n": al.groupby(yr).size(),
+            "ppsf": al.loc[al.price_per_sqft.between(1, 5000)].groupby(yr).price_per_sqft
+                      .median()}
 
 
 FEE_RATE = re.compile(r"\$([\d,]+(?:\.\d+)?)\s*(?:per|/|X)?\s*"
@@ -958,6 +1109,60 @@ def fig_case_join(cases: pd.DataFrame):
     plt.close(fig)
 
 
+def fig_corelogic(cl: dict, it: pd.DataFrame):
+    """The price side of the risk set: what a parcel sold for, and how often the Commission
+    is looking at a parcel with a price near the hearing."""
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4))
+    ax = axes[0]
+    s, n = cl["series"], cl["series_n"]
+    keep = (s.index >= 1990) & (n >= DENSE_YEAR_SALES)
+    vol = ax.twinx()
+    vol.bar(n.index[keep], n[keep] / 1000, color="#ccc", width=0.8, zorder=0)
+    vol.set_ylabel("sales (thousands)", color="#999")
+    vol.set_ylim(0, n[keep].max() / 1000 * 3.2)        # keep the bars low, behind the line
+    vol.spines["top"].set_visible(False)
+    ax.set_zorder(vol.get_zorder() + 1)
+    ax.patch.set_visible(False)
+    ax.plot(s.index[keep], s[keep] / 1e6, color="#5b7fa6", alpha=0.3, lw=0.9)
+    ax.plot(s.index[keep], (s[keep] / 1e6).rolling(SMOOTH_YEARS, center=True,
+                                                   min_periods=1).mean(),
+            color="#5b7fa6", lw=2.2)
+    ax.set_ylabel("median sale price (\\$m)", color="#5b7fa6")
+    ax.set_xlabel("sale year")
+    ax.set_title(f"San Francisco arms-length sales, Cotality\n"
+                 f"(bars: annual volume; {SMOOTH_YEARS}-yr centred mean)",
+                 loc="left", fontsize=8.5)
+    ax = axes[1]
+    wp = it[it.has_parcel]
+    g = wp.groupby("year")
+    n_i = g.size()
+    # A hearing in year Y needs sales through Y + the window before the "traded near the
+    # hearing" rate is even defined. The extract stops in cl["max_date"], so the last few
+    # hearing years are censored, not falling --- draw the gap rather than the artefact.
+    cutoff = int(cl["max_date"][:4]) - TRADE_WINDOW_DAYS // 365
+    for col, lab, c, mask_late in (
+            ("cl_ever", "parcel ever traded", "#5b7fa6", False),
+            ("cl_near", f"parcel traded within {TRADE_WINDOW_DAYS // 365} years of the "
+                        f"hearing", "#2f6f4f", True)):
+        ser = (g[col].mean() * 100).mask(n_i < MIN_RATE_N)
+        if mask_late:
+            ser = ser.mask(ser.index > cutoff)
+        ax.plot(ser.index, ser.values, color=c, alpha=0.25, lw=0.9)
+        ax.plot(ser.index, ser.rolling(SMOOTH_YEARS, center=True, min_periods=1).mean(),
+                color=c, lw=2.0, label=lab)
+    ax.axvspan(cutoff, wp.year.max(), color="#f2f2f2", zorder=0)
+    ax.text(cutoff + 0.3, 4, f"window runs past\nthe extract\n({cl['max_date']})",
+            fontsize=6.5, color="#888", va="bottom")
+    ax.set_ylim(0, 100)
+    ax.set_ylabel("% of items with a parcel key")
+    ax.set_xlabel("hearing year")
+    ax.legend(frameon=False, fontsize=7.5, loc="upper left")
+    ax.set_title("A price contemporaneous with\nthe decision", loc="left", fontsize=8.5)
+    fig.tight_layout()
+    fig.savefig(FIG / "fig_corelogic.pdf")
+    plt.close(fig)
+
+
 def fig_filing_lag(d: pd.DataFrame):
     ok = d[d.lag.notna()]
     fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4))
@@ -1220,10 +1425,11 @@ def write_tables(ctx: dict):
 
     # ── T10 prices ──────────────────────────────────────────────────────
     a(r"\begin{table}[htbp]\centering")
-    a(r"\caption{Prices and rents: what is obtainable now, what needs a person. The "
-      r"fallback chain runs top to bottom --- if the first two stay unavailable, the "
-      r"analysis is done on a market-level index and an assessed value that Proposition 13 "
-      r"makes a function of tenure.}\label{tab:prices}")
+    a(r"\caption{Prices and rents. The first row is the one that matters: a licensed "
+      r"transaction file, already on disk, that joins to the item table on the same parcel "
+      r"key as everything else in \S2. The rows below it are the fallbacks, in descending "
+      r"order of quality, and are what an analysis would be left with if the licence "
+      r"lapsed.}\label{tab:prices}")
     a(r"\begin{tabular}{@{}p{2.5cm}p{2.9cm}p{2.9cm}p{5.9cm}@{}}\toprule")
     a(r"Source & Status & Grain & What it gives\\\midrule")
     for r in ctx["price_rows"]:
@@ -1310,6 +1516,11 @@ def write_readme(ctx: dict):
             L.append(f"| Zillow {_md(label)} | — | files.zillowstatic.com | {n:,} "
                      f"(San Francisco County only) | {ctx['probe'].get('retrieved','')} | "
                      f"`prices/{k}_sf.csv.gz` |")
+    if CL_CACHE.exists():
+        meta = json.loads(CL_META.read_text()) if CL_META.exists() else {}
+        L.append(f"| CoreLogic/Cotality — San Francisco slice | — | local, licensed | "
+                 f"{meta.get('sf_rows', 0):,} | {meta.get('built','')} | "
+                 f"`{CL_CACHE.relative_to(EXT)}` |")
     for y in sorted(FEE_REGISTERS):
         p = FEES_DIR / f"impact_fee_register_{y}.pdf"
         if p.exists():
@@ -1335,7 +1546,18 @@ def write_readme(ctx: dict):
           "- Polygon-only zoning layers (2006, 2009–2015, current) — they need a spatial",
           "  join, and the parcel-keyed years 1998–2008 plus `acdm-wktn`'s own",
           "  `zoning_code` cover what this memo measures.",
-          "- CoreLogic / Cotality — licensed; see the memo's §5.",
+          "- The raw CoreLogic/Cotality extracts — they are licensed and already live under",
+          "  `$MFHR_DATA_ROOT/demand/corelogic/`, written by `demand_estimation/`. Only the",
+          "  San Francisco slice with the parcel key attached is derived into `prices/`, by",
+          "  `fetch --only corelogic`. Nothing is downloaded for it.",
+          "",
+          "## Dropbox online-only files",
+          "",
+          "The macOS file provider keeps files dehydrated: the directory entry reports the",
+          "full size while no blocks are allocated, and an un-materialised directory does not",
+          "appear in `ls` or `find` at all. `acquire_external_data.py sync` reports nominal",
+          "bytes against bytes on disk and materialises what is missing. Run it before",
+          "concluding that anything under `demand/` is gone.",
           ""]
     (EXT / "README.md").write_text("\n".join(L) + "\n")
     print("→", EXT / "README.md")
@@ -1366,6 +1588,27 @@ def report():
     br = permit_bridge(it, rec, stems)
     it = br["frame"]
     it = units_from_records(it)
+    cl_sf = corelogic_sf(it)
+    if cl_sf:
+        _have = set(pd.read_parquet(CL_CACHE, columns=["blklot"]).blklot.dropna())
+        it["cl_ever"] = it.parcels.map(lambda ps: bool(ps & _have))
+        _al = pd.read_parquet(CL_CACHE, columns=["blklot", "sale_date", "sale_amount",
+                                                 "arms_length"])
+        _al["sale_date"] = pd.to_datetime(_al.sale_date, errors="coerce")
+        _al = _al[_al.arms_length.astype("boolean").fillna(False)
+                  & _al.sale_amount.gt(1000) & _al.sale_date.notna()]
+        _by = {k: g.sale_date.values for k, g in _al.groupby("blklot")}
+        _w = np.timedelta64(TRADE_WINDOW_DAYS, "D")
+
+        def _near(r):
+            for q in r.parcels:
+                d = _by.get(q)
+                if d is not None and np.any(np.abs(d - np.datetime64(r.meeting_date)) <= _w):
+                    return True
+            return False
+        it["cl_near"] = [_near(r) for r in it.itertuples()]
+    else:
+        it["cl_ever"] = it["cl_near"] = False
     fees = parse_fee_registers()
 
     # ── inventory rows ──────────────────────────────────────────────────
@@ -1508,14 +1751,14 @@ def report():
     cl = corelogic_status()
     zmeta = _zillow_meta()
     price_rows = [
-        dict(src="CoreLogic / Cotality", status=("pulled 2026-06, extracts absent"
-                                                 if cl["documented_status"] == "landed"
-                                                 and not cl["present"] else "unknown"),
-             grain="transaction and parcel",
-             what=(f"{N(cl['sf_sales_in_pulled_extract'])} San Francisco sales in the pull "
-                   f"that is documented; the files are not under the data root"
-                   if cl["sf_sales_in_pulled_extract"]
-                   else "sale prices and characteristics")),
+        dict(src="CoreLogic / Cotality",
+             status=("cached, licensed" if cl["present"] else "absent"),
+             grain=r"transaction $\times$ parcel",
+             what=(rf"{N(cl_sf['priced'])} arms-length priced San Francisco sales "
+                   rf"{cl_sf['dense_first']}--{cl_sf['last']} over "
+                   rf"{N(cl_sf['parcels'])} parcels, "
+                   rf"joined on \texttt{{blklot}}"
+                   if cl_sf else "sale prices and characteristics")),
         dict(src="CoStar", status="institutional access question",
              grain="property and lease", what="commercial rents; not attempted, not scraped"),
         dict(src="Zillow ZHVI", status="cached", grain=zmeta["zhvi_grain"],
@@ -1547,8 +1790,10 @@ def report():
         ("A time-varying height and bulk layer keyed on parcel",
          "DataSF historic height and bulk series",
          "2009--2014 published as polygons; no parcel-keyed vintage"),
-        ("CoreLogic extracts", TT("$MFHR_DATA_ROOT/demand/corelogic"),
-         "documented as pulled, files absent from the data root"),
+        (f"A market price after {cl_sf['max_date']}" if cl_sf else "CoreLogic extracts",
+         TT("$MFHR_DATA_ROOT/demand/corelogic"),
+         (f"the Cotality pull ends there, two years short of the corpus; Zillow covers the "
+          f"tail at ZIP level only" if cl_sf else "not present under the data root")),
         ("Impact fee registers before 2019",
          "sfplanning.org and the Wayback Machine",
          "the register is republished at one URL; no snapshot before 2019-09-15"),
@@ -1619,6 +1864,7 @@ def report():
                field_macros=field_macros, bridge_macros=bridge_macros,
                row_macros=row_macros, land_use_multi=land_use_multi,
                quirk_macros=quirk_macros, casejoin_macros=casejoin_macros,
+               cl_sf=cl_sf,
                scale_earliest=scale_earliest, issue_lag_median=issue_lag_median,
                issue_lag_p90=issue_lag_p90,
                inventory=inventory, zoning_rows=zrows, bridge_rows=brows, bridge_all=ball,
@@ -1630,6 +1876,8 @@ def report():
                              for f, g in cj["frame"].groupby("fmt")])
 
     fig_riskset(it, asr)
+    if cl_sf:
+        fig_corelogic(cl_sf, it)
     fig_case_join(cj["frame"])
     fig_filing_lag(lag)
     write_tables(ctx)
@@ -1856,6 +2104,31 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
         "acqZhviMonths": str(zmeta.get("zhvi_months", 0)),
         "acqZoriMonths": str(zmeta.get("zori_months", 0)),
         "acqLandUseMulti": ctx["land_use_multi"],
+        **({} if not ctx["cl_sf"] else {
+            "acqClRows": N(ctx["cl_sf"]["rows"]),
+            "acqClPriced": N(ctx["cl_sf"]["priced"]),
+            "acqClResidential": N(ctx["cl_sf"]["residential"]),
+            "acqClParcels": N(ctx["cl_sf"]["parcels"]),
+            "acqClFirst": str(ctx["cl_sf"]["first"]),
+            "acqClDenseFirst": str(ctx["cl_sf"]["dense_first"]),
+            "acqClMaxDate": ctx["cl_sf"]["max_date"],
+            "acqClLast": str(ctx["cl_sf"]["last"]),
+            "acqClKeyed": f"{100*ctx['cl_sf']['keyed']:.1f}",
+            "acqClItemKeys": N(ctx["cl_sf"]["item_keys"]),
+            "acqClItemKeysTraded": N(ctx["cl_sf"]["item_keys_traded"]),
+            "acqClItemKeysTradedPct":
+                f"{100*ctx['cl_sf']['item_keys_traded']/ctx['cl_sf']['item_keys']:.1f}",
+            "acqClItemsEver": N(ctx["cl_sf"]["items_ever_traded"]),
+            "acqClItemsEverPct":
+                f"{100*ctx['cl_sf']['items_ever_traded']/ctx['cl_sf']['items_with_key']:.1f}",
+            "acqClItemsNear": N(ctx["cl_sf"]["items_traded_near"]),
+            "acqClItemsNearPct":
+                f"{100*ctx['cl_sf']['items_traded_near']/ctx['cl_sf']['items_with_key']:.1f}",
+            "acqClWindowYears": str(TRADE_WINDOW_DAYS // 365),
+            "acqClMedianRecent": f"{ctx['cl_sf']['median_recent']/1e6:.2f}",
+            "acqDemandFiles": N(cl["demand_files"]),
+            "acqDemandGB": f"{cl['demand_bytes']/1e9:.2f}",
+        }),
         "acqCuUnitsNZearly": f"{100*cu_reach['units_nz_early']:.1f}",
         "acqCuUnitsNZlate": f"{100*cu_reach['units_nz_late']:.1f}",
         "acqItems": N(len(it)),
@@ -1913,7 +2186,7 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
         "acqZoriZips": str(zmeta.get("zori_n", 0)),
         "acqZoriFirst": zmeta.get("zori_first", ""),
         "acqZoriLast": zmeta.get("zori_last", ""),
-        "acqCoreLogicSales": N(cl["sf_sales_in_pulled_extract"] or 0),
+        "acqCoreLogicSales": N(ctx["cl_sf"]["priced"]) if ctx["cl_sf"] else "---",
         "acqFeeRegisters": str(fees.year.nunique() if len(fees) else 0),
         "acqFeeRates": N(len(fees)),
         "acqFeeFirst": str(int(fees.year.min())) if len(fees) else "---",
@@ -1931,14 +2204,19 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("probe", help="resolve every identifier against the live catalogue")
     f = sub.add_parser("fetch", help="download and cache each source")
-    f.add_argument("--only", help="one source name from the registry (or zillow / fees)")
+    f.add_argument("--only",
+                   help="one source name from the registry (or zillow / fees / corelogic)")
     f.add_argument("--refresh", action="store_true", help="re-download even if cached")
+    y = sub.add_parser("sync", help="materialise Dropbox online-only files under demand/")
+    y.add_argument("--root", help="subtree to materialise (default $MFHR_DATA_ROOT/demand)")
     sub.add_parser("report", help="joins, coverage, figures, tables, README")
     a = ap.parse_args()
     if a.cmd == "probe":
         probe()
     elif a.cmd == "fetch":
         fetch(a.only, a.refresh)
+    elif a.cmd == "sync":
+        sync(Path(a.root).expanduser() if a.root else None)
     else:
         report()
 

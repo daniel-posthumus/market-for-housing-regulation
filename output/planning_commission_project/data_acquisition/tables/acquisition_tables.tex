@@ -182,10 +182,10 @@ Unit Completion Counts & \texttt{number\_\allowbreak of\_\allowbreak units\_\all
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{Prices and rents: what is obtainable now, what needs a person. The fallback chain runs top to bottom --- if the first two stay unavailable, the analysis is done on a market-level index and an assessed value that Proposition 13 makes a function of tenure.}\label{tab:prices}
+\caption{Prices and rents. The first row is the one that matters: a licensed transaction file, already on disk, that joins to the item table on the same parcel key as everything else in \S2. The rows below it are the fallbacks, in descending order of quality, and are what an analysis would be left with if the licence lapsed.}\label{tab:prices}
 \begin{tabular}{@{}p{2.5cm}p{2.9cm}p{2.9cm}p{5.9cm}@{}}\toprule
 Source & Status & Grain & What it gives\\\midrule
-CoreLogic / Cotality & pulled 2026-06, extracts absent & transaction and parcel & 220{,}049 San Francisco sales in the pull that is documented; the files are not under the data root\\[2pt]
+CoreLogic / Cotality & cached, licensed & transaction $\times$ parcel & 415{,}854 arms-length priced San Francisco sales 1968--2024 over 174{,}102 parcels, joined on \texttt{blklot}\\[2pt]
 CoStar & institutional access question & property and lease & commercial rents; not attempted, not scraped\\[2pt]
 Zillow ZHVI & cached & 26 San Francisco ZIPs, monthly & 2000-01 to 2026-07, 319 months\\[2pt]
 Zillow ZORI & cached & 24 San Francisco ZIPs, monthly & 2015-01 to 2026-07, 139 months\\[2pt]
@@ -233,7 +233,7 @@ Assessor roll before 2007 & \texttt{wv5m-vpq2} & the roll starts at 2007; no ear
 Parcel-keyed zoning for 1999 & DataSF historic zoning series & 1998 and 2000 exist; 1999 does not\\[2pt]
 Parcel-keyed zoning after 2008 & DataSF historic zoning series & 2009--2015 are polygon layers only\\[2pt]
 A time-varying height and bulk layer keyed on parcel & DataSF historic height and bulk series & 2009--2014 published as polygons; no parcel-keyed vintage\\[2pt]
-CoreLogic extracts & \texttt{\$MFHR\_\allowbreak DATA\_\allowbreak ROOT/\allowbreak demand/\allowbreak corelogic} & documented as pulled, files absent from the data root\\[2pt]
+A market price after 2024-05-16 & \texttt{\$MFHR\_\allowbreak DATA\_\allowbreak ROOT/\allowbreak demand/\allowbreak corelogic} & the Cotality pull ends there, two years short of the corpus; Zillow covers the tail at ZIP level only\\[2pt]
 Impact fee registers before 2019 & sfplanning.org and the Wayback Machine & the register is republished at one URL; no snapshot before 2019-09-15\\[2pt]
 A unit count for the early docket & every scale source in Table~\ref{tab:scale} & a non-zero count reaches 18.3\% of conditional uses heard before 2005 against 30.9\% after\\[2pt]
 \bottomrule\end{tabular}\end{table}

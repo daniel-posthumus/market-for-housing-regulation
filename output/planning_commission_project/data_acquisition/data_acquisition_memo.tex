@@ -77,11 +77,15 @@ Development Pipeline reaches \acqCuPipeline\% and is a current snapshot, and Hou
 Production reaches \acqCuHousingProd\% by parcel.
 
 \medskip\noindent
-\textbf{Fifth, on prices, the important finding is an absence.} The CoreLogic pull did
-happen --- it is documented as complete, \acqCoreLogicSales\ San Francisco sales --- and
-\textbf{the extracts are not under the data root}. That is a human action item, not a search
-result. What is cached instead: Zillow ZHVI and ZORI for San Francisco, and the assessor's
-assessed values with the Proposition~13 caveat stated. On fees, \acqFeeRegisters\ annual
+\textbf{Fifth, the price side is stronger than expected, and it joins on the parcel key.} The
+CoreLogic/Cotality extract is on disk under the data root: \textbf{\acqClPriced\
+arms-length priced San Francisco sales, \acqClDenseFirst--\acqClLast, over \acqClParcels\
+parcels}. Cotality prints San Francisco's APN as block and lot, so it is not a block-group
+price --- it is \texttt{blklot}, the same key as \S2, on \acqClKeyed\% of transactions.
+\textbf{\acqClItemsEverPct\% of items carrying a parcel key sit on a parcel that has
+traded}, and \acqClItemsNearPct\% on one that traded within \acqClWindowYears\ years of
+the hearing itself. Zillow and the assessor's values are cached behind it as fallbacks. On
+fees, \acqFeeRegisters\ annual
 Citywide Development Impact Fee Registers, \acqFeeFirst--\acqFeeLast, parsed to
 \acqFeeRates\ dated rate observations keyed by Planning Code section --- the Transportation
 Sustainability Fee for residential projects over 99 units runs \$\acqTsfNinetyNineFirst\ to
@@ -130,6 +134,13 @@ one actually used.
 ID, verified --- \textbf{but the roll starts at \acqAsrFirst}. That is not a gap in a scrape; no
 earlier vintage is published. It is reported as a negative in
 Table~\ref{tab:negatives} because the temptation to go looking again will be strong.
+\item \textbf{A Dropbox subtree that has never been materialised is invisible to
+\texttt{ls} and \texttt{find}.} The macOS file provider holds files online-only: the
+directory entry carries the full size while the file occupies no blocks, and an
+un-materialised directory does not list at all. The first pass of this memo concluded on that
+basis that the CoreLogic extract was gone. It was not --- it was dehydrated, and \S5 is what
+it actually contains. \texttt{acquire\_external\_data.py sync} now reports nominal bytes
+against bytes on disk, which is the only way to tell the two cases apart.
 \end{itemize}
 
 \input{tables/acquisition_tables}
@@ -446,23 +457,71 @@ before \acqScaleEarliest\ against \acqCuUnitsNZlate\% of those heard after.
 
 Table~\ref{tab:prices} is the fallback chain. The top of it is the finding.
 
-\paragraph{CoreLogic / Cotality: the pull happened and the files are gone.} The brief asked
-whether the pull went through before Stanford access lapsed on 1 July. It did.
-\texttt{demand\_estimation/stubs.py} records the source's status as \texttt{landed} with a
-full provenance note --- pulled from Stanford Libraries' Redivis ``Data Farm'', filtered
-server-side to the Bay Area county FIPS, PII excluded at query time --- and the summary
-tables it produced are still in the repository:
-\acqCoreLogicSales\ San Francisco sales, with a median price and a median price per square
-foot, and a parcel file carrying year built, bedrooms, bathrooms, living area, lot size,
-assessed value and annual property tax.
+\paragraph{CoreLogic / Cotality: the pull happened, and the extract is here.} The brief
+asked whether the pull went through before Stanford access lapsed. It did, and the files are
+under the data root: \texttt{demand/} holds \acqDemandFiles\ files and \acqDemandGB\,GB,
+including both the raw Cotality extracts and the cleaned parquet
+\texttt{demand\_estimation/corelogic.py} built from them.
 
-\textbf{The extracts themselves are not under \texttt{\$MFHR\_DATA\_ROOT}.} Neither is the
-rest of the \texttt{demand/} subtree the demand pipeline writes. The most likely explanation
-is the machine loss that cost the corpus and the hand labels and from which the labels were
-recovered by content-matching; the CoreLogic extracts had no such second copy. \textbf{This is
-a human action item, not a search result}: either the Redivis extracts are re-exported (the
-query templates and column choices are documented in the stub), or the demand-side price spine
-is re-requested through BU. It should not be looked for again on disk.
+\textbf{An earlier pass of this memo reported the whole \texttt{demand/} subtree as absent.
+It was wrong, and the reason is worth recording because it will recur.} Dropbox's macOS file
+provider keeps files \emph{online-only}: the directory entry reports the full size while the
+file occupies zero blocks, and a directory that has never been materialised does not appear in
+a listing at all. \texttt{find} and \texttt{ls} both said nothing was there.
+\texttt{acquire\_external\_data.py sync} is now the check --- it reports nominal bytes
+against bytes on disk and materialises what is dehydrated --- and running it turned up
+\acqDemandGB\,GB across \acqDemandFiles\ files, of which several gigabytes were
+placeholders. \textbf{The lesson is the one the repo already knows in another form: when the
+machine and the record disagree, check the source before believing the machine.}
+
+\paragraph{What it is, and that it joins at the parcel.} Table~\ref{tab:prices} and
+Figure~\ref{fig:corelogic} report it. The extract holds \acqClRows\ San Francisco
+transactions, of which \acqClPriced\ are arms-length with a price and \acqClResidential\
+are residential, over \acqClParcels\ distinct parcels.
+
+The join is the find. Cotality prints San Francisco's APN as \texttt{0836 003} --- block and
+lot, in the same four-plus-three form DataSF uses --- so stripping the separator yields
+\texttt{blklot} directly. \textbf{\acqClKeyed\% of San Francisco transactions carry a
+usable parcel key}, and the price therefore joins to the item table on exactly the key the
+risk set of \S\ref{sec:riskset} is built on. This is a parcel-level price, not a
+market-level index, and it is the difference between having $\Pi(s)$ and having a proxy
+for it.
+
+What that buys, measured rather than asserted:
+
+\begin{itemize}
+\item \textbf{\acqClItemKeysTraded\ of the \acqClItemKeys\ distinct parcels the item
+table touches (\acqClItemKeysTradedPct\%) have at least one arms-length sale.}
+\item \textbf{\acqClItemsEverPct\% of items with a parcel key} sit on a parcel that has
+traded at some point --- \acqClItemsEver\ items.
+\item \textbf{\acqClItemsNearPct\% sit on a parcel that traded within
+\acqClWindowYears\ years of the hearing} (\acqClItemsNear\ items). That is the number
+that matters for a filing threshold: it is the share of decisions for which a
+\emph{contemporaneous} market price on the actual parcel is observable, rather than a
+neighbourhood average.
+\end{itemize}
+
+The right panel of Figure~\ref{fig:corelogic} shows the first of those rising from roughly
+half to three quarters over the period, as more of the housing stock turns over at least once
+inside the window the extract covers, while the contemporaneous-trade share sits flat near a
+quarter. The flatness is the honest read: turnover, not data coverage, is what caps it.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_corelogic.pdf}
+\caption{Left: median arms-length sale price in San Francisco with annual volume behind it,
+from the year the extract becomes dense. Right: the share of items carrying a parcel key whose
+parcel has ever traded, and whose parcel traded within \acqClWindowYears\ years of the
+hearing. The shaded band is the hearing years whose forward window runs past the end of the
+extract; the contemporaneous series is not drawn there, because a fall would be an artefact of
+where the file stops.}
+\label{fig:corelogic}
+\end{figure}
+
+\paragraph{Where it stops.} The extract ends \acqClMaxDate, two years short of the corpus,
+and the series is only dense from \acqClDenseFirst\ (a handful of deeds carry placeholder
+dates back to \acqClFirst). The last three hearing years therefore cannot have a
+\acqClWindowYears-year forward window and are drawn as a gap in Figure~\ref{fig:corelogic}
+rather than as a decline --- the same rule the corpus memo applies to 2018.
 
 \paragraph{CoStar} is an access question and is reported as one. Nothing was attempted and
 nothing was scraped.
@@ -550,7 +609,11 @@ through to a permit present in DBI, and \acqEitherRoute\% of the docket reaches 
 some route. The conditions memo's non-overlap claim (\S5.1) is overturned.
 \item A unit count is attached to \acqCuUnits\% of conditional-use items and is non-zero on
 \acqCuUnitsNZ\%.
-\item The CoreLogic pull was completed and its output is absent from the data root.
+\item The CoreLogic extract is present, and it is a \emph{parcel-level} price:
+\acqClPriced\ arms-length San Francisco sales over \acqClParcels\ parcels, keyed on
+\texttt{blklot} on \acqClKeyed\% of transactions. \acqClItemsEverPct\% of items with a
+parcel key sit on a parcel that has traded, \acqClItemsNearPct\% on one that traded within
+\acqClWindowYears\ years of the hearing.
 \item An annual dollar fee schedule exists for \acqFeeFirst--\acqFeeLast, keyed by Planning
 Code section and land-use band, \acqFeeRates\ rate observations.
 \end{enumerate}
@@ -574,6 +637,10 @@ table's full span. It is zero on most rows and the zero is not distinguishable f
 unfilled field.
 \item Anything about fee levels before \acqFeeFirst. The register panel starts there and the
 earlier schedules are not on the site or in the archive under any URL tried.
+\item Whether a sale near the hearing is a sale \emph{caused} by it, or how to treat the
+parcels that never trade. \acqClItemsNearPct\% of keyed items have a contemporaneous price;
+the complement is not missing at random --- a parcel that has not changed hands in decades is
+a different kind of parcel --- and nothing here corrects for that.
 \item Anything causal. Every number in this memo is a coverage rate or a descriptive
 distribution.
 \end{enumerate}
@@ -600,13 +667,16 @@ one \texttt{data\_as\_of} date.
 
 \paragraph{Periods that do not line up.} The corpus is \acqCorpusSpan. Assessed values are
 \acqAsrFirst--\acqAsrLast. Parcel-keyed zoning is \acqZoningParcelSpan. Fee rates are
-\acqFeeFirst--\acqFeeLast. \textbf{No single window has all of them}, and a specification
+\acqFeeFirst--\acqFeeLast. Transaction prices are \acqClDenseFirst--\acqClLast\ and stop
+at \acqClMaxDate. \textbf{No single window has all of them}, and a specification
 wanting both an assessed value and the zoning in force is confined to the overlap of the
 second and third unless the polygon zoning years are joined spatially.
 
-\paragraph{Access questions left open.} CoreLogic (re-export from Redivis, or a BU request).
-CoStar (BU Questrom holdings, unchecked by design). The \S415 inclusionary requirement
-percentages and their amendment history. Fee registers before \acqFeeFirst.
+\paragraph{Access questions left open.} CoStar (BU Questrom holdings, unchecked by design).
+The \S415 inclusionary requirement percentages and their amendment history. Fee registers
+before \acqFeeFirst. CoreLogic is \emph{not} on this list any more --- the extract is on
+disk --- but the licence is Stanford's and lapsed, so the file cannot be refreshed past
+\acqClMaxDate\ without new access. Treat what is cached as frozen.
 
 \paragraph{Source quirks worth carrying.} Dwelling Unit Completion Counts contains a
 \texttt{date\_issued} in \acqUcMaxYear, marked \emph{(sic)} in Tables~\ref{tab:inventory}
@@ -630,6 +700,7 @@ item~1.
 each cached so no network stage repeats by accident:
 
 \begin{verbatim}
+python acquire_external_data.py sync             # materialise online-only files
 python acquire_external_data.py probe            # resolve every identifier, live
 python acquire_external_data.py fetch            # download and cache each source
 python acquire_external_data.py fetch --refresh  # re-download everything
@@ -637,12 +708,20 @@ python acquire_external_data.py fetch --only assessor   # or one source
 python acquire_external_data.py report           # joins, figures, tables, README
 \end{verbatim}
 
+\texttt{sync} materialises every online-only file under
+\texttt{\$MFHR\_DATA\_ROOT/demand/} and prints nominal bytes against bytes on disk.
+Run it first: it is the difference between a subtree that is missing and one that Dropbox has
+simply not downloaded, and this memo got that wrong once.
+
 \texttt{probe} writes \texttt{\$MFHR\_DATA\_ROOT/external/\_acquisition/probe.json} --- the
 resolved identifier, row count, column list and update time for every dataset, the catalogue
 searches that produced them, and an HTTP check on every non-Socrata file. \texttt{fetch}
 writes one directory per source under \texttt{\$MFHR\_DATA\_ROOT/external/}
 (\texttt{parcels}, \texttt{assessor}, \texttt{zoning}, \texttt{planning\_records},
 \texttt{pipeline}, \texttt{prices}, \texttt{fees}) and skips anything already on disk.
+\texttt{fetch -{}-only corelogic} is the exception that downloads nothing: it slices the
+licensed Cotality extract already under \texttt{demand/} down to San Francisco, attaches the
+parcel key, and caches the result, so \texttt{report} does not re-read two gigabytes.
 \texttt{report} regenerates the three figures, \texttt{tables/acquisition\_tables.tex},
 \texttt{tables/acquisition\_macros.tex}, and \texttt{external/README.md}, which records per
 source the resolved identifier, retrieval date and row count so a later run can tell whether
@@ -666,8 +745,8 @@ The only numerals typed into the \texttt{.tex} are: section and item cross-refer
 identifiers and dataset names (\texttt{2014.0400CUA}, \texttt{98.426D}, Housing
 Production 2005--present); the register's own printed land-use bands
 (``over 99 units''); named prior facts (Proposition~13, the 2018 hole in the meeting corpus);
-two figures quoted from the brief itself (the $\geq$95\% acceptance
-criterion and the 1 July access lapse); and three figures quoted from sibling memos, each
+the brief's own $\geq$95\% acceptance criterion; and three figures quoted from sibling memos,
+each
 attributed where it appears --- the corpus memo's 8{,}295 distinct parcels, the permit memo's
 145{,}795 duplicate \texttt{permit\_number} rows, and the 83.8\% inside the block quotation
 from the conditions memo. The delay memo's hearing-to-issuance median is \emph{not} in that
