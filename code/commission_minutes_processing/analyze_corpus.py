@@ -5,7 +5,8 @@ analyze_corpus.py
 Purpose : Turn the extracted item-level table into the figures and tables the discretionary-
           review memo reports. One script, so no number in the memo is hand-placed.
 Inputs  : $MFHR_DATA_ROOT/extraction/<run>/clean/*.jsonl
-Outputs : output/planning_commission_project/fig_*.pdf and corpus_tables.tex
+Outputs : output/planning_commission_project/discretionary_review_patterns/
+          figures/fig_*.pdf and tables/corpus_tables.tex
 Author  : Dan Post
 Created : 2026-09-07
 
@@ -36,7 +37,10 @@ import matplotlib.pyplot as plt                                      # noqa: E40
 import pandas as pd                                                  # noqa: E402
 
 RUN = "corpus_v2_g3"
-OUT = HERE.parents[1] / "output" / "planning_commission_project"
+MEMO = (HERE.parents[1] / "output" / "planning_commission_project"
+        / "discretionary_review_patterns")
+FIG = MEMO / "figures"
+TAB = MEMO / "tables"
 SPARSE_YEARS: set[int] = set()
 SMOOTH_YEARS = 3            # centred, in calendar years
 
@@ -106,7 +110,7 @@ def fig_composition(df):
     axes[1].legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=4, frameon=False,
                    fontsize=7.5)
     axes[1].set_xlabel("hearing year")
-    fig.savefig(OUT / "fig_composition.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_composition.pdf"); plt.close(fig)
     return tab, share
 
 
@@ -133,7 +137,7 @@ def fig_outcomes(df):
     ax.set_title(f"Commission outcomes ({SMOOTH_YEARS}-year centred mean over the faint "
                  f"annual series)", loc="left")
     ax.legend(frameon=False, ncol=3, fontsize=8)
-    fig.savefig(OUT / "fig_outcomes.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_outcomes.pdf"); plt.close(fig)
     return rate, n
 
 
@@ -172,7 +176,7 @@ def fig_delay(ch):
     series_plot(axes[1], p90.index, p90.values, "90th percentile", "#a33")
     axes[1].set_ylabel("days"); axes[1].set_xlabel("year of first hearing")
     axes[1].legend(frameon=False, fontsize=8)
-    fig.savefig(OUT / "fig_delay.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_delay.pdf"); plt.close(fig)
     return med, p90, share
 
 
@@ -208,7 +212,7 @@ def fig_commissioners(tab):
                        fontsize=7.5)
     ax.set_xlabel("% of recorded votes cast against the prevailing motion")
     ax.set_title("Dissent rate, commissioners with 200+ recorded votes", loc="left")
-    fig.savefig(OUT / "fig_commissioners.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_commissioners.pdf"); plt.close(fig)
     return d
 
 
@@ -236,7 +240,7 @@ def fig_geography(d):
     ax.set_yticklabels(top.index[::-1], fontsize=7.5)
     ax.set_xlabel("items heard, 1998–2026")
     ax.set_title("Assessor blocks appearing most often before the Commission", loc="left")
-    fig.savefig(OUT / "fig_geography.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_geography.pdf"); plt.close(fig)
     return top
 
 
@@ -269,33 +273,46 @@ def fig_citations(per_item):
     ax.set_yticklabels([f"§{s}" for s in top.index[::-1]], fontsize=8)
     ax.set_xlabel("items citing the section")
     ax.set_title("Planning Code sections cited in the request text", loc="left")
-    fig.savefig(OUT / "fig_citations.pdf"); plt.close(fig)
+    fig.savefig(FIG / "fig_citations.pdf"); plt.close(fig)
     return top
+
+
+def permit_stats(df):
+    """Coverage of the building-permit join, for tab:linkage.
+
+    analyze_permits.py does the real work (it queries DataSF) and caches its headline
+    numbers next to the extraction. Read the cache when it is there; fall back to the
+    parse-only counts, which need no network, and say so.
+    """
+    cache = DATA_ROOT / "extraction" / RUN / "permit_summary.json"
+    if cache.exists():
+        s = json.loads(cache.read_text())
+        return {"items": s["items_with_permit"], "distinct": s["distinct_permits"],
+                "match_rate": s["match_rate_pct"], "matched": True}
+    import analyze_permits as ap
+    hits = [ap.parse_permits(str(r)) for r in df.project_descr.fillna("")]
+    return {"items": sum(1 for h in hits if h),
+            "distinct": len({p for h in hits for p in h}),
+            "match_rate": float("nan"), "matched": False}
 
 
 def main():
     df = load()
     print(f"{len(df):,} items, {df.year.min()}–{df.year.max()}")
-    res = {}
-    tab, share = fig_composition(df);           res["composition"] = (tab, share)
-    rate, n = fig_outcomes(df);                 res["outcomes"] = (rate, n)
-    ch = chains(df); res["chains"] = ch
-    med, p90, mshare = fig_delay(ch);           res["delay"] = (med, p90, mshare)
-    v, ctab = commissioners(df);                res["commissioners"] = (v, ctab)
+    FIG.mkdir(parents=True, exist_ok=True)
+    TAB.mkdir(parents=True, exist_ok=True)
+    tab, share = fig_composition(df)
+    rate, n = fig_outcomes(df)
+    ch = chains(df)
+    fig_delay(ch)
+    v, ctab = commissioners(df)
     fig_commissioners(ctab)
-    pd_ = parcels(df); res["parcels"] = pd_
-    top_blocks = fig_geography(pd_);            res["blocks"] = top_blocks
-    per_item, by_type = citations(df);          res["citations"] = (per_item, by_type)
+    parc = parcels(df)
+    fig_geography(parc)
+    per_item, by_type = citations(df)
     fig_citations(per_item)
-    import pickle
-    with open("/private/tmp/claude-501/-Users-danielposthumus-market-for-housing-regulation/"
-              "b93e3639-1769-4673-abdf-b451fcd4aeb6/scratchpad/analysis.pkl", "wb") as fh:
-        pickle.dump({"df": df, **{k: v for k, v in res.items()}}, fh)
-    print("figures written to", OUT)
-
-
-if __name__ == "__main__":
-    main()
+    print("figures written to", FIG)
+    write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permit_stats(df))
 
 
 # ── tables ───────────────────────────────────────────────────────────────────
@@ -343,17 +360,19 @@ def write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permits)
 
     m = ch[(ch.hearings > 1) & ch.days.notna() & (ch.days >= 0)]
     a(r"\begin{table}[htbp]\centering")
-    a(r"\caption{Elapsed time from first to last hearing, for cases heard more than once, "
-      r"by five-year cohort of first hearing. A case is a \texttt{case\_number}; the "
-      r"corpus ends mid-2025, so recent cohorts are right-censored and their tails are "
-      r"understated.}\label{tab:delay}")
+    a(rf"\caption{{Elapsed time from first to last hearing, for cases heard more than once, "
+      rf"by five-year cohort of first hearing. A case is a \texttt{{case\_number}}; the "
+      rf"corpus ends {df.meeting_date.max():%Y-%m-%d}, so recent cohorts are right-censored "
+      rf"and their tails are understated.}}\label{{tab:delay}}")
     a(r"\begin{tabular}{lrrrr}\toprule")
     a(r"First heard & Cases & Median days & 90th pct & Max\\\midrule")
     mm = m.assign(coh=(m.year // 5) * 5)
     for c, g in mm.groupby("coh"):
         if len(g) < 20:
             continue
-        a(rf"{int(c)}--{int(c)+4} & {len(g):,} & {g.days.median():.0f} & "
+        # label by the years the cohort actually holds: the corpus starts in 1998, so the
+        # bin beginning 1995 is 1998--1999 and saying otherwise invents two years of coverage
+        a(rf"{int(g.year.min())}--{int(g.year.max())} & {len(g):,} & {g.days.median():.0f} & "
           rf"{g.days.quantile(.9):.0f} & {g.days.max():.0f}\\")
     a(rf"\midrule All & {len(m):,} & {m.days.median():.0f} & {m.days.quantile(.9):.0f} & "
       rf"{m.days.max():.0f}\\")
@@ -400,10 +419,15 @@ def write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permits)
       rf"{parc[parc.block.ne('')].block.nunique():,} distinct blocks\\")
     a(rf"Block $+$ lot (APN) & {100*parc.has_parcel.mean():.1f}\% & "
       rf"{len({x for l in parc.apn for x in l}):,} distinct parcels\\")
-    a(rf"Building-permit number & {100*permits['items']/len(parc):.1f}\% & "
-      rf"{permits['distinct']:,} distinct permits, "
-      rf"{permits['match_rate']:.0f}\% matched in DBI\\")
+    reach = (rf"{permits['distinct']:,} distinct permits, "
+             rf"{permits['match_rate']:.1f}\% matched in DBI" if permits["matched"]
+             else rf"{permits['distinct']:,} distinct permits (DBI match not cached)")
+    a(rf"Building-permit number & {100*permits['items']/len(parc):.1f}\% & " + reach + r"\\")
     a(r"\bottomrule\end{tabular}\end{table}")
 
-    (OUT / "corpus_tables.tex").write_text("\n".join(L) + "\n")
-    print("→", OUT / "corpus_tables.tex")
+    (TAB / "corpus_tables.tex").write_text("\n".join(L) + "\n")
+    print("→", TAB / "corpus_tables.tex")
+
+
+if __name__ == "__main__":
+    main()

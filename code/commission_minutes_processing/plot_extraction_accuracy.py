@@ -8,7 +8,8 @@ Purpose : Chart how meeting-level extraction accuracy moved across the three han
           disagreements were used to fix them (in-sample).
 Inputs  : the round-by-round figures recorded below, each produced by scoring the machine's
           recomputed output against date_gold.db and printed in the session log.
-Outputs : output/planning_commission_project/extraction_accuracy.pdf (+ .png)
+Outputs : output/planning_commission_project/meeting_level_info/figures/
+          extraction_accuracy.pdf (+ .png)
 Author  : Dan Post
 Created : 2026-09-03
 
@@ -30,7 +31,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                   # noqa: E402
 
-OUT = Path(__file__).resolve().parents[2] / "output" / "planning_commission_project"
+OUT = (Path(__file__).resolve().parents[2] / "output" / "planning_commission_project"
+       / "meeting_level_info" / "figures")
 
 # (round label, meetings, frozen out-of-sample %, % after that round's fixes)
 ROUNDS = [

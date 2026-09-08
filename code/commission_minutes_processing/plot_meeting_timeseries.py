@@ -7,7 +7,8 @@ Purpose : Two meeting-level time series over the full extracted corpus — staff
           meeting-by-meeting series behind a one-year moving average, banded by inferred
           presidency and with the remote-hearing era shaded.
 Inputs  : meetings_all.csv (produced by extract_all_meetings.py)
-Outputs : output/planning_commission_project/meeting_timeseries.pdf (+ .png)
+Outputs : output/planning_commission_project/meeting_level_info/figures/
+          meeting_timeseries.pdf (+ .png)
 Author  : Dan Post
 Created : 2026-09-04
 
@@ -52,7 +53,8 @@ import matplotlib.dates as mdates                                 # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 CSV = HERE / "meetings_all.csv"
-OUT = HERE.parents[1] / "output" / "planning_commission_project"
+OUT = (HERE.parents[1] / "output" / "planning_commission_project"
+       / "meeting_level_info" / "figures")
 WINDOW_DAYS = 183          # +/- half a year
 SPARSE_YEARS: set[int] = set()   # years too thin to draw through — see the note above
 MODE_WINDOW = 7            # +/- meetings, for smoothing the presiding series

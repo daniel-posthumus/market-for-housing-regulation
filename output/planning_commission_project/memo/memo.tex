@@ -5,6 +5,7 @@
 \usepackage{amsmath}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
 
 \title{SF Planning Commission Minutes:\\ Pipeline Status and Preliminary Results}
 \author{Dan Post}
@@ -31,24 +32,36 @@ to the rest of the Bay Area is documented in the recon directories.
 
 \section{What is in this directory}
 
-\begin{longtable}{p{0.30\textwidth}p{0.62\textwidth}}
+The directory is \textbf{one folder per memo}. Each holds \texttt{<name>.tex}, its compiled
+\texttt{.pdf}, and its own \texttt{figures/} and \texttt{tables/}, so a memo and everything it
+depends on move together; every figure and table is written by a script, and each memo's last
+section names the script that regenerates it. \texttt{README.md} in this directory is the
+index. The spec and reference documents the pipeline code links to by path live in
+\texttt{notes/}.
+
+\begin{longtable}{p{0.37\textwidth}p{0.55\textwidth}}
 \toprule
-File & What it is \\
+Folder & What it answers \\
 \midrule
 \endhead
-\texttt{minutes\_data\_availability.md} & Inventory of what the raw files actually contain,
-by document era (1{,}099 source files). Produced 2026-06-05; read-only. \\
-\texttt{processing\_review.md} & Code review of the pipeline plus an audit of the
-hand-labels, with a 2026-06-08 status update. \\
-\texttt{data\_infrastructure.md} & The schema and how the pieces fit together. \\
-\texttt{labeling\_rules.md} & The authoritative coding manual --- the per-field spec a
-labeler works from. \\
-\texttt{hand\_label\_review\_guide.md} & How to review existing labels before they become
-ground truth. \\
-\texttt{schema\_enrichment\_recommendation.md} & Field-by-field verdicts from the schema
-enrichment investigation (adopt / defer / reject). \\
-\texttt{meeting\_level\_info.tex} & How each item is matched to the meeting it was heard at,
-the meeting-level fields, their accuracy against the gold set, and summary statistics. \\
+\texttt{memo/} & This memo: pipeline status and what is still open. Edited in place. \\
+\texttt{meeting\_level\_info/} & How each item is matched to the meeting it was heard at, the
+meeting-level fields, and their accuracy against the gold set. \\
+\texttt{extraction\_method\_comparison/} & Regex against Claude, field by field, on a frozen
+train/test split, with accuracy and over-extraction reported separately. \\
+\texttt{discretionary\_review\_patterns/} & What the 16{,}199-item corpus contains:
+composition of the docket, dispositions, delay, commissioners, geography, Planning Code
+citations. \\
+\texttt{permit\_linkage/} & How far the entitlement can be followed to a real building permit
+in DBI's records, and what the match buys. \\
+\texttt{conditions\_of\_approval/} & Whether the \emph{content} of the Commission's conditions
+can be recovered, given that \texttt{conditions\_imposed} is only a yes/no flag. \\
+\texttt{predicting\_delay/} & How much elapsed hearing time is forecastable from what a
+developer can observe at the first hearing --- in sample and out. \\
+\texttt{notes/} & \texttt{labeling\_rules.md} (the coding manual),
+\texttt{data\_infrastructure.md} (schema and flow), \texttt{minutes\_data\_availability.md},
+\texttt{processing\_review.md}, \texttt{schema\_enrichment\_recommendation.md},
+\texttt{hand\_label\_review\_guide.md}, \texttt{help\_string\_audit.md}. \\
 \bottomrule
 \end{longtable}
 

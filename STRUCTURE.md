@@ -30,13 +30,17 @@ market-for-housing-regulation/
 | File | Role |
 |---|---|
 | `paths.py` | **Where the data lives** — `DATA_ROOT`/`MEETING_MINUTES`, env-overridable via `MFHR_DATA_ROOT`. `MEETING_MINUTES` resolves to the *active locality* (`MFHR_LOCALITY`, default `san_francisco`) so the pipeline scales across the Bay Area. Everything imports paths from here. |
-| `extraction_common.py` | **The 29-field `SCHEMA` v2** (single source of truth) → `FIELDS`, `build_prompt()`/`item_suffix()`/`prompt_sha()`, `coerce_record()`, `compare_field()`, `verify_evidence()`. The help strings ARE the prompt: `build_prompt()` generates it from them (audit: `output/planning_commission_project/help_string_audit.md`). |
+| `extraction_common.py` | **The 29-field `SCHEMA` v2** (single source of truth) → `FIELDS`, `build_prompt()`/`item_suffix()`/`prompt_sha()`, `coerce_record()`, `compare_field()`, `verify_evidence()`. The help strings ARE the prompt: `build_prompt()` generates it from them (audit: `output/planning_commission_project/notes/help_string_audit.md`). |
 | `normalize.py` | **The storage layer** — one rule per field, applied to hand labels and model output alike, so gold and prediction are never compared across a formatting difference neither side chose. `iso_date`, `lot_list`, `block_key` (unpadded — pad at query time), `clean_name`, `address_core`, `request_for_clause`/`descr_proposal`, `normalize_record`. Self-testing: `python normalize.py`. |
 | `provenance.py` | `extraction_runs` / `predictions` / `verification_failures` in `labels.db`: which run, model, prompt SHA, schema version and gold version produced any value. Append, never overwrite. Also the `gold_version` registry (`bakeoff/gold_versions.json`). |
 | `review_queue.py` | ONE queue for every kind of re-review — `field_redefined`, `migration_ambiguous`, `adjudication`, `new_item` — field-level and sorted so the same field is worked consecutively. Served by the labelling app. |
 | `migrate_gold_v1_v2.py` | Carries the hand-labelled gold from schema v1 to v2. **Proposes, does not decide**: AUTO where a value derives unambiguously, FLAG into the review queue otherwise. Freezes `bakeoff/gold/gold_v1_snapshot.json` first and reads from it thereafter. |
 | `gold_split.py` | The frozen train/test split, stratified by (era, year), with a content SHA. `--verify` reports drift and the `gold_version`; `--refreeze` re-hashes when labels changed but membership did not; `--rebuild` only when the item set changed. |
 | `bakeoff_extract.py` / `bakeoff_report.py` / `bakeoff_memo.py` | Method × field comparison (regex vs Claude) over the Batch API, split-aware scoring with accuracy and over-extraction reported separately, and the LaTeX tables for `extraction_method_comparison.tex`. |
+| `analyze_corpus.py` | The corpus memo, generated: composition, dispositions, delay chains (`chains()`, reused downstream), commissioners, geography, Planning Code citations → `discretionary_review_patterns/{figures,tables}`. |
+| `analyze_permits.py` | The permit-linkage memo: parses the four printed permit-number forms out of the request text, matches them against a local cache of DataSF's Building Permits (`i98e-djp9`, 1.3M rows), scores a block+lot fallback against the permit-number subset, and writes `permit_summary.json` next to the extraction so the corpus memo's linkage table cannot drift. |
+| `analyze_conditions.py` | The conditions memo: `probe` (is a Commission packet published for this case?), `fetch` (pull it, keep only the motion's Exhibit A), `report` (coverage, a block-text sweep, and a twelve-category taxonomy). Both network stages cache to `$MFHR_DATA_ROOT/external/cpc_packets/`. |
+| `analyze_delay.py` | The delay memo: builds the case panel from `chains()`, joins DBI for the supervisor district, and runs OLS / LPM / quantile regressions plus a temporal out-of-sample test. |
 | `build_adjudication.py` | Queues every gold-vs-model disagreement for a three-way verdict (gold right / model right / both wrong) and mirrors it into `review_queue`. Some measured "model error" is gold error. |
 | `autoextract.py` | Regex/heuristic best-guess extraction from a raw block (form pre-fill + builder derivations). |
 | `minutes_scraping/scrape_minutes.py` | Consolidated, idempotent scraper (S3 HTML 1998–2014; live archive PDFs 2015–present). Legacy scrapers deprecated alongside. |
@@ -86,14 +90,20 @@ nine `bay_area_recon/` probes share a single memo at the sprint root rather than
 output/
 ├── README.md                          # start here — layout + where to look first
 ├── planning_commission_project/       # the SF minutes pipeline (LIVE; code links here by path)
-│   ├── minutes_data_availability.md   # what the raw files contain, by era
-│   ├── processing_review.md           # code review + hand-label audit
-│   ├── data_infrastructure.md         # schema + worked examples
-│   ├── labeling_rules.md              # SF-specific coding manual (label/review spec)
-│   ├── hand_label_review_guide.md     # app workflow for reviewing labels
-│   ├── schema_enrichment_recommendation.md  # ADOPT/DEFER/REJECT on candidate fields
-│   ├── memo.tex                       # pipeline status + preliminary results
-│   └── meeting_level_info.tex    # how items are matched to meetings; error rates
+│   ├── README.md                      # one line per memo — start here
+│   ├── memo/                          # the standing pipeline-status memo
+│   ├── notes/                         # the spec/reference .md docs the code links to
+│   │   ├── minutes_data_availability.md   # what the raw files contain, by era
+│   │   ├── processing_review.md           # code review + hand-label audit
+│   │   ├── data_infrastructure.md         # schema + worked examples
+│   │   ├── labeling_rules.md              # SF coding manual (label/review spec)
+│   │   ├── hand_label_review_guide.md     # app workflow for reviewing labels
+│   │   ├── help_string_audit.md           # the prompt-generating help strings
+│   │   └── schema_enrichment_recommendation.md  # ADOPT/DEFER/REJECT on fields
+│   └── <one folder per memo>/         # each: <name>.{tex,pdf} + figures/ + tables/
+│       meeting_level_info, extraction_method_comparison,
+│       discretionary_review_patterns, permit_linkage,
+│       conditions_of_approval, predicting_delay
 ├── political_economic_housing_model/  # the theory (LIVE)
 │   ├── toy_model.tex (+ .pdf, .bib)   # formal toy model + minutes mapping
 │   ├── operationalization_memo.pdf    # three-layer estimation blueprint

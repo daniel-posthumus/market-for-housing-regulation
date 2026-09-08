@@ -82,7 +82,7 @@ the hearing-level attributes are missing.
 Before adding new labels, fix the ones you have. `label_qa.py` diffs every existing
 label against its source block and surfaces the likely-wrong ones (the migration
 left **351 of 415** with `action='other'`, plus dropped `vote`/`noes`/`absent` and
-2014's districts — see `../../output/planning_commission_project/processing_review.md`).
+2014's districts — see `../../output/planning_commission_project/notes/processing_review.md`).
 
 ```bash
 cd code/commission_minutes_processing
@@ -105,7 +105,7 @@ python app.py          # serves http://127.0.0.1:5005
 ```
 
 **Label to the rules.** The SF-specific coding manual —
-[`../../../output/planning_commission_project/labeling_rules.md`](../../../output/planning_commission_project/labeling_rules.md)
+[`../../../output/planning_commission_project/notes/labeling_rules.md`](../../../output/planning_commission_project/notes/labeling_rules.md)
 — is the authoritative spec for every field (case-suffix → request_type, the `action`
 disposition vocabulary, stance markers, recurring-case handling, etc.). Keep it open
 while labeling; `label_qa.py` enforces the mechanical parts of it.

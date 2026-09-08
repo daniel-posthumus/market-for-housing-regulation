@@ -1,0 +1,365 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+
+\title{Recovering What Was Conditioned:\\
+\large The content of the Planning Commission's conditions of approval}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The corpus memo's central pattern is a substitution: outright denial has fallen to
+approximately zero while conditioning has more than tripled. The burden moved into the
+\emph{content} of the approval. The dataset, as it stands, cannot see that content.
+\texttt{conditions\_imposed} is populated on 25.9\% of items and its median length is three
+characters --- it is the word ``yes''. The minutes record \emph{that} a project was
+conditioned and almost never \emph{how}.
+
+\medskip\noindent
+This memo establishes where the content is and how much of it is obtainable. Four results.
+
+\medskip\noindent
+\textbf{The minutes do not hold it.} A regex sweep of all 25,927 source blocks finds 15 --- 
+0.06\% --- that both name conditions and enumerate them, all from 1998--2001 and all
+amendments announced from the dais. \textbf{DataSF does not hold it either}: there is no
+commission-actions dataset, the two Planning Records tables carry applications rather than
+decisions, and across DBI's 1,295,048 permit rows 87 mention a Commission condition or motion
+at all.
+
+\medskip\noindent
+\textbf{The Commission packet does hold it}, and it is systematically addressable by case
+number on two city hosts. On a stratified sample of 20 cases per hearing year, a packet exists
+for 0\% of cases heard before 2010 and roughly 50--90\% of cases heard from 2011 on. The
+packet carries the draft motion, whose \emph{Exhibit A --- Conditions of Approval} enumerates
+and \emph{names} each condition. It is a conditional-use instrument: in a pilot pull of 146
+packets, 55 of 64 conditional-use cases yield an Exhibit A with a median of fifteen named
+conditions, and all 28 discretionary reviews yield none, because a DR produces a Discretionary
+Review Action rather than a conditioned authorisation.
+
+\medskip\noindent
+\textbf{The conditions are templated, and a small scheme spans them.} The 146 packets yield
+166 distinct condition headings over 928 impositions, and a thirteen-category keyword scheme
+--- split into conditions that change the \emph{project} and conditions that change its
+\emph{obligations} --- reaches \textbf{84.9\% of those impositions} and 72.3\% of the
+\texttt{modifications} field, the one place the existing dataset already holds condition
+content. The split between the families is the sharpest result in the memo: weighted by how
+often they are imposed, \textbf{62\% of staff's conditions change the project's obligations
+and 15\% change the project}, while in the Commission's own amendments the proportions are
+reversed.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{The gap, stated precisely}
+
+Three fields in the item table bear on conditions, and Table~\ref{tab:fields} is exact about
+what each one is.
+
+\begin{itemize}
+\item \textbf{\texttt{conditions\_imposed}} is non-empty on \textbf{4{,}199 items (25.9\%)}. Of
+those, 4{,}048 say \texttt{yes} and 151 say \texttt{no}. Its median length is three
+characters. It is a flag.
+\item \textbf{\texttt{project\_modified}} is \texttt{yes} on \textbf{1{,}403 items (8.7\%)}.
+Also a flag, and orthogonal: 1{,}149 items are both conditioned and modified, 2{,}899
+conditioned but not modified, 254 modified but not conditioned.
+\item \textbf{\texttt{modifications}} carries free text on \textbf{1{,}735 items (10.7\%)},
+median 108 characters. \emph{This is the one field in the dataset that holds condition
+content}, and \S\ref{sec:modifications} treats it as such. 215 of those items do not have the
+conditions flag set at all, which is a coding question worth a pass.
+\end{itemize}
+
+The extraction is not at fault here. It records what the minutes say, and the minutes say
+``ACTION: Approved with conditions'' and then move on. Recovering content means going outside
+the minutes.
+
+\section{Where the conditions live: the instrument number}
+
+The minutes do name the document that holds the conditions. Schema v2 records it:
+\texttt{action\_instrument} $\in\{$\texttt{motion}, \texttt{resolution}, \texttt{dra}$\}$ and
+\texttt{action\_instrument\_no}, the number.
+
+\input{tables/condition_tables}
+
+Table~\ref{tab:instrument} gives the coverage. An instrument is named on \textbf{40.5\%} of
+items --- 4{,}672 motions, 1{,}117 resolutions and 764 Discretionary Review Actions --- and a
+number is present on \textbf{39.5\%}. Coverage is better in the modern era (47.7\%) than the
+HTML era (35.9\%), and better still among items that were actually conditioned: \textbf{82.9\%
+of the 4{,}048 conditioned items carry an instrument number}.
+
+The complement is the group that cannot be reached this way at all: \textbf{692 items --- 
+17.1\% of conditioned items --- record conditions with no document number attached}. Some of
+those are extraction misses and some are minutes that never printed a number. Either way, any
+route that keys on the instrument number is structurally blind to about a sixth of the
+conditioned docket, and that has to be carried into any measure built on it.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_conditions_coverage.pdf}
+\caption{Top: the share of items whose record carries the conditions flag and the share
+carrying a motion, resolution or DRA number. Bottom: the share of a stratified random sample
+of 20 cases per year for which a Commission packet is published, by host.}
+\label{fig:coverage}
+\end{figure}
+
+\section{The minutes themselves: a negative result with evidence}
+
+Before going outside the corpus it is worth testing whether the condition text is somewhere the
+current schema is not looking. The item blocks are in \texttt{labels.db}
+(\texttt{items.block\_text}) and are the same text the extraction read, so the sweep is free.
+
+Table~\ref{tab:sweep} reports it over all 25{,}927 blocks. The minutes \emph{name} the
+instrument often --- 23.1\% of blocks contain a motion, resolution or DRA number --- and
+mention conditions of approval on 2.1\%. But blocks that both use condition language
+\emph{and} carry an enumerated list number \textbf{15, or 0.06\%}. Reading all fifteen: they
+are from 1998--2001, when the minutes were far more verbose, and every one is an
+\emph{amendment} announced from the dais, of the form
+
+\begin{quote}\small
+\texttt{Conditions of Approval — ADD: 1) The proposed facility may include child-care services
+for a maximum of 24 children. 3) The Project Sponsor shall provide at least one week's advance
+notice of special events \dots}
+\end{quote}
+
+That is genuine condition text, and it is exactly what \texttt{modifications} captures. It is
+not the conditions themselves. \textbf{The minutes are not a source for the standing
+conditions of approval, and no better extraction of them would make it one.}
+
+\section{DataSF: also not a source}
+
+Two checks, both negative, both worth recording so they are not repeated.
+
+\textbf{There is no commission-actions dataset.} Searching the DataSF catalogue returns 155
+datasets matching ``planning''; none is a record of Commission decisions. The two Planning
+Department Records tables in Table~\ref{tab:elsewhere} --- \texttt{y673-d69b} (Non-Projects)
+and \texttt{qvu5-m3a2} (Projects) --- are \emph{application} records. They carry
+record type, parcel, applicant, planner, open and close dates, a status, and for projects a
+useful set of unit counts and an explicit \texttt{building\_permits} field. They do not carry
+conditions, and they do not carry the Commission's action beyond a
+\texttt{project\_decision} string. They are a good complement to the item table for other
+purposes and no help at all for this one.
+
+\textbf{DBI does not carry them either.} The last row of Table~\ref{tab:elsewhere} is the
+test, computed by the same function the permit-linkage memo uses so the two cannot disagree:
+DBI's \texttt{description} field is populated on 98.6\% of its 1{,}295{,}048 rows and
+describes the \emph{work}; \textbf{87 rows --- 0.007\% ---} mention a condition of approval or
+a Commission motion. A building department records the permit's scope and status, not the planning
+conditions attached upstream of it.
+
+\section{The Commission packet is the source, and it is addressable}
+
+The document that carries the conditions is the \textbf{Commission packet}: the staff report
+plus the \emph{draft motion}, whose \emph{Exhibit A --- Conditions of Approval, Compliance,
+Monitoring, and Reporting} enumerates every condition and gives each a short name.
+
+Two city hosts publish it, and neither covers the whole period:
+
+\begin{itemize}
+\item \texttt{commissions.sfplanning.org/cpcpackets/<case\_number>.pdf} --- keyed on the case
+number alone. Covers roughly 2010--2021.
+\item \texttt{citypln-m-extnl.sfgov.org/Commissions/CPC/<M>\_<D>\_<YYYY>/Commission\%20Packet/}
+\texttt{<case\_number>.pdf} --- keyed on the case number \emph{under the hearing date}, which
+the item table supplies. Covers 2022 onward.
+\end{itemize}
+
+Table~\ref{tab:packets} and the lower panel of Figure~\ref{fig:coverage} give availability on a
+stratified random sample of 20 cases per hearing year, HEAD-probed against both. The result is
+sharp:
+
+\begin{itemize}
+\item \textbf{1998--2009: 0 of 240 probed.} Nothing. The packet archive does not reach back that far,
+and the pre-2010 half of the corpus is unreachable by this route.
+\item \textbf{2011--2021: 55--90\% per year}, on the first host.
+\item \textbf{2022--2026: 50--85\% per year}, on the second.
+\end{itemize}
+
+So the packet route covers \textbf{70.1\% of the 318 sampled cases heard from 2011 on, and
+none of the 240 sampled before 2010} (Table~\ref{tab:packets}). That is a real constraint and it interacts badly with the corpus memo's central
+pattern, which is a \emph{time series}: the conditioning share rose from 13.8\% in 1998 to
+45.7\% in 2023, and the content of the conditions is observable only over the second half of
+that span. Any claim about how the \emph{content} of conditions changed will be a claim about
+2011 onwards.
+
+\subsection{What the packet yields, by kind of case}
+
+Table~\ref{tab:kinds} reports a pilot pull of \textbf{146 packets}, of which 61 carried an
+Exhibit A. The split by kind of case is clean and it is not a parser artefact:
+
+\begin{itemize}
+\item \textbf{Conditional use: 55 of 64}, with a median of \textbf{fifteen} named conditions.
+\item \textbf{Discretionary review: 0 of 28.} Their packet is a ``Discretionary Review
+Analysis'' --- a staff memo with no draft motion in it --- because a DR ends in a
+Discretionary Review Action, not a conditioned authorisation. One was read end to end to
+confirm: it contains no occurrence of ``conditions of approval'', ``Exhibit A'' or ``draft
+motion''.
+\item \textbf{Variance 0 of 5, environmental 0 of 7, legislative 0 of 14.} None of these ends
+in a conditioned authorisation either.
+\end{itemize}
+
+This is the mirror image of the permit-linkage result, and the two memos should be read
+together. \textbf{The permit route reaches discretionary review (83.8\% of DR items match a
+DBI permit) and essentially nothing else; the conditions route reaches conditional use and
+essentially nothing else.} Between them they cover most of the docket, but they never cover
+the same item, so an analysis that wants both construction outcomes and condition content on
+one project cannot have them from these two sources.
+
+A second constraint: the packet is published \emph{before} the hearing, so its motion is a
+\textbf{draft} and its conditions are what staff proposed. What the Commission actually adopted
+may differ, and the item table's \texttt{modifications} field is precisely the record of when
+it did. The right reading is that the packet gives the proposed condition set and
+\texttt{modifications} gives the Commission's amendments to it; neither alone is the adopted
+motion.
+
+\section{The conditions are templated}
+
+Table~\ref{tab:titles} lists the most frequent condition headings across the packets pulled.
+They yielded \textbf{166 distinct headings over 928 impositions} --- 15 conditions per motion,
+drawn from a vocabulary of under two hundred. The template is immediately visible.
+Conditions are numbered, named, and grouped under standing section headings --- Performance,
+Design, Parking and Traffic, Provisions, Operation, Monitoring after Entitlement --- and the
+names repeat across projects: \emph{Validity}, \emph{Expiration and Renewal}, \emph{Diligent
+Pursuit}, \emph{Extension}, \emph{Conformity with Current Law}, \emph{Enforcement},
+\emph{Revocation due to Violation of Conditions}, \emph{Transportation Sustainability Fee},
+\emph{Bicycle Parking}, \emph{Sidewalk Maintenance}, \emph{Community Liaison}.
+
+That is what makes a measure of burden feasible. If every motion wrote its conditions afresh,
+converting them into indicators would be a document-understanding problem. Because they are
+drawn from a standing template with a project-specific subset selected and project-specific
+values filled in, the measurable object is \emph{which conditions were selected} --- a vector
+of indicators --- with the free text reserved for the few that carry a number.
+
+\section{A coding scheme, and how far it goes}
+\label{sec:modifications}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_condition_taxonomy.pdf}
+\caption{The thirteen categories against the two sources of condition text that exist: the
+numbered condition headings of the packet motions, weighted by how often each heading is
+imposed, and the \texttt{modifications} field of the item table. Dotted rules separate the
+three families. The staff template is obligations; the Commission's amendments are the
+building.}
+\label{fig:taxonomy}
+\end{figure}
+
+Not every condition costs the same kind of money, and the distinction the paper needs is
+between a condition that changes \emph{the project} and one that changes \emph{its
+obligations}. The first shrinks or reshapes what gets built and shows up as forgone revenue;
+the second leaves the building alone and attaches a payment, a duty or a monitoring regime, and
+shows up as cost. \texttt{project\_modified} already flags the first family in principle, on
+8.7\% of items.
+
+Table~\ref{tab:taxonomy} sets out thirteen categories in three families:
+
+\begin{description}
+\item[Changes the project] massing and envelope; unit count and mix; design and materials; use
+and operations.
+\item[Changes its obligations] affordability; fees and exactions; transport and parking; open
+space and streetscape; monitoring and reporting; environmental mitigation; historic
+preservation; validity and timing.
+\item[Neither] procedural findings --- the boilerplate a motion opens and closes with
+(conformity with current law, General Plan consistency, severability, project description).
+Kept separate so that ``covered by the scheme'' does not quietly take credit for procedural
+furniture.
+\end{description}
+
+Applied to the two sources of text, the scheme reaches \textbf{84.9\% of the 928 condition
+impositions} in the packets and \textbf{72.3\% of the 1{,}735 \texttt{modifications} texts}.
+Coverage of \emph{distinct} headings is much lower, 58.4\%, and the gap is informative rather
+than embarrassing: 45 of the 69 uncovered headings appear exactly once. The template is a small
+recurring core plus a long tail of one-off, project-specific conditions, and no fixed scheme
+will span the tail. Weighting by how often a condition is actually imposed is the right measure
+of what a scheme reaches, and it is reported alongside the unweighted one in
+Table~\ref{tab:taxonomy}.
+
+\textbf{The split between the two families is the substantive result.} Weighted by imposition,
+\textbf{62.3\% of the packet conditions change the project's obligations and 15.0\% change the
+project}; in the Commission's own \texttt{modifications} the proportions reverse, to 34.8\%
+and 52.6\%. The detail is sharper still: \emph{massing and envelope} matches
+\textbf{0.0\%} of packet condition headings and 28.5\% of modifications. Staff's conditions
+do not name heights and setbacks at all --- the building's shape is fixed by the plans in
+Exhibit B, not by a named condition --- while a third of what the Commission adds from the
+dais is exactly that. \textbf{Staff write the obligations; the Commission reshapes the
+building.} If that holds on a full pull it is a finding about who exercises which margin of
+discretion, and it is invisible in a yes/no flag.
+
+The two largest single categories in the staff template are \emph{monitoring and reporting}
+(21.7\% of impositions) and \emph{validity and timing} (19.5\%) --- enforcement, revocation,
+expiry, extension, diligent pursuit. Two fifths of the conditions a project receives are about
+the conditions themselves.
+
+\textbf{This coverage is in-sample and should be read as such.} The categories are hand-written
+keyword patterns, drafted by reading the packet headings and a sample of the modifications
+text, and then revised once against the headings the first draft missed. They were not revised
+again, so the numbers above are one round of tuning away from naive, not zero --- but the claim
+they support is the one the question asks, that a small scheme spans most of the vocabulary,
+not that they constitute a validated classifier.
+
+\section{What this establishes, and what a pilot would need}
+
+\textbf{Established.}
+\begin{enumerate}
+\item The item table can say \emph{whether} but essentially never \emph{how}: the conditions
+field is a three-character flag, and only \texttt{modifications} (10.7\% of items) holds
+content.
+\item The minutes are not a hidden source. 15 blocks in 25{,}927 enumerate a condition, all
+from 1998--2001, all dais amendments.
+\item Neither DataSF's planning records nor DBI's permit records carry conditions.
+\item The Commission packet does, addressably, by case number on two hosts --- for roughly two
+thirds of cases from 2011 on and none before 2010.
+\item The packet route is a conditional-use instrument. Discretionary review has no motion and
+no Exhibit A. This is the exact complement of the permit route.
+\item The conditions are templated, named and enumerable, and a thirteen-category scheme spans
+most of the observed vocabulary in both sources.
+\end{enumerate}
+
+\textbf{What a full pilot would need.} The pull done here is a sample sized to answer the
+availability question, not to build the measure. To go from here to an indicator matrix:
+
+\begin{enumerate}
+\item \textbf{Enumerate rather than sample.} 8{,}987 cases, of which the conditional-use family
+heard from 2011 on is the addressable set; probe all of them and pull what exists. The probe is
+one HEAD request per case and costs minutes; the pull is the expensive step, at roughly eight
+megabytes and several seconds a packet, and it should be run once and cached, as the two
+network stages of \texttt{analyze\_conditions.py} already are.
+\item \textbf{Extract to a condition list, not a blob.} The Exhibit A parser already recovers
+numbered headings. The next step is one row per (case, condition number, heading, body), which
+makes the count of conditions a variable in its own right --- the simplest measure of
+stringency available and one nothing in the current dataset can compute.
+\item \textbf{Validate against the minutes.} For items where the minutes record
+\texttt{modifications}, the packet's proposed conditions and the Commission's amendments can be
+compared directly. That is the only available check on whether the draft motion is a good proxy
+for the adopted one, and it should be run before the draft is used as if it were.
+\item \textbf{Hand-code a gold set.} The keyword scheme is a first pass. A few hundred
+hand-coded conditions would let the categories be scored the way every other field in this
+pipeline is scored, on a frozen split, with in-sample and out-of-sample reported separately.
+\item \textbf{Accept the period.} No amount of work recovers condition content before 2010.
+The measure will be a 2011--2026 measure, and the pre-2010 half of the corpus will have to be
+carried on the flag alone. Saying so now is cheaper than discovering it in a regression.
+\end{enumerate}
+
+\section{Reproducing this}
+
+\texttt{code/commission\_minutes\_processing/analyze\_conditions.py} runs in three stages, each
+cached so neither network stage repeats by accident:
+
+\begin{verbatim}
+python analyze_conditions.py probe --per-year 20  # is a packet published?
+python analyze_conditions.py fetch --n 225        # pull it, keep Exhibit A
+python analyze_conditions.py report               # figures + tables
+\end{verbatim}
+
+\texttt{probe} writes \texttt{availability.csv} and \texttt{fetch} writes one text file per
+case under \texttt{conditions/}, both in
+\texttt{\$MFHR\_DATA\_ROOT/external/cpc\_packets/}; only the extracted conditions text is
+kept, not the packets. \texttt{report} regenerates both figures and
+\texttt{tables/condition\_tables.tex}. No number in this memo is hand-placed.
+
+\end{document}

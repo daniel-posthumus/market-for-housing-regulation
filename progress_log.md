@@ -1,5 +1,97 @@
 # Progress Log
 
+## 2026-09-08 — Memo reorganisation, permit linkage, conditions of approval, predicting delay
+
+**Goal**: Execute `.claude/instructions/next_analyses_brief.md` — reorganise
+`output/planning_commission_project/` into one folder per memo, then write three new memos on
+permit linkage, the content of conditions of approval, and what predicts delay.
+
+**What was done**:
+- **Reorganisation**: the flat directory became one folder per memo, each with its own
+  `figures/` and `tables/`; the seven reference `.md` docs moved to `notes/`. All moves via
+  `git mv`; every `\includegraphics` and `\input` path updated; `analyze_corpus.py`,
+  `bakeoff_memo.py`, `plot_meeting_timeseries.py` and `plot_extraction_accuracy.py` repointed
+  so the next run does not scatter files back. New `planning_commission_project/README.md`
+  (one line per memo); `output/README.md`, `STRUCTURE.md`, `memo.tex` and
+  `labeling_app/README.md` updated. All memos recompiled: 0 undefined references, 0 overfull
+  alignment boxes.
+- **`analyze_corpus.py` made self-contained**: `main()` now calls `write_tables()` and reads
+  permit statistics from a cache instead of pickling to a hard-coded scratch path that no
+  longer existed. `fig_citations.pdf`, previously generated but referenced by nothing, is now
+  in the corpus memo.
+- **New scripts**: `analyze_permits.py`, `analyze_conditions.py`, `analyze_delay.py` — one per
+  memo, in the pattern `analyze_corpus.py` set. `statsmodels` added to `requirements.txt`.
+- **Three memos** written and compiled: `permit_linkage` (10pp), `conditions_of_approval`
+  (9pp), `predicting_delay` (10pp).
+
+**Key decisions / findings**:
+- **The permit route was never dead after 2019 — the parser was.** Around 2017 the minutes
+  changed how they print a permit number, from `2013.10.21.9832` to `2019.0618.3775` (two
+  separators, not three). Reading the fourth form recovers **711 items and 483 permits** and
+  restores the join for 2017–2026: parsed-permit coverage among discretionary reviews goes from
+  9 items to 139 in 2020 and from 1 to 75 in 2021. The check that caught it costs nothing and
+  should be standard: measure the *mention* rate alongside the *parse* rate, and any gap
+  between them is a parser problem rather than a world problem.
+- **The permit match is 97.6% over a census, not a sample** — 2,239 of all 2,295 distinct
+  numbers, against all 1,295,048 DBI rows. The pre-2001 seven-digit form is the *best* covered
+  (98.3%), not the worst as assumed. All 56 misses were read: none is a parser false positive.
+- **A guard was needed on the seven-digit form.** "No. + seven digits" also catches notices of
+  violation, DBI complaint numbers and a State Clearinghouse number; eight were entering the
+  join. Requiring a permit word in the preceding 70 characters removes them.
+- **The two linkage routes are exact complements.** The permit join reaches **83.8% of
+  discretionary reviews and under 2% of everything else**; the conditions route reaches
+  conditional use and nothing else. They never cover the same item.
+- **Conditions of approval are in the Commission packet, and it is addressable by case
+  number** — `commissions.sfplanning.org/cpcpackets/<case>.pdf` for 2010–2021 and
+  `citypln-m-extnl.sfgov.org/.../<M>_<D>_<YYYY>/Commission Packet/<case>.pdf` for 2022 on.
+  Availability: **0 of 240 sampled cases before 2010, 70.1% of 318 from 2011 on**. The packet
+  carries the draft motion and its Exhibit A, which names and numbers every condition.
+- **The minutes are not a hidden source for condition text.** Of 25,927 source blocks, **15
+  (0.06%)** both use condition language and enumerate — all 1998–2001, all dais amendments.
+  DataSF has no commission-actions dataset, and 87 of DBI's 1,295,048 rows mention a Commission
+  condition or motion at all.
+- **The conditions are templated**, numbered and named. A pilot pull of 146 packets yields
+  **166 distinct condition headings over 928 impositions** — 15 conditions per motion from a
+  vocabulary under two hundred — and a thirteen-category scheme reaches **84.9% of the
+  impositions** and 72.3% of the `modifications` field. Weighted by imposition, **62.3% of
+  staff's conditions change the project's obligations and 15.0% change the project**; in the
+  Commission's own amendments the proportions reverse (34.8% / 52.6%), and *massing and
+  envelope* matches **0.0%** of staff headings against 28.5% of modifications. Staff write the
+  obligations; the Commission reshapes the building.
+- **The packet pull is slow and needs a size guard.** Packets run to 90 MB of scanned plans that
+  pdfplumber chews on for many minutes and that never contain an Exhibit A; `fetch` now skips
+  anything over 40 MB using the content-length the probe already recorded. The pilot stopped at
+  146 of the 225 available packets; `fetch` is resumable and picks up where it left off.
+- **Delay is predictable in level and not in tail.** Everything observable at the first hearing
+  gives **R² = 0.169 in sample and 0.096 out of sample** on log(days+1); on
+  1[days > 365] it gives **0.054 in and 0.032 out**. Sorting cases into deciles of predicted
+  delay, the worst decile still finishes within a year **95%** of the time and the best fails
+  **1.2%** of the time. **83% of the variance is unexplained**, and within the top decile of
+  returning cases the 10th and 90th percentiles are 28 and 675 days.
+- **The staff recommendation is the single most informative pre-hearing signal**: it nearly
+  triples R² on its own, and `no_action` carries a 12.2% chance of running past a year against
+  1.5% for `approve`.
+- **Speaker counts must not be read as mobilisation.** More speakers predicts *less* delay
+  (b = −0.355) because half of all cases have no speakers and half of those were continued at
+  that hearing — the count marks whether the item was substantively heard.
+- **Geography barely matters**: adding zoning district and supervisor district (recovered by
+  joining the parcel to DBI, which carries a district on 99.9% of permits) moves R² from 0.121
+  to 0.128.
+
+**Next steps**:
+- **Enumerate the packets rather than sampling them** — probe all conditional-use-family cases
+  heard from 2011, pull what exists, and extract one row per (case, condition number, heading,
+  body). The count of conditions is then a variable, which is the simplest stringency measure
+  available and one nothing in the dataset can currently compute.
+- **Hand-code a few hundred conditions** so the taxonomy can be scored on a frozen split like
+  every other field, in-sample and out-of-sample separately.
+- **Adjudicate the 56 unmatched permit numbers** before any analysis treats non-match as an
+  outcome.
+- **Start the delay clock earlier** by joining `open_date` from DataSF Planning Records, and
+  end it later by joining DBI's issuance date — the current measure is hearing-to-hearing only.
+- Validate the parcel-fallback rule outside discretionary review, where its 0.70 precision was
+  measured and where the ground truth happens to live.
+
 ## 2026-09-07 — Schema v2, gold set finished and adjudicated, corpus extracted, two memos
 
 **Goal**: Follow `extraction_pipeline_v2_spec.md` end to end — migrate the schema, rebuild the

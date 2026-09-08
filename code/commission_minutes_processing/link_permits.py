@@ -15,6 +15,12 @@ Created : 2026-07-04
 
 Notes
 -----
+Superseded for corpus-scale work by `analyze_permits.py`, which runs on the full extraction
+rather than the hand-labelled subset, knows all four printed permit-number forms (this file
+knows three), and matches against a local cache of DBI instead of one query per permit. This
+pilot is kept for the two things it does that the newer script does not: the Planning-Code
+section index and the Planning-Records (`y673-d69b`) join.
+
 Minutes cite the DBI *application* number (e.g. "9801703"); DBI's permit_number often
 carries a trailing letter suffix ("9801703S"). We match on the digit-stem being equal
 (permit_number stripped of letters == the cited number), via a starts_with query so it

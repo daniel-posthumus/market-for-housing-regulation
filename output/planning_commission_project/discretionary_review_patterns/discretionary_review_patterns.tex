@@ -40,8 +40,8 @@ not a disposition but an \emph{expectation} formed before filing --- over delay,
 conditions, over the probability of either. The dataset now measures realised outcomes well.
 Turning those into a measure of \emph{ex ante} cost and uncertainty is the modelling problem
 the paper rests on, and \S\ref{sec:uncertainty} sets out four routes into it. A tested
-linkage to the city's building-permit records --- \textbf{97.5\% of parsed permit numbers
-match} --- shows that construction outcomes are observable on the other side of the
+linkage to the city's building-permit records --- \textbf{97.6\% of all 2{,}295 parsed permit
+numbers match} --- shows that construction outcomes are observable on the other side of the
 entitlement.
 \end{abstract}
 
@@ -80,7 +80,7 @@ letting a reader infer a collapse in Commission activity that did not happen.
 \section{The composition of the docket}
 
 \begin{figure}[htbp]\centering
-\includegraphics[width=\textwidth]{fig_composition.pdf}
+\includegraphics[width=\textwidth]{figures/fig_composition.pdf}
 \caption{Items heard per year (top) and their composition (bottom). The thin years at each end
 are archive coverage, not Commission activity.}
 \end{figure}
@@ -109,7 +109,7 @@ as the demand side of individual permissions.
 \section{What the Commission does}
 
 \begin{figure}[htbp]\centering
-\includegraphics[width=\textwidth]{fig_outcomes.pdf}
+\includegraphics[width=\textwidth]{figures/fig_outcomes.pdf}
 \caption{Outcome rates. Faint lines are the annual series; bold lines are a three-year centred
 mean.}
 \end{figure}
@@ -154,7 +154,7 @@ reflects that the Zoning Administrator, not the Commission, is the usual varianc
 \section{Delay}
 
 \begin{figure}[htbp]\centering
-\includegraphics[width=\textwidth]{fig_delay.pdf}
+\includegraphics[width=\textwidth]{figures/fig_delay.pdf}
 \caption{Repeat hearings and elapsed time, by year of first hearing.}
 \end{figure}
 
@@ -184,7 +184,7 @@ an artefact and is flagged as such rather than read as an improvement.
 \section{Commissioners}
 
 \begin{figure}[htbp]\centering
-\includegraphics[width=0.95\textwidth]{fig_commissioners.pdf}
+\includegraphics[width=0.95\textwidth]{figures/fig_commissioners.pdf}
 \caption{Dissent rate for commissioners with 200 or more recorded votes.}
 \end{figure}
 
@@ -207,7 +207,7 @@ composition for cases heard repeatedly --- the same project, a different room.
 \section{Geography}
 
 \begin{figure}[htbp]\centering
-\includegraphics[width=\textwidth]{fig_geography.pdf}
+\includegraphics[width=\textwidth]{figures/fig_geography.pdf}
 \caption{Assessor blocks appearing most often before the Commission, 1998--2026.}
 \end{figure}
 
@@ -231,6 +231,13 @@ straightforward with the chain construction of \S4.
 
 Table~\ref{tab:citations} lists the sections cited in the request text. \textbf{1{,}347
 distinct sections} appear at least once; the distribution is extremely skewed.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_citations.pdf}
+\caption{The twenty Planning and Administrative Code sections cited most often in the
+request text. The long tail is the point: 1{,}347 sections appear at least once, but twenty
+of them account for the bulk of the citations.}
+\end{figure}
 
 The result is a validity check as much as a finding. Nothing told the extractor what the
 Planning Code contains, yet the mapping from section to request type recovers the Code's own
@@ -361,14 +368,17 @@ section reports a first, tested pass.
 
 \subsection{Permit numbers parse and they match}
 
-3{,}932 items mention a building or demolition permit in their request text. A permit number
-can be parsed from \textbf{2{,}778} of them, yielding 1{,}752 distinct permits in three printed
-forms --- the modern \texttt{2013.10.21.9832}, the packed \texttt{201310219832}, and the
-1990s eight-digit \texttt{9725973}.
+4{,}083 items mention a building, site or demolition permit in their request text. A permit
+number can be parsed from \textbf{3{,}588} of them, yielding 2{,}295 distinct permits in four
+printed forms. Tested against \emph{every} one of those numbers in DataSF's Building Permits
+dataset (1{,}295{,}048 rows, \texttt{i98e-djp9}), \textbf{2{,}239 matched --- 97.6\%}. The join
+works, and it works on the exact identifier the minutes print.
 
-Tested against DataSF's Building Permits dataset (1{,}295{,}048 rows, dataset
-\texttt{i98e-djp9}) on a random sample of 120 parsed numbers, \textbf{117 matched --- 97.5\%}.
-The join works, and it works on the exact identifier the minutes print.
+The fourth printed form is a correction to an earlier reading of this section. From about
+2017 the minutes print the permit as \texttt{2019.0618.3775} --- year, MMDD, serial --- and a
+parser that insists on the older four-group \texttt{2013.10.21.9832} sees nothing. That,
+rather than any change in what the Commission hears, is why the permit route appeared to die
+after 2019. The permit-linkage memo works this through.
 
 \subsection{What the match buys}
 
@@ -391,18 +401,21 @@ completed, and permits withdrawn after filing.
 
 \subsection{The parcel route is broader but noisier}
 
-Where no permit number is printed, the block-and-lot key reaches further: on a random sample
-of 150 parcels from the minutes, \textbf{68\% had at least one DBI permit}. But the median
-matched parcel carries \emph{15} permits, most of them plumbing, electrical and small
-alterations irrelevant to the entitlement. The parcel join therefore needs a date window and a
-permit-type filter before it identifies the right permit, and its precision should be
-validated against the permit-number subset --- which is exactly what that subset is for.
+Where no permit number is printed, the block-and-lot key reaches further, but it does not
+point at one permit: the median matched parcel carries a decade of plumbing, electrical and
+small-alteration filings irrelevant to the entitlement. Scored against the permit-number
+subset --- which is ground truth, since there we know which permit the hearing was about ---
+a rule that keeps only new construction, alterations and demolitions filed within three years
+before and one year after the hearing recovers \textbf{92\% of the right permits at 0.70
+precision}, narrowing a median-ten parcel history to a median-two candidate set. The
+permit-linkage memo reports the full trade-off curve.
 
 \subsection{What is not yet established}
 
 Whether the \emph{conditions} attached at the hearing are observable in the permit record is
-unresolved. DBI records the permit's own status and scope, not the Planning Commission's
-conditions of approval. Recovering those means the motions and resolutions of \S8.1, not
+now resolved, and the answer is no: across all 1{,}295{,}048 DBI rows, 87 --- 0.007\% ---
+mention a condition of approval or a Commission motion at all. DBI records the permit's own
+status and scope, not the Planning Commission's conditions of approval. Recovering those means the motions and resolutions of \S8.1, not
 DataSF. The permit join gives outcomes; it does not give the burden.
 
 \section{Where the data lives}
@@ -447,6 +460,6 @@ the scored run. Any mobilisation analysis should wait for a re-run.
 described as a candidate natural experiment, not as an estimate.
 \end{enumerate}
 
-\input{corpus_tables}
+\input{tables/corpus_tables}
 
 \end{document}

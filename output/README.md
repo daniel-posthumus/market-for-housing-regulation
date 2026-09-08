@@ -6,9 +6,10 @@ Reports, memos, figures, and small derived tables. Bulk data lives on Dropbox
 **Each project line carries a standing `memo.tex`** — an edit-in-place summary of what it
 is, what is in it, how each artifact was produced, and what is still open. Those memos, not
 this file, are the description of the work; this file only says where to look.
-`planning_commission_project/` and `political_economic_housing_model/` each hold their own;
-`bay_area_recon/` has **one memo at its root** (`bay_area_recon/memo.tex`) covering all nine
-probes, not one per probe directory.
+`planning_commission_project/` keeps its standing memo in `memo/` alongside one folder per
+topic memo (see that directory's own `README.md`); `political_economic_housing_model/` holds
+its own; `bay_area_recon/` has **one memo at its root** (`bay_area_recon/memo.tex`) covering
+all nine probes, not one per probe directory.
 
 ```
 output/
@@ -20,13 +21,18 @@ output/
 
 ## Where to start
 
-- **`planning_commission_project/`** — the live project line. The five spec/reference docs
-  the pipeline code links to by path: `labeling_rules.md` (the coding manual hand labels are
-  graded against), `data_infrastructure.md` (canonical schema + scrape→parse→label→train
-  flow), `minutes_data_availability.md`, `processing_review.md`,
-  `schema_enrichment_recommendation.md`, plus `hand_label_review_guide.md` and
-  `meeting_level_info.tex`. **Do not rename this directory** — five code files,
-  `README.md`, `STRUCTURE.md`, and `labeling_app/README.md` reference it by path.
+- **`planning_commission_project/`** — the live project line, and the one with its own
+  `README.md`: start there. It is **one folder per memo**, each holding `<name>.{tex,pdf}`
+  with its own `figures/` and `tables/`. Seven of them: `memo/` (standing pipeline status),
+  `meeting_level_info/`, `extraction_method_comparison/`, `discretionary_review_patterns/`
+  (what the 16,199-item corpus contains), `permit_linkage/` (following the entitlement to
+  DBI's building permits), `conditions_of_approval/` (recovering what was conditioned, not
+  just that it was), and `predicting_delay/` (how much elapsed hearing time is forecastable).
+  The spec/reference docs the pipeline code links to by path — `labeling_rules.md`,
+  `data_infrastructure.md`, `minutes_data_availability.md`, `processing_review.md`,
+  `schema_enrichment_recommendation.md`, `hand_label_review_guide.md`,
+  `help_string_audit.md` — are in `notes/`. **Do not rename this directory** — five code
+  files, `README.md`, `STRUCTURE.md`, and `labeling_app/README.md` reference it by path.
 - **`political_economic_housing_model/`** — `toy_model.tex` (+ `.pdf`, v5) formalizing
   fragmented housing regulation as a fiscal-federalism breakdown,
   `operationalization_memo.pdf` (the three-layer estimation blueprint that operationalizes

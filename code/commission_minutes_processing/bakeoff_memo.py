@@ -6,7 +6,8 @@ Purpose : Generate every table in extraction_method_comparison.tex from the scor
           the memo can never quote a number the data no longer supports.
 Inputs  : bakeoff/g3_report.json (written by the collector), bakeoff/split.json,
           bakeoff/gold_versions.json, labels.db (adjudication verdicts, provenance).
-Outputs : output/planning_commission_project/bakeoff_tables.tex
+Outputs : output/planning_commission_project/extraction_method_comparison/
+          tables/bakeoff_tables.tex
 Author  : Dan Post
 Created : 2026-09-06
 
@@ -33,7 +34,8 @@ from extraction_common import SCHEMA, EXTRACTED_FIELDS, SCHEMA_VERSION   # noqa:
 
 OUT = HERE / "bakeoff"
 DB = HERE / "labeling_app" / "labels.db"
-TEX = HERE.parents[1] / "output" / "planning_commission_project" / "bakeoff_tables.tex"
+TEX = (HERE.parents[1] / "output" / "planning_commission_project"
+       / "extraction_method_comparison" / "tables" / "bakeoff_tables.tex")
 REPORT = OUT / "g3_report.json"
 
 # Haiku 4.5 list price, $/MTok; the Batch API halves all four.
