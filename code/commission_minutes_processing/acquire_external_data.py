@@ -56,6 +56,7 @@ import io
 import json
 import os
 import re
+import sqlite3
 import sys
 import time
 from collections import Counter
@@ -309,6 +310,7 @@ APN_COL = "APN__PARCEL_NUMBER_UNFORMATTED_"
 TRADE_WINDOW_DAYS = 1095        # +/- 3 years of the hearing: "did this parcel trade near the
                                 # decision", the price a real-options threshold is measured at
 DENSE_YEAR_SALES = 1000         # fewest sales a year needs before the series is called usable
+DENSE_YEAR_FIRST = 1968         # the first year that clears it; the hedonic is fitted from here
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1158,13 +1160,22 @@ def parse_fee_registers() -> pd.DataFrame:
                 ms = FEE_SECTION.search(body)
                 sec = ("EdCode" if FEE_ED_CODE.search(body)
                        else ms.group(1) if ms else "")
+                # The category a rate belongs to is often printed on the line *above* it
+                # ("Hospitals:" then "$28.14 per gross s.f."), so it is carried forward as a
+                # running header within the block rather than read only from the same line.
+                # Reading it only from the same line labelled a third of the rates.
+                current = ""
                 for line in block:
+                    lab = _rate_label(line, len(line))
+                    if lab:
+                        current = lab
                     for r in FEE_RATE.finditer(line):
+                        own = _rate_label(line, r.start())
                         rows.append({
                             "year": year, "effective": eff, "section": sec,
                             "fee": FEE_SECTIONS.get(sec, "School Impact Fee"
                                                     if sec == "EdCode" else ""),
-                            "label": _rate_label(line, r.start()),
+                            "label": own or current,
                             "rate": float(r.group(1).replace(",", "")),
                             "unit": (r.group(2) or "").lower()})
     return pd.DataFrame(rows, columns=cols)
@@ -1183,9 +1194,35 @@ def _fee_blocks(lines: list[str]) -> list[list[str]]:
 
 LABEL_STOP = re.compile(r"(?i)(residential|non-?residential|hospitals?|"
                         r"medical services|pdr|office|retail|hotel|entertainment|"
-                        r"institutional|industrial|senior housing|"
-                        r"research (?:&|and) development|[<>]?[\d,]+[\-–][\d,]+ ?(?:units?|gsf)|"
-                        r"[<>][\d,]+ ?(?:units?|gsf))\s*:?\s*$")
+                        r"institutional|industrial|senior housing|laboratory|"
+                        r"small enterprise workspace|research (?:&|and) development|"
+                        r"[<>]?[\d,]+[\-–][\d,]+ ?(?:units?|gsf|g\.s\.f\.)|"
+                        r"[<>][\d,]+ ?(?:units?|gsf|g\.s\.f\.))\s*:?\s*$")
+
+# The size band inside a label, where there is one: "21-99 Units", ">99,999 gsf".
+FEE_BAND = re.compile(r"""(?ix)
+   (?:(?P<op>[<>≥≤])\s*)?(?P<lo>[\d,]+)\s*(?:[-–—]|\s+to\s+)\s*(?P<hi>[\d,]+)
+   \s*(?P<unit>units?|gsf|g\.s\.f\.|sq\.?\s*ft|square\s+feet|s\.f\.)
+ | (?P<op2>[<>≥≤])\s*(?P<lo2>[\d,]+)\s*
+   (?P<unit2>units?|gsf|g\.s\.f\.|sq\.?\s*ft|square\s+feet|s\.f\.)""")
+
+
+def fee_band(label: str):
+    r"""(lower, upper, unit) for a size band, or (None, None, None) for a pure land-use
+    label. The TSF's break at 99 units and \S415's at 10 are discontinuities in the cost of
+    filing, which is the only reason to parse the band at all."""
+    m = FEE_BAND.search(label or "")
+    if not m:
+        return (None, None, None)
+    g = m.groupdict()
+    def num(x):
+        return float(x.replace(",", "")) if x else None
+    if g["lo"]:
+        return (num(g["lo"]), num(g["hi"]), (g["unit"] or "").lower())
+    lo = num(g["lo2"])
+    if g["op2"] in (">", "≥"):
+        return (lo, None, (g["unit2"] or "").lower())
+    return (None, lo, (g["unit2"] or "").lower())
 
 
 def _rate_label(line: str, at: int) -> str:
@@ -1667,12 +1704,14 @@ def write_tables(ctx: dict):
 
     # ── T4 zoning ───────────────────────────────────────────────────────
     a(r"\begin{table}[htbp]\centering")
-    a(r"\caption{Zoning, by how it is published. The parcel-keyed years join to the item "
-      r"table directly; the polygon years need a spatial join and are inventoried, not "
-      r"cached. 1999 is not published in either form.}\label{tab:zoning}")
+    a(r"\caption{Zoning, by how it is published \emph{and} how it is now joined. The "
+      r"parcel-keyed years join on \texttt{blklot} directly; the polygon years are joined "
+      r"by point-in-polygon against parcel centroids, with a largest-overlap fallback where "
+      r"the centroid rule fails or is ambiguous. 1999 is not published in either "
+      r"form.}\label{tab:zoning}")
     a(r"\resizebox{\textwidth}{!}{%")
     a(r"\begin{tabular}{llrrl}\toprule")
-    a(r"Year & Identifier & Rows & Distinct \texttt{blklot} & Form\\\midrule")
+    a(r"Year & Identifier & Rows & Parcels keyed & Form\\\midrule")
     for r in ctx["zoning_rows"]:
         ident = "---" if r["id"] == "---" else rf"\texttt{{{T(r['id'])}}}"
         a(rf"{T(r['year'])} & {ident} & {N(r['rows'])} & "
@@ -1848,6 +1887,214 @@ def write_tables(ctx: dict):
         a(rf"{w} & {wh} & {res}\\[2pt]")
     a(r"\bottomrule\end{tabular}\end{table}")
 
+
+    # ══ the follow-up tables ═══════════════════════════════════════════
+    sp, fs, rs, ps, tc, hp, sel = (ctx.get(k) for k in
+                                   ("sp", "fs", "rs", "ps", "tc", "hp", "sel"))
+
+    if sp:
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{The parcel-year zoning panel the spatial join produces: %s rows, one "
+          r"per parcel per year in which that parcel existed, keyed on \texttt{blklot}. "
+          r"`Vintage' is the layer the year is served from; 2016 onward has no published "
+          r"vintage and carries the current layer forward, flagged, which is a stated "
+          r"assumption and not an observation.}\label{tab:panel}" % N(sp["panel_rows"]))
+        a(r"\begin{tabular}{llrrr}\toprule")
+        a(r"Years & Vintage & Parcel-years & Zoned & Rate\\\midrule")
+        by = sp["by_year"]
+        groups = [("1998, 2000--2005, 2007--2008", by[by.vintage.str.startswith("parcel")]),
+                  ("2006, 2009--2015", by[by.vintage.str.startswith("polygon")]),
+                  ("2016--2026", by[by.is_snapshot])]
+        for lab, g in groups:
+            if not len(g):
+                continue
+            a(rf"{lab} & {T(g.iloc[0].vintage.split(' ')[0])} & {N(g.parcels.sum())} & "
+              rf"{N(g.zoned.sum())} & {100*g.zoned.sum()/g.parcels.sum():.1f}\%\\")
+        a(r"\midrule")
+        a(rf"All & --- & {N(by.parcels.sum())} & {N(by.zoned.sum())} & "
+          rf"{100*by.zoned.sum()/by.parcels.sum():.1f}\%\\")
+        a(r"\bottomrule\end{tabular}\end{table}")
+
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{The spatial join itself, per layer. `Multi' is a centroid falling in "
+          r"more than one polygon. For zoning and height that is an error and goes to the "
+          r"largest-overlap fallback; for special-use districts and fee areas it is the "
+          r"correct answer --- they are overlays, and a parcel legitimately sits in several "
+          r"or in none, so those rows carry a list.}\label{tab:spatial}")
+        a(r"\resizebox{\textwidth}{!}{%")
+        a(r"\begin{tabular}{llrrrl}\toprule")
+        a(r"Family & Year & Matched & Multi & Unmatched & Treatment\\\midrule")
+        for r in sp["coverage"].itertuples():
+            treat = ("single-valued: fallback" if r.single_valued
+                     else "overlay: list, no fallback")
+            a(rf"{T(r.family)} & {'current' if r.year == 0 else r.year} & "
+              rf"{N(r.centroid_matched)} & {N(r.centroid_multi)} & "
+              rf"{N(r.centroid_unmatched)} & {treat}\\")
+        a(r"\bottomrule\end{tabular}}\end{table}")
+
+    if rs:
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{From every parcel-year to a denominator. Each row is one restriction, "
+          r"stated as a sentence. `Events' is parcel-years in which the Commission heard "
+          r"something; `lost' is how many of those the restriction discards. A restriction "
+          r"that drops real filings is reported, not tuned away --- and the condominium rule "
+          r"drops %s of them.}\label{tab:funnel}"
+          % N(int(rs["steps"].events_lost.iloc[1])))
+        a(r"\resizebox{\textwidth}{!}{%")
+        a(r"\begin{tabular}{lrrrrr}\toprule")
+        a(r"Restriction & Parcels & Parcel-years & Events & Lost & Per 10{,}000\\\midrule")
+        for r in rs["steps"].itertuples():
+            a(rf"{r.rule} & {N(r.parcels)} & {N(r.parcel_years)} & {N(r.events)} & "
+              rf"{N(r.events_lost) if r.events_lost else '---'} & {r.rate:.2f}\\")
+        a(r"\bottomrule\end{tabular}}\end{table}")
+
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{What the preferred denominator discards, by request type, at the level "
+          r"of the item rather than the parcel-year. The loss is spread rather than "
+          r"concentrated, which is the reason it is acceptable: no single kind of case is "
+          r"being defined out of the sample.}\label{tab:funnelrt}")
+        a(r"\begin{tabular}{lrrr}\toprule")
+        a(r"Request type & Items on a panel parcel-year & Kept & Dropped\\\midrule")
+        for rt, (tot, kept) in sorted(rs["by_request_type"].items(),
+                                      key=lambda kv: -kv[1][0])[:10]:
+            a(rf"\texttt{{{T(rt)}}} & {N(tot)} & {N(kept)} & "
+              rf"{100*(tot-kept)/tot:.1f}\%\\")
+        a(r"\midrule")
+        a(rf"All & {N(rs['items_in_panel'])} & {N(rs['items_kept'])} & "
+          rf"{100*(rs['items_in_panel']-rs['items_kept'])/rs['items_in_panel']:.1f}\%\\")
+        a(r"\bottomrule\end{tabular}\end{table}")
+
+    if fs:
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{The fee register as a structured schedule, and how much variation "
+          r"survives conditioning. The decomposition is on the log rate. A year fixed effect "
+          r"absorbs almost nothing because the dispersion is \emph{across} fees, not over "
+          r"time; what a project-level design can use is what remains inside a year and a "
+          r"fee, across land uses and size bands.}\label{tab:feestruct}")
+        a(r"\begin{tabular}{lr}\toprule")
+        a(r"Quantity & Value\\\midrule")
+        for lab, v in (
+                ("Rate observations parsed", N(len(fs["rates"]))),
+                (r"\quad carrying a land-use or size label",
+                 rf"{100*fs['labelled']:.1f}\%"),
+                (r"\quad carrying a parsed size band", rf"{100*fs['banded']:.1f}\%"),
+                ("Schedule rows (year $\times$ section $\times$ use $\times$ band)",
+                 N(fs["n_sched"])),
+                ("Register rows naming a district the zoning panel knows",
+                 rf"{fs['districts'].get('with_district', 0)} of "
+                 rf"{fs['districts'].get('rows', 0)}"),
+                (r"\midrule Variation in log rate absorbed by year alone",
+                 rf"{fs['abs_year']:.1f}\%"),
+                (r"\quad by year and Planning Code section",
+                 rf"{fs['abs_year_section']:.1f}\%"),
+                (r"\quad remaining within year and section",
+                 rf"\textbf{{{fs['within']:.1f}\%}}"),
+                (r"\quad remaining after land use and band too",
+                 rf"{fs['within_after_label']:.1f}\%")):
+            a(rf"{lab} & {v}\\")
+        a(r"\bottomrule\end{tabular}\end{table}")
+
+    if ps:
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{The price surface: a neighbourhood-by-year effect plus a hedonic on "
+          r"assessor characteristics, fitted on the within variation and scored out of "
+          r"sample on a held-out fifth of transactions. The row that matters is the third: "
+          r"the fit is \emph{better} on parcels that rarely trade, which are the parcels the "
+          r"prediction exists for.}\label{tab:price}")
+        a(r"\begin{tabular}{lr}\toprule")
+        a(r"Quantity & Value\\\midrule")
+        for lab, v in (
+                ("Transactions used", N(ps["n_tx"])),
+                (r"\quad held out for scoring", N(ps["n_test"])),
+                ("Neighbourhood $\times$ year cells", N(ps["cells"])),
+                ("Out-of-sample RMSE, log price", f"{ps['rmse']:.3f}"),
+                (r"\quad on parcels that trade at most once", f"{ps['rmse_rare']:.3f}"),
+                ("Out-of-sample $R^2$", f"{ps['r2']:.3f}"),
+                ("Bias on parcel-years where both exist", f"{ps['bias']:+.3f}"),
+                ("Correlation, predicted vs observed", f"{ps['corr_obs_hat']:.3f}"),
+                (r"\midrule Parcel-years in the price panel", N(ps["panel_rows"])),
+                (r"\quad with an observed sale that year",
+                 rf"{N(ps['observed'])} ({100*ps['observed_share']:.1f}\%)"),
+                (r"\quad the rest imputed and flagged as such",
+                 rf"{N(ps['panel_rows']-ps['observed'])}"),
+                ("Parcels trading more than once (repeat-sales feasible)",
+                 rf"{N(ps['repeat_parcels'])} ({100*ps['repeat_share']:.1f}\% of traded)")):
+            a(rf"{lab} & {v}\\")
+        a(r"\bottomrule\end{tabular}\end{table}")
+
+    if tc:
+        d = tc["d"]
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{Two clocks. `Any record' starts at the earliest record opened under the "
+          r"case's stem; `entitlement record' starts at the earliest record whose type is "
+          r"the discretionary application itself, excluding pre-application and "
+          r"environmental filings. The third panel is the gap between them --- the "
+          r"pre-application process, which nothing here had measured.}\label{tab:clocks}")
+        a(r"\resizebox{\textwidth}{!}{%")
+        a(r"\begin{tabular}{lrrrrrr}\toprule")
+        a(r"Clock & $N$ & Coverage & Median & 90th pct & 99th pct & Negative\\\midrule")
+        for lab, col in (("Earliest record of any type", "lag_any"),
+                         ("Earliest entitlement record", "lag_ent"),
+                         ("Gap between them", "gap")):
+            v = d[col].dropna()
+            a(rf"{lab} & {N(len(v))} & {100*len(v)/len(d):.1f}\% & {v.median():.0f} & "
+              rf"{v.quantile(.9):.0f} & {v.quantile(.99):.0f} & "
+              rf"{100*(v<0).mean():.1f}\%\\")
+        a(r"\midrule")
+        a(r"\multicolumn{7}{l}{\emph{Where the long tail lives: median and 90th percentile "
+          r"of the any-record clock, by how many records share the stem}}\\")
+        for r in tc["tail"].itertuples():
+            a(rf"\quad {r.Index} record(s) & {N(r.n)} & & {r.median:.0f} & {r.p90:.0f} & "
+              rf"& \\")
+        a(r"\bottomrule\end{tabular}}\end{table}")
+
+    if sel is not None and len(sel):
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{Is the coverage selective? Every headline rate, cross-tabulated. "
+          r"Levels with fewer than 100 items are omitted. Read down a column: a rate that "
+          r"moves with the outcome or with conditioning is a rate that cannot be treated as "
+          r"missing at random.}\label{tab:selectivity}")
+        a(r"\resizebox{\textwidth}{!}{%")
+        cols = [c for c in sel.columns if c not in ("dimension", "level", "n")]
+        a(r"\begin{tabular}{llr" + "r" * len(cols) + r"}\toprule")
+        a(r"Dimension & Level & $N$ & " +
+          " & ".join(T(c) for c in cols) + r"\\\midrule")
+        last = None
+        # `itertuples` renames a column with a space to a positional `_3`, which silently
+        # turned every cell of this table into a dash. Iterate on the row mapping instead.
+        for _, r in sel.iterrows():
+            dim = "" if r["dimension"] == last else T(r["dimension"])
+            last = r["dimension"]
+            vals = " & ".join(f"{r[c]:.1f}" if pd.notna(r[c]) else "---" for c in cols)
+            a(rf"{dim} & {T(r['level'])} & {N(r['n'])} & {vals}\\")
+        a(r"\bottomrule\end{tabular}}\end{table}")
+
+    if hp and "counts" in hp:
+        a("")
+        a(r"\begin{table}[htbp]\centering")
+        a(r"\caption{The hand pass. The residual after the corrected parcel key is %s "
+          r"items; %s of those have the block and lot transposed, %s name no block the city "
+          r"records, and %s name a block that exists and a lot that does not. A random %d of "
+          r"that last group were read against the minutes text the extraction saw. The "
+          r"sample is written to \texttt{handpass\_sample.csv} beside this "
+          r"memo.}\label{tab:handpass}"
+          % (N(hp["residual"]), N(hp["transposed"]), N(hp["no_block"]),
+             N(hp["block_only"]), hp["n"]))
+        a(r"\resizebox{\textwidth}{!}{%")
+        a(r"\begin{tabular}{lrr}\toprule")
+        a(r"Classification & Items & Share\\\midrule")
+        for lab, n in hp["counts"].items():
+            a(rf"{T(lab)} & {N(n)} & {100*n/hp['n']:.0f}\%\\")
+        a(r"\bottomrule\end{tabular}}\end{table}")
+
     TAB.mkdir(parents=True, exist_ok=True)
     (TAB / "acquisition_tables.tex").write_text("\n".join(L) + "\n")
     print("→", TAB / "acquisition_tables.tex")
@@ -1929,6 +2176,438 @@ def write_readme(ctx: dict):
     print("→", EXT / "README.md")
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# the follow-up measurements
+# ═══════════════════════════════════════════════════════════════════════════
+def load_panel(**kw) -> pd.DataFrame:
+    if not PANEL.exists():
+        raise SystemExit(f"{PANEL} missing — run `acquire_external_data.py spatial`")
+    return pd.read_parquet(PANEL, **kw)
+
+
+# ── task 1: what the spatial join covers ─────────────────────────────────
+def spatial_report() -> dict:
+    cov = pd.read_csv(PANEL_COVERAGE)
+    panel = load_panel(columns=["blklot", "year", "zoning", "vintage", "is_snapshot",
+                                "method", "height", "sud", "feearea"])
+    by_year = panel.groupby(["year", "vintage", "is_snapshot"], as_index=False).agg(
+        parcels=("blklot", "size"), zoned=("zoning", lambda v: v.notna().sum()),
+        heighted=("height", lambda v: v.notna().sum()))
+    by_year["rate"] = 100 * by_year.zoned / by_year.parcels
+    meth = panel.loc[panel.zoning.notna(), "method"].value_counts()
+    return {"coverage": cov, "by_year": by_year, "panel_rows": len(panel),
+            "years": sorted(panel.year.unique()), "method": meth,
+            "spatial_years": sorted(by_year.loc[by_year.vintage.str.startswith("polygon"),
+                                                "year"]),
+            "snapshot_years": sorted(by_year.loc[by_year.is_snapshot, "year"]),
+            "overlap_rows": int((panel.method.eq("spatial")).sum())}
+
+
+# ── task 2: the fee schedule as a schedule ───────────────────────────────
+# The register's "City Area Subject to the Fee" column is free text naming zoning districts.
+# Codes are upper-case tokens; the false friends are the register's own vocabulary words.
+DISTRICT_TOKEN = re.compile(r"\b([A-Z]{1,4}(?:-[A-Z0-9]{1,4}){0,3})\b")
+DISTRICT_STOP = {"FEE", "GSF", "NSF", "FAR", "SF", "AND", "OR", "THE", "N/A", "TDM",
+                 "PDR", "BMR", "CEQA", "SOMA", "EN", "RH", "C", "A", "TSF", "TIDF"}
+
+
+def fee_schedule(fees: pd.DataFrame, panel_districts: set[str]) -> dict:
+    """Turn the parsed rates into a schedule keyed on (year, section, land use, size band),
+    attach the district codes the register names, and report how much variation survives a
+    year fixed effect --- which is the question of whether fees identify anything."""
+    if not len(fees):
+        return {}
+    f = fees.copy()
+    b = f.label.map(fee_band)
+    f["band_lo"] = [x[0] for x in b]
+    f["band_hi"] = [x[1] for x in b]
+    f["band_unit"] = [x[2] for x in b]
+    f["land_use"] = np.where(f.band_lo.notna() | f.band_hi.notna(), "", f.label)
+    sched = (f[f.section.ne("")]
+             .groupby(["year", "section", "land_use", "band_lo", "band_hi", "band_unit",
+                       "unit"], dropna=False, as_index=False).rate.max())
+    # districts named in the register, matched against the zoning panel's own vocabulary
+    dist = _fee_districts(panel_districts)
+    # variance decomposition on log rate: year, then year+section, then the remainder
+    g = f[f.rate.gt(0) & f.section.ne("")].copy()
+    g["ly"] = np.log(g.rate)
+    tot = float(((g.ly - g.ly.mean()) ** 2).sum())
+    r_year = float(((g.ly - g.groupby("year").ly.transform("mean")) ** 2).sum())
+    r_ys = float(((g.ly - g.groupby(["year", "section"]).ly.transform("mean")) ** 2).sum())
+    r_ysl = float(((g.ly - g.groupby(["year", "section", "label"]).ly.transform("mean"))
+                   ** 2).sum())
+    return {"rates": f, "schedule": sched, "districts": dist,
+            "labelled": float(f.label.ne("").mean()),
+            "banded": float(f.band_lo.notna().mean()),
+            "n_sched": len(sched),
+            "var_total": tot, "r_year": r_year, "r_year_section": r_ys,
+            "r_year_section_label": r_ysl,
+            "abs_year": 100 * (1 - r_year / tot),
+            "abs_year_section": 100 * (1 - r_ys / tot),
+            "within": 100 * r_ys / tot,
+            "within_after_label": 100 * r_ysl / tot}
+
+
+def _fee_districts(panel_districts: set[str]) -> dict:
+    """Which register rows name a zoning district the panel also knows. Parsed from the
+    register text; rows that do not parse are counted, not dropped."""
+    if not FEES_DIR.exists():
+        return {}
+    try:
+        import pdfplumber
+    except ImportError:
+        return {}
+    latest = sorted(FEES_DIR.glob("impact_fee_register_*.pdf"))[-1]
+    rows = []
+    with pdfplumber.open(latest) as pdf:
+        for page in pdf.pages:
+            for blk in _fee_blocks((page.extract_text() or "").splitlines()):
+                body = " ".join(blk)
+                m = FEE_SECTION.search(body)
+                sec = "EdCode" if FEE_ED_CODE.search(body) else (m.group(1) if m else "")
+                toks = {t for t in DISTRICT_TOKEN.findall(body) if t not in DISTRICT_STOP}
+                known = sorted(toks & panel_districts)
+                rows.append({"section": sec, "tokens": len(toks), "known": len(known),
+                             "districts": "; ".join(known)})
+    d = pd.DataFrame(rows)
+    d = d[d.section.ne("")]
+    return {"rows": len(d), "with_district": int((d.known > 0).sum()),
+            "share": float((d.known > 0).mean()) if len(d) else 0.0,
+            "citywide": int((d.known == 0).sum()), "table": d}
+
+
+# ── task 3: the risk set, defined ────────────────────────────────────────
+SUB_PARCEL = re.compile(r"(?i)condominium|timeshare|time share|coop|co-op|"
+                        r"parking stall|garage cond")
+PUBLIC_PARCEL = re.compile(r"(?i)public|church|school|govt|government")
+
+
+def risk_set(it: pd.DataFrame, keys: set[str]) -> dict:
+    """Step from every parcel-year down to a denominator, reporting at each step what is
+    lost --- including the events. A restriction that drops real filings is reported, not
+    tuned away."""
+    panel = load_panel(columns=["blklot", "year", "zoning"])
+    roll = pd.read_csv(path_of(SOCRATA_SOURCES["assessor"]), dtype=str,
+                       usecols=["parcel_number", "closed_roll_year",
+                                "property_class_code_definition"], low_memory=False)
+    roll["yr"] = pd.to_numeric(roll.closed_roll_year, errors="coerce")
+    dfn = roll.property_class_code_definition.fillna("")
+    roll["sub"] = dfn.str.contains(SUB_PARCEL)
+    roll["pub"] = dfn.str.contains(PUBLIC_PARCEL) & ~roll["sub"]
+    roll = roll.dropna(subset=["yr"]).drop_duplicates(["parcel_number", "yr"])
+    ky = list(zip(roll.parcel_number, roll.yr.astype(int)))
+    k_sub, k_pub = dict(zip(ky, roll["sub"])), dict(zip(ky, roll["pub"]))
+    # A parcel condominium-ised *after* its hearing must not be excluded retroactively, so
+    # the class in force that year is used, falling back to the earliest one observed.
+    f = roll.sort_values("yr").drop_duplicates("parcel_number")
+    f_sub, f_pub = dict(zip(f.parcel_number, f["sub"])), dict(zip(f.parcel_number, f["pub"]))
+    bl, yr = panel.blklot.values, panel.year.values
+    panel["sub"] = [k_sub.get((b, int(y)), f_sub.get(b, False)) for b, y in zip(bl, yr)]
+    panel["pub"] = [k_pub.get((b, int(y)), f_pub.get(b, False)) for b, y in zip(bl, yr)]
+
+    ev = {(p, int(r.year)) for r in it.itertuples() for p in r.parcels if p in keys}
+    items = []
+    for r in it.itertuples():
+        ps = [p for p in r.parcels if p in keys]
+        if ps:
+            items.append((r.item_id, r.request_type, int(r.year), tuple(ps)))
+
+    steps, frames = [], []
+    def add(rule, df):
+        s = set(zip(df.blklot, df.year))
+        steps.append({"rule": rule, "parcels": int(df.blklot.nunique()),
+                      "parcel_years": len(df), "events": len(ev & s)})
+        frames.append(s)
+
+    add("Every parcel-year in which the parcel existed", panel)
+    a = panel[~panel["sub"]]
+    add("\\quad not a condominium or other sub-parcel interest that year", a)
+    b = a[~a["pub"]]
+    add("\\quad\\quad not public, institutional, a church or a school", b)
+    c = b[b.zoning.notna()]
+    add("\\quad\\quad\\quad a zoning district in force on it that year", c)
+
+    keep = frames[-1]
+    inpanel = frames[0]
+    n_pan = sum(1 for _, _, y, ps in items if any((p, y) in inpanel for p in ps))
+    n_keep = sum(1 for _, _, y, ps in items if any((p, y) in keep for p in ps))
+    by_rt = {}
+    for _, rt, y, ps in items:
+        if any((p, y) in inpanel for p in ps):
+            k = by_rt.setdefault(rt or "(blank)", [0, 0])
+            k[0] += 1
+            k[1] += int(any((p, y) in keep for p in ps))
+    d = pd.DataFrame(steps)
+    d["events_lost"] = -d.events.diff().fillna(0).astype(int)
+    d["rate"] = 10000 * d.events / d.parcel_years
+    return {"steps": d, "events_total": len(ev), "items_in_panel": n_pan,
+            "items_kept": n_keep, "by_request_type": by_rt,
+            "denominator": c[["blklot", "year"]], "n_parcels": int(c.blklot.nunique()),
+            "n_parcel_years": len(c), "n_events": steps[-1]["events"],
+            "rate": 10000 * steps[-1]["events"] / len(c)}
+
+
+# ── task 4: a price on every parcel-year ─────────────────────────────────
+PRICE_PANEL = EXT / "prices" / "parcel_year_price.parquet"
+HEDONIC_CHARS = ["lot_area", "property_area", "number_of_units", "number_of_stories",
+                 "year_property_built"]
+
+
+def price_surface(denom: pd.DataFrame, refresh: bool = False) -> dict:
+    """Predict a parcel-year price where none is observed.
+
+    The surface is a neighbourhood-by-year effect absorbed out of log price, plus a hedonic
+    on assessor characteristics fitted on the within variation. It is compared against a
+    repeat-sales index on the parcels that trade more than once. The hedonic is what is used,
+    because a repeat-sales index is undefined on every parcel that has never traded --- and
+    those are precisely the parcels the prediction exists for."""
+    if not CL_CACHE.exists():
+        return {}
+    tx = pd.read_parquet(CL_CACHE, columns=["blklot", "sale_date", "sale_amount",
+                                            "arms_length", "is_residential", "living_sqft"])
+    tx["sale_date"] = pd.to_datetime(tx.sale_date, errors="coerce")
+    tx = tx[tx.arms_length.astype("boolean").fillna(False) & tx.sale_amount.gt(1000)
+            & tx.sale_date.notna() & tx.blklot.notna()]
+    tx["year"] = tx.sale_date.dt.year
+    tx = tx[tx.year >= DENSE_YEAR_FIRST]
+    par = read_cached("parcels", usecols=["blklot", "analysis_neighborhood",
+                                          "supervisor_district"])
+    nb = dict(zip(par.blklot, par.analysis_neighborhood.fillna("(none)")))
+    chars = pd.read_csv(path_of(SOCRATA_SOURCES["assessor"]), dtype=str,
+                        usecols=["parcel_number", "closed_roll_year", "use_code"]
+                                + HEDONIC_CHARS, low_memory=False)
+    for c in HEDONIC_CHARS:
+        chars[c] = pd.to_numeric(chars[c], errors="coerce")
+    chars["yr"] = pd.to_numeric(chars.closed_roll_year, errors="coerce")
+    ch = (chars.sort_values("yr").drop_duplicates("parcel_number", keep="last")
+          .set_index("parcel_number"))
+
+    def design(df, key="blklot"):
+        x = pd.DataFrame(index=df.index)
+        for c in HEDONIC_CHARS:
+            v = df[key].map(ch[c])
+            x[c] = np.log1p(v.clip(lower=0)) if c != "year_property_built" else \
+                (v.clip(1850, 2026) - 1900) / 100.0
+        x["use"] = df[key].map(ch["use_code"]).fillna("(none)")
+        return x
+
+    tx["nb"] = tx.blklot.map(nb).fillna("(none)")
+    tx["ly"] = np.log(tx.sale_amount)
+    X = design(tx)
+    ok = X[HEDONIC_CHARS].notna().all(axis=1)
+    tx, X = tx[ok], X[ok]
+    tx["cell"] = tx.nb + "|" + tx.year.astype(str)
+    rng = np.random.default_rng(20260908)
+    test = rng.random(len(tx)) < 0.2
+    tr, te = tx[~test], tx[test]
+    Xtr, Xte = X[~test], X[test]
+    cell_mu = tr.groupby("cell").ly.mean()
+    grand = float(tr.ly.mean())
+    dm = tr.ly - tr.cell.map(cell_mu)
+    Z0 = pd.get_dummies(Xtr, columns=["use"], drop_first=True).astype(float)
+    cell_z = Z0.groupby(tr.cell.values).mean()          # the cell's mean characteristics
+    zbar_all = Z0.mean()
+    Z = Z0.sub(cell_z.reindex(tr.cell.values).values)
+    beta, *_ = np.linalg.lstsq(Z.values, dm.values, rcond=None)
+    cols = Z0.columns
+
+    def predict(Xa, cells):
+        """The model is fitted on deviations from the cell mean, so the prediction is the
+        cell mean price plus the deviation of *this* parcel's characteristics from the
+        cell's mean characteristics. Adding the raw level instead put a +0.9 log bias --- a
+        factor of two and a half --- on every predicted price."""
+        Za = pd.get_dummies(Xa, columns=["use"], drop_first=True).astype(float)
+        Za = Za.reindex(columns=cols, fill_value=0.0)
+        zb = cell_z.reindex(cells.values)
+        zb = zb.fillna(zbar_all)
+        dev = Za.values - zb.values
+        return pd.Series(cells.map(cell_mu).fillna(grand).values + dev @ beta,
+                         index=Xa.index)
+
+    pred_te = predict(Xte, te.cell)
+    rmse = float(np.sqrt(np.mean((te.ly - pred_te) ** 2)))
+    n_sales = tx.groupby("blklot").size()
+    rare = te.blklot.map(n_sales).fillna(1) <= 1
+    rmse_rare = float(np.sqrt(np.mean((te.ly[rare] - pred_te[rare]) ** 2))) if rare.any() \
+        else float("nan")
+    # repeat sales, for the comparison the brief asks for
+    rep = tx[tx.blklot.map(n_sales) >= 2]
+    r2_hed = 1 - rmse ** 2 / float(np.var(te.ly))
+
+    # predict for the denominator
+    d = denom.copy()
+    d["nb"] = d.blklot.map(nb).fillna("(none)")
+    d["cell"] = d.nb + "|" + d.year.astype(str)
+    Xd = design(d)
+    good = Xd[HEDONIC_CHARS].notna().all(axis=1)
+    d = d[good]
+    d["log_price_hat"] = predict(Xd[good], d.cell)
+    obs = (tx.groupby(["blklot", "year"]).ly.mean())
+    d["log_price_obs"] = pd.MultiIndex.from_arrays([d.blklot, d.year]).map(obs)
+    d["is_observed"] = d.log_price_obs.notna()
+    d["log_price"] = d.log_price_obs.fillna(d.log_price_hat)
+    PRICE_PANEL.parent.mkdir(parents=True, exist_ok=True)
+    d[["blklot", "year", "log_price", "log_price_hat", "log_price_obs",
+       "is_observed"]].to_parquet(PRICE_PANEL, index=False)
+    both = d[d.is_observed]
+    return {"n_tx": int(len(tx)), "n_train": int(len(tr)), "n_test": int(len(te)),
+            "rmse": rmse, "rmse_rare": rmse_rare, "r2": r2_hed,
+            "cells": int(tr.cell.nunique()),
+            "repeat_parcels": int((n_sales >= 2).sum()),
+            "repeat_share": float((n_sales >= 2).mean()),
+            "panel_rows": int(len(d)), "observed": int(d.is_observed.sum()),
+            "observed_share": float(d.is_observed.mean()),
+            "corr_obs_hat": float(np.corrcoef(both.log_price_obs,
+                                              both.log_price_hat)[0, 1]) if len(both) > 2
+            else float("nan"),
+            "bias": float((both.log_price_hat - both.log_price_obs).mean())
+            if len(both) else float("nan"),
+            "by_era": both.assign(era=np.where(both.year < 2010, "pre-2010", "2010+"))
+            .groupby("era").apply(
+                lambda g: pd.Series({
+                    "n": len(g),
+                    "rmse": float(np.sqrt(np.mean((g.log_price_obs - g.log_price_hat) ** 2)))
+                }), include_groups=False)}
+
+
+# ── task 6: two clocks ───────────────────────────────────────────────────
+# The record types that ARE the discretionary application the Commission hears, as against
+# the pre-application and environmental records that can share a stem with it.
+ENTITLEMENT_TYPES = {"CUA", "DRM", "DRP", "VAR", "ZAV", "PCA", "DNX", "OFA", "COA", "HRR",
+                     "DES", "SHD", "CND", "MAP", "GPR", "CWP", "LBR", "PTA", "ZAD", "APL",
+                     "SUB", "TDM", "GEN", "OFA", "AHB"}
+
+
+def two_clocks(it: pd.DataFrame, rec: pd.DataFrame) -> dict:
+    first = (it[it.cn.ne("")].groupby("cn", as_index=False)
+             .agg(first_hearing=("meeting_date", "min"), year=("year", "min"),
+                  request_type=("request_type", "first"), stem=("stem", "first")))
+    r = rec.dropna(subset=["open_date"])
+    ent = r[r.record_type.isin(ENTITLEMENT_TYPES)]
+    by_cn, by_st = r.groupby("cn").open_date.min(), \
+        r[r.stem.ne("")].groupby("stem").open_date.min()
+    e_cn, e_st = ent.groupby("cn").open_date.min(), \
+        ent[ent.stem.ne("")].groupby("stem").open_date.min()
+    d = first.copy()
+    d["open_any"] = d.cn.map(by_cn).fillna(d.stem.map(by_st))
+    d["open_ent"] = d.cn.map(e_cn).fillna(d.stem.map(e_st))
+    d["lag_any"] = (d.first_hearing - d.open_any).dt.days
+    d["lag_ent"] = (d.first_hearing - d.open_ent).dt.days
+    d["gap"] = (d.open_ent - d.open_any).dt.days
+    per_stem = r[r.stem.ne("")].groupby("stem").size()
+    d["n_rec"] = d.stem.map(per_stem).fillna(1)
+    types = (r[r.stem.isin(set(first.stem) - {""})].record_type.value_counts())
+    bands = pd.cut(d.n_rec, [0, 1, 2, 3, 5, 10, 1000],
+                   labels=["1", "2", "3", "4--5", "6--10", "$>$10"])
+    tail = (d.dropna(subset=["lag_any"]).groupby(bands, observed=True)
+            .lag_any.agg(n="size", median="median", p90=lambda v: v.quantile(0.9)))
+    return {"d": d, "types": types, "per_stem": per_stem, "tail": tail,
+            "n_cases": len(d)}
+
+
+# ── task 7: is the coverage selective? ───────────────────────────────────
+def selectivity(it: pd.DataFrame) -> pd.DataFrame:
+    """Every headline coverage rate, cross-tabulated against the things it could plausibly
+    be correlated with. Unconditional rates hide exactly this."""
+    d = it.copy()
+    act = d.action.astype(str).str.lower()
+    # Order matters: `disapproved` contains `approve`, so the refusal test comes first.
+    d["outcome"] = np.select(
+        [act.str.contains("disapprove|motion_failed"),
+         act.str.contains("approve|adopted|certified|upheld|took_dr"),
+         act.str.contains("continu"), act.str.contains("withdraw"),
+         act.str.contains("did_not_take_dr")],
+        ["refused", "approved", "continued", "withdrawn", "DR declined"],
+        default="other")
+    d["conditioned"] = np.where(
+        d.conditions_imposed.astype(str).str.strip().str.lower().eq("yes"),
+        "conditioned", "not conditioned")
+    d["era"] = np.where(d.year <= 2007, "1998--2007",
+                        np.where(d.year <= 2016, "2008--2016", "2017--2026"))
+    rates = {"parcel join": "par_hit", "assessor roll": "asr_hit",
+             "case number": "case_hit", "permit bridge": "bridge_in_dbi",
+             "non-zero units": "units_nz", "ever traded": "cl_ever",
+             "traded near hearing": "cl_near"}
+    out = []
+    for dim, col in (("Request type", "request_type"), ("Outcome", "outcome"),
+                     ("Conditions", "conditioned"), ("Era", "era")):
+        for lvl, g in d.groupby(col):
+            if len(g) < 100:
+                continue
+            row = {"dimension": dim, "level": str(lvl) or "(blank)", "n": len(g)}
+            for lab, c in rates.items():
+                row[lab] = 100 * g[c].mean() if c in g.columns else np.nan
+            out.append(row)
+    return pd.DataFrame(out)
+
+
+# ── task 8: the hand pass ────────────────────────────────────────────────
+HAND_BLOCK = re.compile(r"(?i)\bblocks?\s*(?:nos?\.?|#)?\s*([0-9]{1,4}[A-Z]?)")
+HAND_LOT = re.compile(r"(?i)\blots?\s*(?:nos?\.?|#)?\s*"
+                      r"((?:[0-9]{1,4}[A-Z]?)(?:\s*(?:,|&|and)\s*[0-9]{1,4}[A-Z]?)*)")
+HAND_N = 50
+HAND_SEED = 20260908
+HAND_FILE = MEMO / "handpass_sample.csv"
+
+
+def hand_pass(it: pd.DataFrame, keys: set[str], blocks: set[str]) -> dict:
+    """Classify a random sample of the block-matched, lot-unmatched residual against the
+    minutes text the extraction read. Written out so the classification is auditable."""
+    db = HERE / "labeling_app" / "labels.db"
+    resid = it[it.parcels.map(bool) & ~it.parcels.map(lambda ps: bool(ps & keys))].copy()
+    resid["swap"] = [bool(_swapped(r) & keys) for r in resid.itertuples()]
+    resid["blockok"] = resid.parcels.map(lambda ps: bool({p[:4] for p in ps} & blocks))
+    pop = resid[resid.blockok & ~resid.swap]
+    res = {"residual": len(resid), "transposed": int(resid.swap.sum()),
+           "block_only": len(pop),
+           "no_block": int((~resid.blockok & ~resid.swap).sum())}
+    if not db.exists() or not len(pop):
+        return res
+    con = sqlite3.connect(db)
+    bt = dict(con.execute("select id, block_text from items"))
+    s = pop.sample(min(HAND_N, len(pop)), random_state=HAND_SEED)
+
+    def norm(x):
+        return str(x).strip().upper().lstrip("0") or "0"
+
+    rows = []
+    for r in s.itertuples():
+        t = (bt.get(r.item_id) or "").replace("\n", " ")
+        mb = {norm(x) for x in HAND_BLOCK.findall(t)}
+        ml = set()
+        for grp in HAND_LOT.findall(t):
+            ml |= {norm(x) for x in re.split(r"\s*(?:,|&|and)\s*", grp) if x.strip()}
+        eb = {norm(b) for b in BLOCK_LIST.split(str(r.assessor_block or "")) if b.strip()}
+        el = {norm(l) for l in (r.lot_number or [])}
+        if not mb or not ml:
+            c = "undetermined: the block text does not print a block and a lot"
+        elif eb & mb and el & ml:
+            alt = any(blklot(b, l) in keys for b in mb for l in el)
+            c = ("lot recorded under a different block the item also names" if alt else
+                 "lot absent from the parcel layer; extraction matches the minutes")
+        elif eb & mb:
+            c = "extraction error: lot differs from the minutes"
+        else:
+            c = "extraction error: block differs from the minutes"
+        rows.append({"item_id": r.item_id, "case_number": r.case_number, "year": r.year,
+                     "extracted_block": r.assessor_block,
+                     "extracted_lots": ";".join(map(str, r.lot_number or [])),
+                     "minutes_blocks": ";".join(sorted(mb)),
+                     "minutes_lots": ";".join(sorted(ml)),
+                     "classification": c, "block_text": t[:600]})
+    d = pd.DataFrame(rows)
+    HAND_FILE.parent.mkdir(parents=True, exist_ok=True)
+    d.to_csv(HAND_FILE, index=False)
+    res.update({"sample": d, "counts": d.classification.value_counts(), "n": len(d)})
+    return res
+
+
+def _swapped(r) -> set[str]:
+    lots = r.lot_number if isinstance(r.lot_number, list) else []
+    bs = [b.strip() for b in BLOCK_LIST.split(str(r.assessor_block or "")) if b.strip()]
+    return {k for k in (blklot(l, b) for b in bs for l in lots) if k}
+
+
 # ── the report itself ────────────────────────────────────────────────────
 def report():
     FIG.mkdir(parents=True, exist_ok=True)
@@ -1938,7 +2617,8 @@ def report():
                                                                          "polygon_zoning": {}}
     it = load_items()
     print(f"{len(it):,} items, {it.cn.ne('').sum():,} with a case number, "
-          f"{it[it.cn.ne('')].cn.nunique():,} distinct cases")
+          f"{it[it.cn_raw.ne('')].cn_raw.nunique():,} distinct as printed, "
+          f"{it[it.cn.ne('')].cn.nunique():,} after expanding the two-digit year")
 
     par = read_cached("parcels", usecols=["mapblklot", "blklot", "block_num", "lot_num",
                                           "active", "date_rec_add", "date_rec_drop"])
@@ -1977,6 +2657,19 @@ def report():
         it["cl_ever"] = it["cl_near"] = False
     fees = parse_fee_registers()
 
+    # ── the follow-up brief's measurements ──────────────────────────────
+    par_keys = set(par.blklot.dropna())
+    par_blocks = set(par.block_num.dropna())
+    sp = spatial_report() if PANEL.exists() else {}
+    panel_districts = ({str(x).strip().upper()
+                        for x in load_panel(columns=["zoning"]).zoning.dropna().unique()}
+                       if PANEL.exists() else set())
+    fs = fee_schedule(fees, panel_districts)
+    rs = risk_set(it, par_keys) if PANEL.exists() else {}
+    ps = price_surface(rs["denominator"]) if rs else {}
+    tc = two_clocks(it, rec)
+    handpass = hand_pass(it, par_keys, par_blocks)
+
     # ── inventory rows ──────────────────────────────────────────────────
     inventory, readme_rows = [], []
     for name, src in SOCRATA_SOURCES.items():
@@ -2003,6 +2696,7 @@ def report():
     inventory.sort(key=lambda kv: (kv[1]["category"], kv[1]["label"]))
 
     # ── zoning table ────────────────────────────────────────────────────
+    ctx_cov = sp.get("coverage") if sp else None
     zrows = []
     for name, src in SOCRATA_SOURCES.items():
         if not name.startswith("zoning_"):
@@ -2018,8 +2712,17 @@ def report():
     zrows.append({"year": "1999", "id": "---", "rows": 0, "distinct": "---",
                   "form": "not published"})
     for lab, m in pr.get("polygon_zoning", {}).items():
+        matched = ""
+        if ctx_cov is not None and len(ctx_cov):
+            key = 0 if not str(lab)[:4].isdigit() else int(str(lab)[:4])
+            fam = ("zoning" if "district" in str(lab) or str(lab)[:4].isdigit()
+                   else "heightdist" if "height" in str(lab) else "sud")
+            r = ctx_cov[(ctx_cov.family == fam) & (ctx_cov.year == key)]
+            if len(r):
+                matched = int(r.iloc[0].centroid_matched)
         zrows.append({"year": lab, "id": m.get("id", ""), "rows": m.get("rows") or 0,
-                      "distinct": "---", "form": "polygon; needs a spatial join"})
+                      "distinct": N(matched) if matched != "" else "---",
+                      "form": "polygon, joined spatially"})
     zrows.sort(key=lambda r: (r["year"][:4], r["year"]))
 
     # ── the bridge table ────────────────────────────────────────────────
@@ -2142,6 +2845,10 @@ def report():
     # ── fees ────────────────────────────────────────────────────────────
     fee_rows, fee_years, fee_matrix = _fee_tables(fees)
 
+    it["case_hit"] = it.cn.isin(set(cj["frame"].loc[cj["frame"].j_any, "cn"]))
+    it["units_nz"] = it.units_prj.fillna(0) > 0
+    sel = selectivity(it)
+
     negatives = [
         ("Condition-of-approval text", r"DBI Building Permits (\texttt{i98e-djp9})",
          r"87 of 1{,}295{,}048 rows mention one --- conditions memo \S4, not re-run"),
@@ -2230,7 +2937,7 @@ def report():
                field_macros=field_macros, bridge_macros=bridge_macros,
                row_macros=row_macros, land_use_multi=land_use_multi,
                quirk_macros=quirk_macros, casejoin_macros=casejoin_macros,
-               cl_sf=cl_sf,
+               cl_sf=cl_sf, sp=sp, fs=fs, rs=rs, ps=ps, tc=tc, hp=handpass, sel=sel,
                scale_earliest=scale_earliest, issue_lag_median=issue_lag_median,
                issue_lag_p90=issue_lag_p90,
                inventory=inventory, zoning_rows=zrows, bridge_rows=brows, bridge_all=ball,
@@ -2410,6 +3117,107 @@ def _fee_tables(fees: pd.DataFrame):
     return rows, years, matrix
 
 
+def _followup_macros(ctx) -> dict:
+    """Every prose number the follow-up work added. Same contract as the rest: if it is in
+    the memo's text it is defined here."""
+    sp, fs, rs, ps, tc, hp = (ctx.get(k) for k in ("sp", "fs", "rs", "ps", "tc", "hp"))
+    m = {}
+    if sp:
+        by = sp["by_year"]
+        cov = sp["coverage"]
+        zc = cov[cov.family.eq("zoning")]
+        m.update({
+            "acqPanelRows": N(sp["panel_rows"]),
+            "acqPanelFirst": str(min(sp["years"])), "acqPanelLast": str(max(sp["years"])),
+            "acqPanelYears": str(len(sp["years"])),
+            "acqPanelZoned": f"{100*by.zoned.sum()/by.parcels.sum():.1f}",
+            "acqSpatialYears": str(len(sp["spatial_years"])),
+            "acqSnapshotYears": str(len(sp["snapshot_years"])),
+            "acqSnapshotFirst": str(min(sp["snapshot_years"])) if sp["snapshot_years"]
+            else "---",
+            "acqPanelBySpatial": N(int(sp["method"].get("spatial", 0))),
+            "acqPanelByTable": N(int(sp["method"].get("table", 0))),
+            "acqCentroidRate": f"{100*zc.centroid_matched.sum()/zc.parcels.sum():.1f}",
+            "acqCentroidMulti": N(int(zc.centroid_multi.sum())),
+            "acqCentroidUnmatched": N(int(zc.centroid_unmatched.sum())),
+            "acqTabularCover":
+                f"{100*by[~by.is_snapshot & by.vintage.str.startswith('parcel')].zoned.sum()/by[~by.is_snapshot & by.vintage.str.startswith('parcel')].parcels.sum():.1f}",
+            "acqPolygonCover":
+                f"{100*by[by.vintage.str.startswith('polygon')].zoned.sum()/by[by.vintage.str.startswith('polygon')].parcels.sum():.1f}",
+        })
+    if fs:
+        d = fs["districts"]
+        m.update({
+            "acqFeeLabelled": f"{100*fs['labelled']:.1f}",
+            "acqFeeBanded": f"{100*fs['banded']:.1f}",
+            "acqFeeSchedRows": N(fs["n_sched"]),
+            "acqFeeAbsYear": f"{fs['abs_year']:.1f}",
+            "acqFeeAbsYearSection": f"{fs['abs_year_section']:.1f}",
+            "acqFeeWithin": f"{fs['within']:.1f}",
+            "acqFeeWithinLabel": f"{fs['within_after_label']:.1f}",
+            "acqFeeDistrictRows": str(d.get("rows", 0)),
+            "acqFeeDistrictKnown": str(d.get("with_district", 0)),
+            "acqFeeDistrictShare": f"{100*d.get('share', 0):.1f}",
+        })
+    if rs:
+        st = rs["steps"]
+        m.update({
+            "acqRiskStart": N(int(st.parcels.iloc[0])),
+            "acqRiskStartYears": N(int(st.parcel_years.iloc[0])),
+            "acqRiskParcels": N(rs["n_parcels"]),
+            "acqRiskParcelYears": N(rs["n_parcel_years"]),
+            "acqRiskEvents": N(rs["n_events"]),
+            "acqRiskRate": f"{rs['rate']:.1f}",
+            "acqRiskRateStart": f"{st.rate.iloc[0]:.1f}",
+            "acqRiskCondoLost": N(int(st.events_lost.iloc[1])),
+            "acqRiskItemsPanel": N(rs["items_in_panel"]),
+            "acqRiskItemsKept": N(rs["items_kept"]),
+            "acqRiskItemsKeptPct":
+                f"{100*rs['items_kept']/rs['items_in_panel']:.1f}",
+        })
+    if ps:
+        m.update({
+            "acqPriceTx": N(ps["n_tx"]), "acqPriceTest": N(ps["n_test"]),
+            "acqPriceCells": N(ps["cells"]),
+            "acqPriceRmse": f"{ps['rmse']:.2f}",
+            "acqPriceRmseRare": f"{ps['rmse_rare']:.2f}",
+            "acqPriceRsq": f"{ps['r2']:.2f}",
+            "acqPriceBias": f"{ps['bias']:+.3f}",
+            "acqPriceCorr": f"{ps['corr_obs_hat']:.2f}",
+            "acqPricePanel": N(ps["panel_rows"]),
+            "acqPriceObserved": f"{100*ps['observed_share']:.1f}",
+            "acqPriceRepeatShare": f"{100*ps['repeat_share']:.1f}",
+        })
+    if tc:
+        d = tc["d"]
+        for lab, col in (("Any", "lag_any"), ("Ent", "lag_ent"), ("Gap", "gap")):
+            v = d[col].dropna()
+            m.update({f"acqClock{lab}N": N(len(v)),
+                      f"acqClock{lab}Cov": f"{100*len(v)/len(d):.1f}",
+                      f"acqClock{lab}Med": f"{v.median():.0f}",
+                      f"acqClock{lab}Pninety": f"{v.quantile(.9):.0f}",
+                      f"acqClock{lab}Pninetynine": f"{v.quantile(.99):.0f}"})
+        t = tc["tail"]
+        m["acqClockTailLow"] = f"{t['median'].iloc[0]:.0f}"
+        m["acqClockTailHigh"] = f"{t['median'].iloc[-1]:.0f}"
+        m["acqClockOneRec"] = N(int(t.n.iloc[0]))
+        m["acqClockManyRec"] = N(int(t.n.iloc[-1]))
+    if hp and isinstance(hp, dict):
+        m.update({"acqHandResidual": N(hp["residual"]),
+                  "acqHandTransposed": N(hp["transposed"]),
+                  "acqHandNoBlock": N(hp["no_block"]),
+                  "acqHandBlockOnly": N(hp["block_only"])})
+        if "counts" in hp:
+            c = hp["counts"]
+            top = c.index[0]
+            m.update({"acqHandN": str(hp["n"]),
+                      "acqHandTopN": str(int(c.iloc[0])),
+                      "acqHandTopPct": f"{100*c.iloc[0]/hp['n']:.0f}",
+                      "acqHandErrors": str(int(sum(v for k, v in c.items()
+                                                   if "extraction error" in k)))})
+    return m
+
+
 def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
     P, asr, cj, lag = ctx["parcels"], ctx["assessor"], ctx["cases"], ctx["lag"]
     ok = lag[lag.lag.notna()]
@@ -2470,6 +3278,7 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
         "acqZhviMonths": str(zmeta.get("zhvi_months", 0)),
         "acqZoriMonths": str(zmeta.get("zori_months", 0)),
         "acqLandUseMulti": ctx["land_use_multi"],
+        **_followup_macros(ctx),
         **({} if not ctx["cl_sf"] else {
             "acqClRows": N(ctx["cl_sf"]["rows"]),
             "acqClPriced": N(ctx["cl_sf"]["priced"]),

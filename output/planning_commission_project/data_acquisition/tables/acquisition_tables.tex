@@ -36,12 +36,12 @@ Dataset & Identifier & Rows & Distinct key & Key unique & Date range\\\midrule
 Items & Count & Share\\\midrule
 All items in the corpus & 16{,}199 & 100.0\%\\
 \quad carrying a block and at least one lot & 13{,}620 & 84.1\%\\
-\quad\quad joined to \texttt{blklot} in the parcel layer & 12{,}195 & 89.5\%\\
-\quad\quad\quad \dots\ to a parcel still active & 9{,}115 & 66.9\%\\
-\quad\quad\quad \dots\ to a retired parcel only & 3{,}080 & 22.6\%\\
-\quad\quad joined to \texttt{mapblklot} (the surviving map parcel) & 12{,}038 & 88.4\%\\
-\quad\quad not joined: block exists, that lot does not & 1{,}232 & 9.0\%\\
-\quad\quad not joined: no such block & 193 & 1.4\%\\
+\quad\quad joined to \texttt{blklot} in the parcel layer & 13{,}300 & 97.7\%\\
+\quad\quad\quad \dots\ to a parcel still active & 10{,}031 & 73.6\%\\
+\quad\quad\quad \dots\ to a retired parcel only & 3{,}269 & 24.0\%\\
+\quad\quad joined to \texttt{mapblklot} (the surviving map parcel) & 13{,}135 & 96.4\%\\
+\quad\quad not joined: block exists, that lot does not & 298 & 2.2\%\\
+\quad\quad not joined: no such block & 22 & 0.2\%\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
@@ -51,18 +51,18 @@ Quantity & Value\\\midrule
 Rows (parcel-years) & 3{,}934{,}467\\
 Distinct parcels & 222{,}251\\
 Roll years & 2007--2025 (19 years)\\
-Distinct item parcel keys sought & 8{,}294\\
-\quad found on the roll & 5{,}565\\
+Distinct item parcel keys sought & 12{,}141\\
+\quad found on the roll & 8{,}307\\
 \quad\quad median roll years observed for one of them & 19 of 19\\
-\quad\quad present in every roll year & 4{,}372\\
-Items with a parcel key joined to the roll & 11{,}112 (81.6\%)\\
+\quad\quad present in every roll year & 6{,}168\\
+Items with a parcel key joined to the roll & 12{,}170 (89.4\%)\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{Zoning, by how it is published. The parcel-keyed years join to the item table directly; the polygon years need a spatial join and are inventoried, not cached. 1999 is not published in either form.}\label{tab:zoning}
+\caption{Zoning, by how it is published \emph{and} how it is now joined. The parcel-keyed years join on \texttt{blklot} directly; the polygon years are joined by point-in-polygon against parcel centroids, with a largest-overlap fallback where the centroid rule fails or is ambiguous. 1999 is not published in either form.}\label{tab:zoning}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{llrrl}\toprule
-Year & Identifier & Rows & Distinct \texttt{blklot} & Form\\\midrule
+Year & Identifier & Rows & Parcels keyed & Form\\\midrule
 1998 & \texttt{piqy-pimd} & 152{,}569 & 152{,}535 & parcel-keyed (\texttt{blklot})\\
 1999 & --- & 0 & --- & not published\\
 2000 & \texttt{itx2-wzp5} & 153{,}292 & 153{,}247 & parcel-keyed (\texttt{blklot})\\
@@ -71,40 +71,41 @@ Year & Identifier & Rows & Distinct \texttt{blklot} & Form\\\midrule
 2003 & \texttt{6ru7-zq4y} & 153{,}716 & 153{,}518 & parcel-keyed (\texttt{blklot})\\
 2004 & \texttt{s3eh-jdwb} & 191{,}062 & 190{,}896 & parcel-keyed (\texttt{blklot})\\
 2005 & \texttt{b52k-gy2v} & 196{,}344 & 192{,}031 & parcel-keyed (\texttt{blklot})\\
-2006 & \texttt{afkh-hfhr} & 23{,}132 & --- & polygon; needs a spatial join\\
+2006 & \texttt{afkh-hfhr} & 23{,}132 & 232{,}262 & polygon, joined spatially\\
 2007 & \texttt{pe87-v8tx} & 153{,}822 & 153{,}751 & parcel-keyed (\texttt{blklot})\\
 2008 & \texttt{tsdh-z53a} & 153{,}355 & 153{,}355 & parcel-keyed (\texttt{blklot})\\
-2009 & \texttt{jud5-ja46} & 23{,}355 & --- & polygon; needs a spatial join\\
-2010 & \texttt{x4gj-zjx7} & 9{,}897 & --- & polygon; needs a spatial join\\
-2011 & \texttt{rt4q-mf68} & 9{,}880 & --- & polygon; needs a spatial join\\
-2012 & \texttt{vfz8-awmy} & 9{,}889 & --- & polygon; needs a spatial join\\
-2013 & \texttt{6jb9-g73z} & 9{,}982 & --- & polygon; needs a spatial join\\
-2014 & \texttt{hg44-eza7} & 9{,}981 & --- & polygon; needs a spatial join\\
-2015 & \texttt{ada2-cu6t} & 9{,}978 & --- & polygon; needs a spatial join\\
-current (districts) & \texttt{xzez-p3nc} & 1{,}647 & --- & polygon; needs a spatial join\\
-current (height and bulk) & \texttt{usp2-teig} & 1{,}195 & --- & polygon; needs a spatial join\\
-current (special use) & \texttt{rxfc-8aap} & 125 & --- & polygon; needs a spatial join\\
+2009 & \texttt{jud5-ja46} & 23{,}355 & 232{,}543 & polygon, joined spatially\\
+2010 & \texttt{x4gj-zjx7} & 9{,}897 & 233{,}283 & polygon, joined spatially\\
+2011 & \texttt{rt4q-mf68} & 9{,}880 & 233{,}283 & polygon, joined spatially\\
+2012 & \texttt{vfz8-awmy} & 9{,}889 & 233{,}255 & polygon, joined spatially\\
+2013 & \texttt{6jb9-g73z} & 9{,}982 & 233{,}255 & polygon, joined spatially\\
+2014 & \texttt{hg44-eza7} & 9{,}981 & 233{,}255 & polygon, joined spatially\\
+2015 & \texttt{ada2-cu6t} & 9{,}978 & 233{,}255 & polygon, joined spatially\\
+current (districts) & \texttt{xzez-p3nc} & 1{,}647 & 235{,}400 & polygon, joined spatially\\
+current (height and bulk) & \texttt{usp2-teig} & 1{,}195 & 235{,}401 & polygon, joined spatially\\
+current (special use) & \texttt{rxfc-8aap} & 125 & 113{,}802 & polygon, joined spatially\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{Does a planning record's identifier join to the item table's case number? Tested three ways over all 8{,}987 distinct cases. `Stem' strips the letter suffix (\texttt{2014.0400CUA}$\to$\texttt{2014.0400}), which is how a suffixed case reaches its umbrella project record.}\label{tab:casejoin}
+\caption{Does a planning record's identifier join to the item table's case number? Tested four ways over all 8{,}958 distinct cases. `Stem' strips the letter suffix (\texttt{2014.0400CUA}$\to$\texttt{2014.0400}), which is how a suffixed case reaches its umbrella project record; `expanded' rewrites the two-digit year the minutes printed before 2002 (\texttt{98.426D}$\to$\texttt{1998.426D}) against the hearing year. The century is never guessed: 0 cases would have matched a real record under \emph{both} centuries.}\label{tab:casejoin}
 \begin{tabular}{lrr}\toprule
 Join & Cases matched & Rate\\\midrule
-Raw string equality & 6{,}716 & 74.7\%\\
-Normalised (upper-case, whitespace stripped) & 6{,}736 & 75.0\%\\
-Suffix-stripped stem & 8{,}334 & 92.7\%\\
-\textbf{Either} & 8{,}334 & \textbf{92.7\%}\\
+Raw string equality & 6{,}695 & 74.7\%\\
+Normalised (upper-case, whitespace stripped) & 6{,}715 & 75.0\%\\
+Suffix-stripped stem & 8{,}311 & 92.8\%\\
+Two-digit year expanded against the hearing year & 8{,}838 & 98.7\%\\
+\textbf{Any of them} & 8{,}838 & \textbf{98.7\%}\\
 \midrule
-\quad heard 1998--2004 & 2{,}025\,/\,2{,}613 & 77.5\%\\
-\quad heard 2005--2009 & 1{,}754\,/\,1{,}776 & 98.8\%\\
+\quad heard 1998--2004 & 2{,}528\,/\,2{,}585 & 97.8\%\\
+\quad heard 2005--2009 & 1{,}755\,/\,1{,}775 & 98.9\%\\
 \quad heard 2010--2014 & 1{,}547\,/\,1{,}557 & 99.4\%\\
 \quad heard 2015--2019 & 1{,}450\,/\,1{,}476 & 98.2\%\\
 \quad heard 2020--2026 & 1{,}558\,/\,1{,}565 & 99.6\%\\
 \midrule
 \multicolumn{3}{l}{\emph{The residual, by the format the minutes print the case number in}}\\
-\quad \texttt{YY.NNN} & 536 unmatched of 536 & 0.0\% matched\\
+\quad \texttt{YY.NNN} & 3 unmatched of 530 & 99.4\% matched\\
 \quad \texttt{YYYY-NNNNNN} & 8 unmatched of 2{,}648 & 99.7\% matched\\
-\quad \texttt{YYYY.NNNN} & 92 unmatched of 5{,}786 & 98.4\% matched\\
+\quad \texttt{YYYY.NNNN} & 92 unmatched of 5{,}763 & 98.4\% matched\\
 \quad \texttt{other} & 17 unmatched of 17 & 0.0\% matched\\
 \bottomrule\end{tabular}\end{table}
 
@@ -113,12 +114,12 @@ Suffix-stripped stem & 8{,}334 & 92.7\%\\
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrr}\toprule
 Cases & $N$ & Coverage & Median & 90th pct & 99th pct & Negative\\\midrule
-All cases & 8{,}987 & 92.7\% & 142 & 758 & 2346 & 0.3\%\\
-conditional use & 3{,}055 & 93.7\% & 175 & 608 & 1824 & 0.0\%\\
-discretionary review & 2{,}453 & 92.4\% & 105 & 327 & 960 & 0.3\%\\
-variance & 550 & 96.5\% & 280 & 870 & 2347 & 0.0\%\\
-planning code amendment & 728 & 96.2\% & 64 & 409 & 1841 & 0.4\%\\
-heard 1998--2009 & 4{,}393 & 86.1\% & 126 & 580 & 1491 & 0.4\%\\
+All cases & 8{,}958 & 98.7\% & 140 & 730 & 2314 & 0.4\%\\
+conditional use & 3{,}046 & 99.3\% & 168 & 597 & 1771 & 0.1\%\\
+discretionary review & 2{,}448 & 98.8\% & 101 & 315 & 945 & 0.4\%\\
+variance & 549 & 99.5\% & 273 & 848 & 2320 & 0.0\%\\
+planning code amendment & 728 & 98.8\% & 64 & 415 & 1836 & 0.4\%\\
+heard 1998--2009 & 4{,}364 & 98.2\% & 121 & 561 & 1486 & 0.4\%\\
 heard 2010--2017 & 2{,}359 & 98.7\% & 169 & 944 & 3027 & 0.3\%\\
 heard 2018--2026 & 2{,}235 & 99.5\% & 161 & 894 & 2330 & 0.3\%\\
 \bottomrule\end{tabular}}\end{table}
@@ -128,14 +129,14 @@ heard 2018--2026 & 2{,}235 & 99.5\% & 161 & 894 & 2330 & 0.3\%\\
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrr}\toprule
 Request type & Items & Reaches a permit & \dots\ present in DBI & Printed permit number & Either route\\\midrule
-\texttt{discretionary\_review} & 4{,}117 & 72.4\% & 71.8\% & 85.5\% & 93.2\%\\
-\texttt{large\_project\_authorization} & 308 & 70.5\% & 70.5\% & 0.0\% & 70.5\%\\
-\texttt{variance} & 1{,}172 & 63.5\% & 63.3\% & 1.6\% & 63.9\%\\
-\texttt{downtown\_project} & 321 & 57.3\% & 57.3\% & 1.9\% & 57.9\%\\
-\texttt{conditional\_use} & 5{,}074 & 46.3\% & 46.0\% & 0.3\% & 46.1\%\\
+\texttt{discretionary\_review} & 4{,}117 & 72.5\% & 71.8\% & 85.5\% & 93.3\%\\
+\texttt{large\_project\_authorization} & 308 & 71.1\% & 71.1\% & 0.0\% & 71.1\%\\
+\texttt{variance} & 1{,}172 & 63.6\% & 63.4\% & 1.6\% & 64.0\%\\
+\texttt{downtown\_project} & 321 & 58.3\% & 58.3\% & 1.9\% & 58.9\%\\
+\texttt{conditional\_use} & 5{,}074 & 46.5\% & 46.3\% & 0.3\% & 46.3\%\\
 \texttt{other} & 459 & 44.0\% & 44.0\% & 0.7\% & 44.2\%\\
-\texttt{office\_allocation} & 301 & 41.9\% & 41.9\% & 0.0\% & 41.9\%\\
-\texttt{ceqa\_environmental} & 652 & 40.6\% & 40.6\% & 0.0\% & 40.6\%\\
+\texttt{office\_allocation} & 301 & 42.9\% & 42.9\% & 0.0\% & 42.9\%\\
+\texttt{ceqa\_environmental} & 652 & 41.9\% & 41.9\% & 0.0\% & 41.9\%\\
 \texttt{appeal\_preliminary\_negative\_declaration} & 537 & 36.5\% & 36.5\% & 0.0\% & 36.5\%\\
 \texttt{conditional\_use\_modification} & 295 & 33.2\% & 33.2\% & 2.0\% & 35.3\%\\
 \texttt{general\_plan\_amendment} & 334 & 32.0\% & 32.0\% & 0.0\% & 32.0\%\\
@@ -144,7 +145,7 @@ Request type & Items & Reaches a permit & \dots\ present in DBI & Printed permit
 \texttt{rezoning\_map\_amendment} & 261 & 20.7\% & 20.7\% & 0.0\% & 20.7\%\\
 \texttt{planning\_code\_amendment} & 1{,}301 & 7.7\% & 7.6\% & 0.0\% & 7.6\%\\
 \midrule
-All items & 16{,}199 & \textbf{48.6\%} & \textbf{48.4\%} & 22.1\% & \textbf{54.0\%}\\
+All items & 16{,}199 & \textbf{48.8\%} & \textbf{48.5\%} & 22.1\% & \textbf{54.2\%}\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
@@ -174,9 +175,9 @@ Field & Table & What it is & Populated & Rows\\\midrule
 \caption{Project scale: what each source offers, and what share of the 5{,}074 conditional-use items in the item table it actually reaches. `Join key available' is a property of the file; the last column is the measurement.}\label{tab:scale}
 \begin{tabular}{@{}p{2.8cm}p{3.4cm}p{3.0cm}p{1.8cm}p{3.0cm}@{}}\toprule
 Source & Unit field & Join key & Years & CU items reached\\\midrule
-Planning Records --- Projects & \texttt{number\_\allowbreak of\_\allowbreak units\_\allowbreak prop} & case-number stem & 1974--2026 & 91.9\% populated, 27.1\% non-zero\\[2pt]
+Planning Records --- Projects & \texttt{number\_\allowbreak of\_\allowbreak units\_\allowbreak prop} & case-number stem & 1974--2026 & 99.0\% populated, 27.7\% non-zero\\[2pt]
 SF Development Pipeline & \texttt{net\_\allowbreak pipeline\_\allowbreak units} & case\_\allowbreak no (PRJ) $+$ blklot & 1997--2026 & 4.5\%\\[2pt]
-Housing Production 2005-- & \texttt{net\_\allowbreak units} & ppts\_\allowbreak project\_\allowbreak id $+$ blocklot & 2005--2026 & 11.2\% by case, 17.6\% by parcel\\[2pt]
+Housing Production 2005-- & \texttt{net\_\allowbreak units} & ppts\_\allowbreak project\_\allowbreak id $+$ blocklot & 2005--2026 & 11.3\% by case, 19.1\% by parcel\\[2pt]
 MOHCD Affordable Pipeline & \texttt{total\_\allowbreak project\_\allowbreak units} & planning\_\allowbreak case\_\allowbreak number & 1995--2030 & 1.5\%\\[2pt]
 Unit Completion Counts & \texttt{number\_\allowbreak of\_\allowbreak units\_\allowbreak certified} & building permit number & 2002--2205\,\emph{(sic)} & via the permit bridge only\\[2pt]
 \bottomrule\end{tabular}\end{table}
@@ -235,5 +236,166 @@ Parcel-keyed zoning after 2008 & DataSF historic zoning series & 2009--2015 are 
 A time-varying height and bulk layer keyed on parcel & DataSF historic height and bulk series & 2009--2014 published as polygons; no parcel-keyed vintage\\[2pt]
 A market price after 2024-05-16 & \texttt{\$MFHR\_\allowbreak DATA\_\allowbreak ROOT/\allowbreak demand/\allowbreak corelogic} & the Cotality pull ends there, two years short of the corpus; Zillow covers the tail at ZIP level only\\[2pt]
 Impact fee registers before 2019 & sfplanning.org and the Wayback Machine & the register is republished at one URL; no snapshot before 2019-09-15\\[2pt]
-A unit count for the early docket & every scale source in Table~\ref{tab:scale} & a non-zero count reaches 18.3\% of conditional uses heard before 2005 against 30.9\% after\\[2pt]
+A unit count for the early docket & every scale source in Table~\ref{tab:scale} & a non-zero count reaches 20.3\% of conditional uses heard before 2005 against 30.9\% after\\[2pt]
 \bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The parcel-year zoning panel the spatial join produces: 5{,}824{,}609 rows, one per parcel per year in which that parcel existed, keyed on \texttt{blklot}. `Vintage' is the layer the year is served from; 2016 onward has no published vintage and carries the current layer forward, flagged, which is a stated assumption and not an observation.}\label{tab:panel}
+\begin{tabular}{llrrr}\toprule
+Years & Vintage & Parcel-years & Zoned & Rate\\\midrule
+1998, 2000--2005, 2007--2008 & parcel-keyed & 1{,}705{,}949 & 1{,}441{,}029 & 84.5\%\\
+2006, 2009--2015 & polygon & 1{,}658{,}523 & 1{,}650{,}031 & 99.5\%\\
+2016--2026 & current & 2{,}460{,}137 & 2{,}448{,}840 & 99.5\%\\
+\midrule
+All & --- & 5{,}824{,}609 & 5{,}539{,}900 & 95.1\%\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The spatial join itself, per layer. `Multi' is a centroid falling in more than one polygon. For zoning and height that is an error and goes to the largest-overlap fallback; for special-use districts and fee areas it is the correct answer --- they are overlays, and a parcel legitimately sits in several or in none, so those rows carry a list.}\label{tab:spatial}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrl}\toprule
+Family & Year & Matched & Multi & Unmatched & Treatment\\\midrule
+zoning & 2006 & 232{,}262 & 1{,}144 & 2{,}877 & single-valued: fallback\\
+zoning & 2009 & 232{,}543 & 855 & 2{,}885 & single-valued: fallback\\
+zoning & 2010 & 233{,}283 & 94 & 2{,}906 & single-valued: fallback\\
+zoning & 2011 & 233{,}283 & 94 & 2{,}906 & single-valued: fallback\\
+zoning & 2012 & 233{,}255 & 94 & 2{,}934 & single-valued: fallback\\
+zoning & 2013 & 233{,}255 & 94 & 2{,}934 & single-valued: fallback\\
+zoning & 2014 & 233{,}255 & 94 & 2{,}934 & single-valued: fallback\\
+zoning & 2015 & 233{,}255 & 94 & 2{,}934 & single-valued: fallback\\
+zoning & current & 235{,}400 & 0 & 883 & single-valued: fallback\\
+height & 2009 & 233{,}202 & 172 & 2{,}909 & single-valued: fallback\\
+height & 2010 & 233{,}199 & 161 & 2{,}923 & single-valued: fallback\\
+height & 2011 & 233{,}200 & 160 & 2{,}923 & single-valued: fallback\\
+height & 2012 & 233{,}170 & 160 & 2{,}953 & single-valued: fallback\\
+height & 2013 & 233{,}170 & 160 & 2{,}953 & single-valued: fallback\\
+height & 2014 & 233{,}175 & 160 & 2{,}948 & single-valued: fallback\\
+height & current & 235{,}342 & 0 & 941 & single-valued: fallback\\
+heightdist & current & 235{,}401 & 0 & 882 & single-valued: fallback\\
+sud & current & 113{,}802 & 104{,}499 & 17{,}982 & overlay: list, no fallback\\
+feearea & current & 14{,}008 & 40{,}448 & 181{,}827 & overlay: list, no fallback\\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{From every parcel-year to a denominator. Each row is one restriction, stated as a sentence. `Events' is parcel-years in which the Commission heard something; `lost' is how many of those the restriction discards. A restriction that drops real filings is reported, not tuned away --- and the condominium rule drops 1{,}301 of them.}\label{tab:funnel}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}\toprule
+Restriction & Parcels & Parcel-years & Events & Lost & Per 10{,}000\\\midrule
+Every parcel-year in which the parcel existed & 236{,}552 & 5{,}824{,}609 & 11{,}256 & --- & 19.32\\
+\quad not a condominium or other sub-parcel interest that year & 174{,}946 & 4{,}365{,}352 & 9{,}955 & 1{,}301 & 22.80\\
+\quad\quad not public, institutional, a church or a school & 173{,}755 & 4{,}315{,}386 & 9{,}444 & 511 & 21.88\\
+\quad\quad\quad a zoning district in force on it that year & 173{,}325 & 4{,}261{,}894 & 9{,}240 & 204 & 21.68\\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{What the preferred denominator discards, by request type, at the level of the item rather than the parcel-year. The loss is spread rather than concentrated, which is the reason it is acceptable: no single kind of case is being defined out of the sample.}\label{tab:funnelrt}
+\begin{tabular}{lrrr}\toprule
+Request type & Items on a panel parcel-year & Kept & Dropped\\\midrule
+\texttt{conditional\_use} & 4{,}770 & 4{,}425 & 7.2\%\\
+\texttt{discretionary\_review} & 3{,}776 & 3{,}669 & 2.8\%\\
+\texttt{variance} & 1{,}104 & 1{,}059 & 4.1\%\\
+\texttt{ceqa\_environmental} & 415 & 379 & 8.7\%\\
+\texttt{appeal\_preliminary\_negative\_declaration} & 347 & 331 & 4.6\%\\
+\texttt{other} & 302 & 278 & 7.9\%\\
+\texttt{large\_project\_authorization} & 300 & 299 & 0.3\%\\
+\texttt{downtown\_project} & 293 & 290 & 1.0\%\\
+\texttt{office\_allocation} & 255 & 250 & 2.0\%\\
+\texttt{conditional\_use\_modification} & 254 & 230 & 9.4\%\\
+\midrule
+All & 12{,}688 & 11{,}987 & 5.5\%\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The fee register as a structured schedule, and how much variation survives conditioning. The decomposition is on the log rate. A year fixed effect absorbs almost nothing because the dispersion is \emph{across} fees, not over time; what a project-level design can use is what remains inside a year and a fee, across land uses and size bands.}\label{tab:feestruct}
+\begin{tabular}{lr}\toprule
+Quantity & Value\\\midrule
+Rate observations parsed & 1{,}341\\
+\quad carrying a land-use or size label & 49.6\%\\
+\quad carrying a parsed size band & 2.6\%\\
+Schedule rows (year $	imes$ section $	imes$ use $	imes$ band) & 455\\
+Register rows naming a district the zoning panel knows & 11 of 42\\
+\midrule Variation in log rate absorbed by year alone & 3.0\%\\
+\quad by year and Planning Code section & 83.6\%\\
+\quad remaining within year and section & \textbf{16.4\%}\\
+\quad remaining after land use and band too & 9.4\%\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The price surface: a neighbourhood-by-year effect plus a hedonic on assessor characteristics, fitted on the within variation and scored out of sample on a held-out fifth of transactions. The row that matters is the third: the fit is \emph{better} on parcels that rarely trade, which are the parcels the prediction exists for.}\label{tab:price}
+\begin{tabular}{lr}\toprule
+Quantity & Value\\\midrule
+Transactions used & 408{,}119\\
+\quad held out for scoring & 82{,}194\\
+Neighbourhood $	imes$ year cells & 2{,}162\\
+Out-of-sample RMSE, log price & 0.687\\
+\quad on parcels that trade at most once & 0.613\\
+Out-of-sample $R^2$ & 0.716\\
+Bias on parcel-years where both exist & -0.037\\
+Correlation, predicted vs observed & 0.735\\
+\midrule Parcel-years in the price panel & 3{,}948{,}435\\
+\quad with an observed sale that year & 105{,}708 (2.7\%)\\
+\quad the rest imputed and flagged as such & 3{,}842{,}727\\
+Parcels trading more than once (repeat-sales feasible) & 106{,}569 (62.4\% of traded)\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{Two clocks. `Any record' starts at the earliest record opened under the case's stem; `entitlement record' starts at the earliest record whose type is the discretionary application itself, excluding pre-application and environmental filings. The third panel is the gap between them --- the pre-application process, which nothing here had measured.}\label{tab:clocks}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}\toprule
+Clock & $N$ & Coverage & Median & 90th pct & 99th pct & Negative\\\midrule
+Earliest record of any type & 8{,}838 & 98.7\% & 140 & 730 & 2314 & 0.4\%\\
+Earliest entitlement record & 8{,}594 & 95.9\% & 135 & 653 & 2298 & 1.1\%\\
+Gap between them & 8{,}594 & 95.9\% & 0 & 8 & 871 & 1.8\%\\
+\midrule
+\multicolumn{7}{l}{\emph{Where the long tail lives: median and 90th percentile of the any-record clock, by how many records share the stem}}\\
+\quad 1 record(s) & 377 & & 71 & 457 & & \\
+\quad 2 record(s) & 3{,}836 & & 112 & 352 & & \\
+\quad 3 record(s) & 1{,}759 & & 121 & 455 & & \\
+\quad 4--5 record(s) & 1{,}409 & & 224 & 799 & & \\
+\quad 6--10 record(s) & 1{,}048 & & 466 & 1395 & & \\
+\quad $>$10 record(s) & 409 & & 653 & 1850 & & \\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{Is the coverage selective? Every headline rate, cross-tabulated. Levels with fewer than 100 items are omitted. Read down a column: a rate that moves with the outcome or with conditioning is a rate that cannot be treated as missing at random.}\label{tab:selectivity}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrrrrr}\toprule
+Dimension & Level & $N$ & parcel join & assessor roll & case number & permit bridge & non-zero units & ever traded & traded near hearing\\\midrule
+Request type & (blank) & 262 & 37.0 & 31.3 & 68.7 & 26.3 & 15.3 & 4.2 & 2.3\\
+ & appeal\_preliminary\_negative\_declaration & 537 & 79.9 & 62.4 & 98.7 & 36.5 & 36.7 & 31.5 & 14.5\\
+ & ceqa\_environmental & 652 & 67.0 & 57.5 & 96.6 & 41.9 & 36.8 & 25.9 & 11.5\\
+ & conditional\_use & 5{,}074 & 97.9 & 91.7 & 99.2 & 46.3 & 27.7 & 65.8 & 20.6\\
+ & conditional\_use\_modification & 295 & 94.6 & 90.8 & 99.7 & 33.2 & 17.3 & 59.3 & 21.4\\
+ & discretionary\_review & 4{,}117 & 96.1 & 88.0 & 98.5 & 71.8 & 35.3 & 72.6 & 35.8\\
+ & downtown\_project & 321 & 97.2 & 82.6 & 99.7 & 58.3 & 34.9 & 53.0 & 25.9\\
+ & general\_plan\_amendment & 334 & 48.5 & 41.6 & 97.6 & 32.0 & 24.6 & 18.9 & 6.3\\
+ & historic & 177 & 84.7 & 77.4 & 100.0 & 20.9 & 27.1 & 42.9 & 14.7\\
+ & informational & 587 & 27.6 & 27.1 & 86.7 & 23.0 & 18.2 & 15.5 & 4.6\\
+ & large\_project\_authorization & 308 & 98.4 & 91.6 & 98.1 & 71.1 & 62.3 & 58.1 & 24.7\\
+ & office\_allocation & 301 & 91.7 & 80.4 & 99.0 & 42.9 & 9.3 & 58.1 & 25.9\\
+ & other & 459 & 68.0 & 62.3 & 99.8 & 44.0 & 34.2 & 33.1 & 11.1\\
+ & planning\_code\_amendment & 1{,}301 & 9.3 & 8.6 & 99.2 & 7.6 & 5.9 & 4.8 & 1.8\\
+ & rezoning\_map\_amendment & 261 & 69.0 & 59.0 & 98.9 & 20.7 & 22.2 & 39.5 & 12.3\\
+ & variance & 1{,}172 & 96.2 & 87.9 & 99.5 & 63.4 & 54.4 & 63.6 & 26.5\\
+Outcome & DR declined & 1{,}105 & 96.9 & 88.6 & 98.9 & 72.8 & 35.9 & 72.0 & 32.9\\
+ & approved & 6{,}606 & 82.6 & 76.2 & 98.7 & 46.2 & 27.2 & 51.7 & 19.0\\
+ & continued & 6{,}195 & 85.6 & 77.8 & 98.6 & 49.4 & 33.3 & 56.7 & 23.3\\
+ & other & 1{,}519 & 50.8 & 45.4 & 90.6 & 35.8 & 27.3 & 29.1 & 11.9\\
+ & refused & 258 & 86.4 & 79.8 & 98.8 & 29.1 & 24.0 & 55.8 & 21.3\\
+ & withdrawn & 516 & 92.6 & 86.0 & 98.3 & 64.0 & 31.0 & 70.5 & 34.5\\
+Conditions & conditioned & 4{,}048 & 92.9 & 86.9 & 99.2 & 51.8 & 29.0 & 61.8 & 21.9\\
+ & not conditioned & 12{,}151 & 78.5 & 71.2 & 97.5 & 47.5 & 30.6 & 50.8 & 21.3\\
+Era & 1998--2007 & 7{,}271 & 85.2 & 70.0 & 98.0 & 41.9 & 23.8 & 47.2 & 21.5\\
+ & 2008--2016 & 4{,}858 & 78.0 & 77.8 & 97.7 & 47.6 & 25.3 & 51.4 & 21.2\\
+ & 2017--2026 & 4{,}070 & 81.4 & 81.0 & 98.1 & 61.5 & 47.6 & 67.6 & 21.7\\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The hand pass. The residual after the corrected parcel key is 320 items; 34 of those have the block and lot transposed, 21 name no block the city records, and 265 name a block that exists and a lot that does not. A random 50 of that last group were read against the minutes text the extraction saw. The sample is written to \texttt{handpass\_sample.csv} beside this memo.}\label{tab:handpass}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrr}\toprule
+Classification & Items & Share\\\midrule
+lot absent from the parcel layer; extraction matches the minutes & 46 & 92\%\\
+undetermined: the block text does not print a block and a lot & 3 & 6\%\\
+lot recorded under a different block the item also names & 1 & 2\%\\
+\bottomrule\end{tabular}}\end{table}
