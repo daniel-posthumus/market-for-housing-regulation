@@ -118,7 +118,8 @@ SOCRATA_SOURCES: dict[str, dict] = {
         select=("mapblklot,blklot,block_num,lot_num,active,in_asr_secured_roll,"
                 "date_rec_add,date_rec_drop,date_map_add,date_map_drop,"
                 "zoning_code,zoning_district,supervisor_district,analysis_neighborhood,"
-                "planning_district,from_address_num,to_address_num,street_name,street_type"),
+                "planning_district,from_address_num,to_address_num,street_name,street_type,"
+                "centroid_latitude,centroid_longitude"),
         key="blklot"),
     "assessor": dict(
         id="wv5m-vpq2", dir="assessor", file="assessor_secured_roll.csv.gz",
@@ -202,6 +203,51 @@ POLYGON_ZONING = {
     "current (districts)": "xzez-p3nc", "current (height and bulk)": "usp2-teig",
     "current (special use)": "rxfc-8aap",
 }
+
+# ── 2.1 zoning as polygons: the layers the first pass inventoried and skipped ──
+# Eleven of these were reported as "polygon; needs a spatial join" and left alone. The join
+# is task 1 of the follow-up brief, and it is what turns "parcel-keyed zoning is 1998--2008"
+# into a panel that spans the corpus.
+#
+# `usp2-teig` is the layer the brief names for current height and bulk. It is the *height
+# district* layer (1,195 rows); `h9wh-cg3m` is Height AND Bulk (5,292 rows) and is the
+# geometric continuation of the 2009--2014 historic series (~7,300 rows a year). Both are
+# joined; the panel carries `h9wh-cg3m` as the height-and-bulk vintage and `usp2-teig`
+# separately, so neither the brief's choice nor the series' own continuity is lost.
+POLYGON_LAYERS: dict[str, dict] = {
+    "zoning": {2006: "afkh-hfhr", 2009: "jud5-ja46", 2010: "x4gj-zjx7", 2011: "rt4q-mf68",
+               2012: "vfz8-awmy", 2013: "6jb9-g73z", 2014: "hg44-eza7", 2015: "ada2-cu6t",
+               0: "xzez-p3nc"},
+    "height": {2009: "a4wu-zqx3", 2010: "xzb6-i4dc", 2011: "rwdp-2k4t", 2012: "nh4m-jbyj",
+               2013: "9mmf-fv7s", 2014: "gu4h-44qp", 0: "h9wh-cg3m"},
+    "heightdist": {0: "usp2-teig"},
+    "sud": {0: "rxfc-8aap"},
+    "feearea": {0: "ntc3-dd64"},
+}
+# Year 0 is the convention for "current, undated". The value carried out of each family:
+# Families where a parcel has exactly one value, and families where it legitimately has
+# zero or several. A special-use district is an overlay: 104{,}499 parcels sit in more than
+# one, and a fee area covers only part of the city. Calling those "multi" and "unmatched"
+# failures --- and sending 232{,}000 parcels to an area-overlap fallback --- was wrong; the
+# right output there is a list and an honest zero.
+SINGLE_VALUED = {"zoning", "height", "heightdist"}
+MULTI_VALUED = {"sud", "feearea"}
+POLY_VALUE = {"zoning": ["zoning_sim", "districtna", "districtname", "zoning"],
+              "height": ["height", "gen_hght"],
+              "heightdist": ["height", "gen_hght"],
+              "sud": ["name"],
+              "feearea": ["fee", "tier", "area", "ordinance"]}
+POLY_DIR = EXT / "zoning" / "poly"
+PANEL = EXT / "zoning" / "parcel_zoning_panel.parquet"
+PANEL_COVERAGE = EXT / "zoning" / "spatial_coverage.csv"
+# Parcel polygons, fetched only for the centroids that fail or multi-match, so the
+# largest-overlap fallback costs a few thousand geometries rather than 236,556.
+PARCEL_SHAPES = EXT / "parcels" / "parcel_shapes_fallback.geojson"
+EQUAL_AREA = "EPSG:3310"          # California Albers; areas in square metres
+# 2016 onward has no published vintage. The current layer is carried forward and flagged,
+# never silently: see the panel's `is_snapshot` column and §2.3 of the memo.
+PANEL_YEARS = range(1998, 2027)
+
 
 # ── 2.4 prices ───────────────────────────────────────────────────────────
 ZILLOW = {
@@ -317,23 +363,75 @@ def case_format(s) -> str:
     return "other"
 
 
+# ── the two-digit-year case number, and why it is not a fuzzy match ──────
+# The first pass concluded that the Planning Department's records "simply do not go back
+# that far under any key", on the evidence that 0 of 536 two-digit-format cases matched.
+# That was wrong. The department stores `1998.505C` where the minutes print `98.505C`:
+# the records are there and the *format* differs. Expanding the year is a deterministic
+# normalisation, not a fuzzy match, and it recovers the era.
+#
+# The one judgement call is the century. It is resolved against the hearing year rather
+# than a fixed pivot --- a case heard in 1998 cannot have been filed in 2084 --- and the
+# rule is checked: `report` counts the cases for which BOTH centuries would match a real
+# record, and that count is reported rather than assumed to be zero.
+YY_CASE = re.compile(r"^(\d{2})\.(\d{2,4})(.*)$")
+
+
+def expand_yy(cn: str, hearing_year) -> str:
+    """`98.426D` heard in 1998 → `1998.426D`. Returns the input unchanged when it is not a
+    two-digit-year case number, and when no century is consistent with the hearing."""
+    m = YY_CASE.match(cn or "")
+    if not m:
+        return cn
+    yy = int(m.group(1))
+    ok = [y for y in (1900 + yy, 2000 + yy) if hearing_year and y <= hearing_year]
+    return f"{max(ok)}.{m.group(2)}{m.group(3)}" if ok else cn
+
+
 def digits(s) -> str:
     return re.sub(r"[^0-9]", "", str(s or ""))
 
 
+_ALNUM = re.compile(r"^(\d*)([A-Za-z]*)$")
+
+
+def _pad(tok: str, width: int) -> str:
+    """Zero-pad the *digits* and keep the letter. DataSF writes lot 17A as `017A` and block
+    452T as `0452T`: the padding goes on the numeric part, not the whole token.
+
+    An earlier version of this function used `zfill` on the token as a whole, which is a
+    no-op once a letter makes it long enough --- `'17A'.zfill(3) == '17A'` --- so every
+    lettered parcel silently failed to join. 27{,}822 of San Francisco's parcels carry a
+    lettered lot, and that one line was most of the memo's parcel-join shortfall."""
+    m = _ALNUM.match(tok or "")
+    if not m:
+        return tok
+    d, a = m.group(1), m.group(2)
+    return (d.zfill(width) if d else "") + a
+
+
 def blklot(block, lot) -> str:
-    """DataSF's parcel key is block zero-padded to 4 and lot zero-padded to 3, concatenated
-    (`3605052`). The minutes print neither padded, and lots are occasionally alphanumeric
-    ('021B'), which `zfill` handles correctly because it pads on the left."""
+    """DataSF's parcel key is block padded to 4 and lot padded to 3, concatenated
+    (`3605052`, `4001017A`, `0452T044H`). The minutes print neither padded."""
     b, l = str(block or "").strip().upper(), str(lot or "").strip().upper()
     if not b or not l:
         return ""
-    return f"{b.zfill(4)}{l.zfill(3)}"
+    return _pad(b, 4) + _pad(l, 3)
+
+
+# An item that spans several blocks has all of them in the single `assessor_block` field,
+# comma- or semicolon-separated ("4624, 4720"), against a flat list of lots that carries no
+# positional pairing back to them. Taking the field as one block produced the nonsense key
+# `4624, 4720003`. The cross-product of the named blocks with the named lots, kept only where
+# the resulting parcel actually exists, is the set of parcels the item plausibly touches ---
+# it is a normalisation of what the minutes said, not a guess about what they meant.
+BLOCK_LIST = re.compile(r"[,;/]|\band\b")
 
 
 def _item_parcels(r) -> set[str]:
     lots = r.lot_number if isinstance(r.lot_number, list) else []
-    return {k for k in (blklot(r.assessor_block, l) for l in lots) if k}
+    blocks = [b.strip() for b in BLOCK_LIST.split(str(r.assessor_block or "")) if b.strip()]
+    return {k for k in (blklot(b, l) for b in blocks for l in lots) if k}
 
 
 def load_items() -> pd.DataFrame:
@@ -343,8 +441,11 @@ def load_items() -> pd.DataFrame:
     df = pd.DataFrame(rows)
     df["meeting_date"] = pd.to_datetime(df.meeting_date, errors="coerce")
     df["year"] = df.meeting_date.dt.year.fillna(df.year).astype(int)
-    df["cn"] = df.case_number.map(norm_case)
-    df["stem"] = df.case_number.map(case_stem)
+    df["cn_raw"] = df.case_number.map(norm_case)
+    # The join key is the expanded form; `cn_raw` is kept so the memo can still report what
+    # raw string equality buys, which is the point of Table 5's first row.
+    df["cn"] = [expand_yy(c, y) for c, y in zip(df.cn_raw, df.year)]
+    df["stem"] = df.cn.map(case_stem)
     df["parcels"] = [_item_parcels(r) for r in df.itertuples()]
     df["has_parcel"] = df.parcels.map(bool)
     return df
@@ -584,6 +685,250 @@ def fetch(only: str | None, refresh: bool):
         fetch_fees(refresh)
     if not only or only == "corelogic":
         fetch_corelogic(refresh)
+    if not only or only == "polygons":
+        fetch_polygons(refresh)
+
+
+# ── polygons and the spatial join ────────────────────────────────────────
+def poly_path(fam: str, year: int) -> Path:
+    return POLY_DIR / f"{fam}_{'current' if year == 0 else year}.geojson"
+
+
+def fetch_polygons(refresh: bool):
+    """Pull each polygon layer once as GeoJSON. These are small (a few thousand features)
+    and the geometry is the whole point, so unlike the tabular sources they are not
+    column-filtered."""
+    POLY_DIR.mkdir(parents=True, exist_ok=True)
+    s = sess()
+    for fam, years in POLYGON_LAYERS.items():
+        for year, ds in years.items():
+            out = poly_path(fam, year)
+            if out.exists() and not refresh:
+                continue
+            r = s.get(f"https://{SOCRATA_HOST}/resource/{ds}.geojson",
+                      params={"$limit": 500_000}, timeout=600)
+            r.raise_for_status()
+            out.write_bytes(r.content)
+            n = r.text.count('"Feature"')
+            print(f"  {fam} {year or 'current'} ({ds}): {n:,} features → {out.name}")
+            time.sleep(PAUSE)
+
+
+def _parcel_points():
+    """Parcel centroids as a GeoDataFrame, with the dates that say when each parcel existed.
+    `date_map_add`/`date_map_drop` are the map's own record of when the lot came into and
+    went out of force, which is what makes a 2003 hearing joinable to 2003 geometry."""
+    import geopandas as gpd
+    par = read_cached("parcels", usecols=["blklot", "mapblklot", "active",
+                                          "date_map_add", "date_map_drop",
+                                          "centroid_latitude", "centroid_longitude"])
+    par = par[par.centroid_latitude.notna() & par.centroid_longitude.notna()].copy()
+    for c in ("date_map_add", "date_map_drop"):
+        par[c] = pd.to_datetime(par[c], errors="coerce")
+    g = gpd.GeoDataFrame(
+        par, geometry=gpd.points_from_xy(pd.to_numeric(par.centroid_longitude),
+                                         pd.to_numeric(par.centroid_latitude)),
+        crs="EPSG:4326").to_crs(EQUAL_AREA)
+    return g
+
+
+def _fetch_parcel_shapes(blklots: set[str], refresh: bool):
+    """Polygons for just the parcels the centroid rule could not place. Socrata's `in()`
+    has a practical length limit, so the ids go in batches."""
+    import geopandas as gpd
+    if PARCEL_SHAPES.exists() and not refresh:
+        have = gpd.read_file(PARCEL_SHAPES)
+        if set(have.blklot) >= blklots:
+            return have
+    s = sess()
+    ids = sorted(blklots)
+    feats = []
+    for i in range(0, len(ids), 50):                # 200 per query returned a server 500
+        chunk = ids[i:i + 50]
+        where = "blklot in (" + ",".join(f"'{b}'" for b in chunk) + ")"
+        for attempt in range(4):
+            try:
+                r = s.get(f"https://{SOCRATA_HOST}/resource/acdm-wktn.geojson",
+                          params={"$select": "blklot,shape", "$where": where,
+                                  "$limit": 5000}, timeout=300)
+                r.raise_for_status()
+                break
+            except requests.RequestException:
+                if attempt == 3:
+                    raise
+                time.sleep(3 * (attempt + 1))
+        feats += r.json().get("features", [])
+        if (i // 50) % 20 == 0:
+            print(f"    shapes {i:,}/{len(ids):,}", flush=True)
+        time.sleep(PAUSE)
+    if not feats:
+        return None
+    gj = {"type": "FeatureCollection", "features": feats}
+    PARCEL_SHAPES.parent.mkdir(parents=True, exist_ok=True)
+    PARCEL_SHAPES.write_text(json.dumps(gj))
+    print(f"  fetched {len(feats):,} parcel polygons for the overlap fallback")
+    return gpd.read_file(PARCEL_SHAPES)
+
+
+def _value_of(gdf, fam: str) -> pd.Series:
+    """The first attribute a family actually publishes, per layer. The historic zoning
+    layers call the district `zoning_sim`; the current one publishes `zoning_sim`,
+    `zoning` and `districtname`. Take the first present rather than assuming."""
+    for c in POLY_VALUE[fam]:
+        if c in gdf.columns and gdf[c].notna().any():
+            return gdf[c].astype(str)
+    return pd.Series([""] * len(gdf), index=gdf.index)
+
+
+def spatial(refresh: bool = False):
+    """Point-in-polygon every parcel against every polygon layer, fall back to
+    largest-area overlap where the centroid rule fails or is ambiguous, and write a
+    parcel-year panel keyed on `blklot`."""
+    import geopandas as gpd
+    if PANEL.exists() and not refresh:
+        print(f"{PANEL} exists; --refresh to rebuild")
+        return
+    pts = _parcel_points()
+    print(f"{len(pts):,} parcel centroids")
+    layers, cover = {}, []
+    need_fallback: set[str] = set()
+    for fam, years in POLYGON_LAYERS.items():
+        for year in years:
+            f = poly_path(fam, year)
+            if not f.exists():
+                continue
+            poly = gpd.read_file(f).to_crs(EQUAL_AREA)
+            poly = poly[poly.geometry.notna() & poly.geometry.is_valid |
+                        poly.geometry.notna()]
+            poly = poly.assign(_val=_value_of(poly, fam))
+            j = gpd.sjoin(pts[["blklot", "geometry"]], poly[["_val", "geometry"]],
+                          predicate="within", how="left")
+            n_match = j.groupby("blklot")["_val"].apply(lambda v: v.notna().sum())
+            matched = int((n_match == 1).sum())
+            multi = int((n_match > 1).sum())
+            unmatched = int((n_match == 0).sum())
+            if fam in SINGLE_VALUED:                  # only here is multi/none a failure
+                need_fallback |= set(n_match.index[n_match != 1])
+            layers[(fam, year)] = (poly, j)
+            cover.append({"family": fam, "year": year, "parcels": len(pts),
+                          "single_valued": fam in SINGLE_VALUED,
+                          "centroid_matched": matched, "centroid_multi": multi,
+                          "centroid_unmatched": unmatched})
+            print(f"  {fam:11s} {year or 'current':>7}: {matched:,} matched, "
+                  f"{multi:,} multi, {unmatched:,} unmatched", flush=True)
+
+    print(f"{len(need_fallback):,} parcels need the largest-overlap fallback in at least "
+          f"one layer", flush=True)
+    shapes = _fetch_parcel_shapes(need_fallback, refresh) if need_fallback else None
+    if shapes is not None and len(shapes):
+        shapes = shapes.to_crs(EQUAL_AREA)
+        shapes = shapes[shapes.geometry.notna()]
+
+    rows = []
+    for (fam, year), (poly, j) in layers.items():
+        print(f"  resolving {fam} {year or 'current'} …", flush=True)
+        if fam in MULTI_VALUED:
+            # an overlay: keep every district the parcel falls in, as a sorted list
+            g = (j.dropna(subset=["_val"]).groupby("blklot")["_val"]
+                 .apply(lambda v: "; ".join(sorted(set(v)))))
+            rows.append(pd.DataFrame({"blklot": g.index, "family": fam, "year": year,
+                                      "value": g.values, "method": "centroid"}))
+            continue
+        best = (j.dropna(subset=["_val"]).drop_duplicates("blklot")
+                .set_index("blklot")["_val"])
+        method = pd.Series("centroid", index=best.index)
+        if shapes is not None and len(shapes) and need_fallback:
+            sub = shapes[shapes.blklot.isin(need_fallback)]
+            if len(sub):
+                # `gpd.overlay` computes a full intersection layer and was taking minutes per
+                # layer. The candidate pairs from an `intersects` sjoin, intersected
+                # row-wise, give the same largest-overlap winner far more cheaply.
+                cand = gpd.sjoin(sub[["blklot", "geometry"]],
+                                 poly[["_val", "geometry"]].reset_index(drop=True),
+                                 predicate="intersects", how="inner")
+                if len(cand):
+                    pg = poly.geometry.reset_index(drop=True)
+                    inter = cand.geometry.intersection(
+                        gpd.GeoSeries(pg.loc[cand.index_right].values,
+                                      index=cand.index, crs=poly.crs))
+                    cand = cand.assign(_a=inter.area)
+                    win = (cand.sort_values("_a", ascending=False)
+                           .drop_duplicates("blklot").set_index("blklot")["_val"])
+                    best = win.combine_first(best)
+                    method = pd.Series("overlap", index=win.index).combine_first(method)
+        rows.append(pd.DataFrame({"blklot": best.index, "family": fam, "year": year,
+                                  "value": best.values,
+                                  "method": method.reindex(best.index).values}))
+    long = pd.concat(rows, ignore_index=True)
+
+    # ── the parcel-year panel ────────────────────────────────────────────
+    par = read_cached("parcels", usecols=["blklot", "date_map_add", "date_map_drop"])
+    for c in ("date_map_add", "date_map_drop"):
+        par[c] = pd.to_datetime(par[c], errors="coerce")
+    par["y0"] = par.date_map_add.dt.year.fillna(min(PANEL_YEARS)).astype(int)
+    par["y1"] = par.date_map_drop.dt.year.fillna(max(PANEL_YEARS)).astype(int)
+    parcel_zoning = _parcel_keyed_zoning()           # the 1998--2008 tabular vintages
+    poly_zoning = {y: g.set_index("blklot").value
+                   for y, g in long[long.family.eq("zoning")].groupby("year")}
+    poly_method = {y: g.set_index("blklot").method
+                   for y, g in long[long.family.eq("zoning")].groupby("year")}
+
+    panel = []
+    for y in PANEL_YEARS:
+        live = par[(par.y0 <= y) & (par.y1 >= y)]
+        if y in parcel_zoning:
+            v = parcel_zoning[y].reindex(live.blklot)
+            src, snap, meth = f"parcel-keyed {y}", False, "table"
+        elif y in poly_zoning:
+            v = poly_zoning[y].reindex(live.blklot)
+            src, snap, meth = f"polygon {y}", False, "spatial"
+        elif 0 in poly_zoning and y > max([k for k in poly_zoning if k], default=0):
+            v = poly_zoning[0].reindex(live.blklot)
+            src, snap, meth = "current layer, carried forward", True, "spatial"
+        else:
+            continue                                  # 1999: nothing published
+        panel.append(pd.DataFrame({"blklot": live.blklot.values, "year": y,
+                                   "zoning": v.values, "vintage": src,
+                                   "is_snapshot": snap, "method": meth}))
+    panel = pd.concat(panel, ignore_index=True)
+    for fam in ("height", "sud", "feearea"):
+        cur = long[long.family.eq(fam)]
+        if len(cur):
+            byyr = {y: g.set_index("blklot").value for y, g in cur.groupby("year")}
+            def pick(r, byyr=byyr):
+                return byyr.get(r, byyr.get(0))
+            col = []
+            for y, g in panel.groupby("year"):
+                srcs = pick(y)
+                col.append(pd.Series(srcs.reindex(g.blklot).values, index=g.index))
+            panel[fam] = pd.concat(col).sort_index()
+    PANEL.parent.mkdir(parents=True, exist_ok=True)
+    panel.to_parquet(PANEL, index=False)
+    pd.DataFrame(cover).to_csv(PANEL_COVERAGE, index=False)
+    print(f"  parcel-year panel: {len(panel):,} rows, "
+          f"{panel.year.min()}--{panel.year.max()} → {PANEL}")
+    print(f"  coverage by layer → {PANEL_COVERAGE}")
+
+
+def _parcel_keyed_zoning() -> dict[int, pd.Series]:
+    """The 1998--2008 tabular vintages, as one Series of zoning per year keyed on blklot."""
+    out = {}
+    for name, src in SOCRATA_SOURCES.items():
+        if not name.startswith("zoning_"):
+            continue
+        p = path_of(src)
+        if not p.exists():
+            continue
+        d = pd.read_csv(p, dtype=str, low_memory=False)
+        kc = "blklot" if "blklot" in d.columns else "mapblklot"
+        vc = next((c for c in ("zoning", "zonsimpl", "newzon", "sumdist")
+                   if c in d.columns and d[c].notna().any()), None)
+        if vc is None:
+            continue
+        d = d[[kc, vc]].dropna().drop_duplicates(kc)
+        d[kc] = d[kc].str.upper()
+        out[int(name.split("_")[1])] = d.set_index(kc)[vc]
+    return out
 
 
 # ── the local licensed extract ───────────────────────────────────────────
@@ -964,20 +1309,36 @@ def join_assessor(it: pd.DataFrame) -> dict:
 def join_records(it: pd.DataFrame, rec: pd.DataFrame) -> dict:
     """Three tests, reported separately, because 'it joins' is three different claims:
     raw string equality, the normalised case number, and the suffix-stripped stem."""
-    cases = it.drop_duplicates("cn")[["cn", "stem", "case_number", "year", "meeting_date"]]
+    cases = it.drop_duplicates("cn")[["cn", "cn_raw", "stem", "case_number", "year",
+                                      "meeting_date"]]
     cases = cases[cases.cn.ne("")]
     raw = set(rec.record_id.dropna())
     norm = set(rec.cn)
     stems = set(rec.stem) - {""}
     cases = cases.assign(
         j_raw=cases.case_number.isin(raw),
-        j_norm=cases.cn.isin(norm),
-        j_stem=cases.stem.isin(stems) & cases.stem.ne(""))
-    cases["j_any"] = cases.j_norm | cases.j_stem
-    cases["fmt"] = cases.cn.map(case_format)
+        j_norm=cases.cn_raw.isin(norm),
+        j_stem=cases.cn_raw.map(case_stem).isin(stems) & cases.cn_raw.map(case_stem).ne(""),
+        j_exp=cases.cn.isin(norm) | (cases.stem.isin(stems) & cases.stem.ne("")))
+    cases["j_any"] = cases.j_norm | cases.j_stem | cases.j_exp
+    cases["fmt"] = cases.cn_raw.map(case_format)
+    # How often would the other century also have hit a real record? If this is not zero the
+    # expansion is a guess and has to be labelled one.
+    amb = 0
+    for c, hy in zip(cases.cn_raw, cases.year):
+        m = YY_CASE.match(c)
+        if not m:
+            continue
+        hits = 0
+        for y in (1900 + int(m.group(1)), 2000 + int(m.group(1))):
+            cand = f"{y}.{m.group(2)}{m.group(3)}"
+            st = case_stem(cand)
+            hits += int(cand in norm or (st and st in stems))
+        amb += int(hits > 1)
     return {"cases": cases, "n": len(cases),
             "raw": int(cases.j_raw.sum()), "norm": int(cases.j_norm.sum()),
-            "stem": int(cases.j_stem.sum()), "any": int(cases.j_any.sum())}
+            "stem": int(cases.j_stem.sum()), "exp": int(cases.j_exp.sum()),
+            "any": int(cases.j_any.sum()), "century_ambiguous": amb}
 
 
 def filing_lag(it: pd.DataFrame, rec: pd.DataFrame) -> pd.DataFrame:
@@ -1323,15 +1684,20 @@ def write_tables(ctx: dict):
     # ── T5 the case-number join ─────────────────────────────────────────
     a(r"\begin{table}[htbp]\centering")
     a(r"\caption{Does a planning record's identifier join to the item table's case number? "
-      r"Tested three ways over all %s distinct cases. `Stem' strips the letter suffix "
+      r"Tested four ways over all %s distinct cases. `Stem' strips the letter suffix "
       r"(\texttt{2014.0400CUA}$\to$\texttt{2014.0400}), which is how a suffixed case reaches "
-      r"its umbrella project record.}\label{tab:casejoin}" % N(cj["n"]))
+      r"its umbrella project record; `expanded' rewrites the two-digit year the minutes "
+      r"printed before 2002 (\texttt{98.426D}$\to$\texttt{1998.426D}) against the hearing "
+      r"year. The century is never guessed: %d cases would have matched a real record under "
+      r"\emph{both} centuries.}\label{tab:casejoin}"
+      % (N(cj["n"]), cj["century_ambiguous"]))
     a(r"\begin{tabular}{lrr}\toprule")
     a(r"Join & Cases matched & Rate\\\midrule")
     for lab, k in (("Raw string equality", cj["raw"]),
                    ("Normalised (upper-case, whitespace stripped)", cj["norm"]),
                    ("Suffix-stripped stem", cj["stem"]),
-                   (r"\textbf{Either}", cj["any"])):
+                   ("Two-digit year expanded against the hearing year", cj["exp"]),
+                   (r"\textbf{Any of them}", cj["any"])):
         bold = lab.startswith(r"\textbf")
         v = rf"\textbf{{{100*k/cj['n']:.1f}\%}}" if bold else rf"{100*k/cj['n']:.1f}\%"
         a(rf"{lab} & {N(k)} & {v}\\")
@@ -2205,8 +2571,11 @@ def main():
     sub.add_parser("probe", help="resolve every identifier against the live catalogue")
     f = sub.add_parser("fetch", help="download and cache each source")
     f.add_argument("--only",
-                   help="one source name from the registry (or zillow / fees / corelogic)")
+                   help="a source name from the registry, or "
+                        "zillow / fees / corelogic / polygons")
     f.add_argument("--refresh", action="store_true", help="re-download even if cached")
+    sp = sub.add_parser("spatial", help="point-in-polygon → the parcel-year zoning panel")
+    sp.add_argument("--refresh", action="store_true", help="rebuild the panel")
     y = sub.add_parser("sync", help="materialise Dropbox online-only files under demand/")
     y.add_argument("--root", help="subtree to materialise (default $MFHR_DATA_ROOT/demand)")
     sub.add_parser("report", help="joins, coverage, figures, tables, README")
@@ -2215,6 +2584,8 @@ def main():
         probe()
     elif a.cmd == "fetch":
         fetch(a.only, a.refresh)
+    elif a.cmd == "spatial":
+        spatial(a.refresh)
     elif a.cmd == "sync":
         sync(Path(a.root).expanduser() if a.root else None)
     else:
