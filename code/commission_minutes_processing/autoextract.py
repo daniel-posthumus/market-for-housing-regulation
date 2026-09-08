@@ -15,7 +15,34 @@ from extraction_common import coerce_record, empty_record
 
 # Suffix allows lowercase: some items print the type suffix lowercase ("2004.1234d"),
 # which an uppercase-only suffix would truncate to "2004.1234" (dropping the type).
-CASE_RE = re.compile(r"\b((?:\d{2}|\d{4})[.\-]\d{3,}(?:[A-Za-z0-9/]+)?)\b")
+# The archive sometimes breaks a suffix with a stray space — "2006.1052E T", "97.870 C V",
+# "2005.0148DD V" — and a suffix-only pattern stopped at the space, dropping the type letter
+# and with it the derived request_type (14 `E`, 6 `GPA`, and the rest). The trailing group
+# picks up those orphans, but only when each is a LONE capital: " D" continues a case
+# number, " District" does not. It can only EXTEND a match that already started, so it
+# cannot invent a case number where there was none.
+# Two guards, both learned from real mis-parses:
+#
+# `(?![\d]|[.\-]\d)` after the numeric part — never cut a code in half. The 2015-2017
+# minutes print the agenda number hard against the case number ("12.2015-006317CUA"), and
+# without this the match is "12.2015": the agenda number plus the case number's year. That
+# corrupted 362 items, concentrated in 2015-2017. The guard applies to the DIGITS only, so a
+# letter suffix is still taken whole ("2015-002632VAR." stays VAR, not VA).
+#
+# A four-digit leading part must be a YEAR. Otherwise a street-address range ("1650-1680
+# Mission Street") and a permit number ("2007.0619.4378") read as case numbers; two-digit
+# years are unconstrained because 98.226D is real.
+# "2004. 0164D" — a space after the separator. Same quirk as the header regex; without it the
+# match fails and the scanner falls through to a building-permit number later in the block.
+CASE_RE = re.compile(
+    r"\b((?:\d{2}|(?:19|20)\d{2})[.\-][ ]?\d{3,}(?![\d]|[.\-]\d)"
+    r"(?:[A-Za-z0-9/]+)?(?:[ ][A-Z](?![A-Za-z]))*)")
+
+
+def normalise_case(cn: str) -> str:
+    """'2006.1052E T' -> '2006.1052ET'. The spaces are a rendering artefact; the suffix is
+    one token, and derive_request_type() only sees the letters if they are joined."""
+    return re.sub(r"\s+", "", cn or "")
 ITEM_RE = re.compile(r"^\s*(\d{1,2}[a-z]?)[.\)]\s", re.M)
 
 
@@ -37,9 +64,12 @@ def derive_request_type(case_number: str) -> str:
             return v
     single = {
         "C": "conditional_use", "D": "discretionary_review", "V": "variance",
-        "Z": "rezoning_map_amendment", "T": "text_amendment",
+        "Z": "rezoning_map_amendment", "T": "planning_code_amendment",
         "E": "ceqa_environmental", "X": "large_project_authorization",
-        "H": "historic", "R": "downtown_project",
+        # `L` is an Article 10 landmark designation — the same historic-preservation family
+        # as `H` (Certificate of Appropriateness). It was missing, so every designation
+        # pre-filled blank and the QA check stayed silent because the suffix was unknown.
+        "H": "historic", "L": "historic", "R": "downtown_project",
     }
     for ch in suf:
         if ch in single:
@@ -57,6 +87,67 @@ def _after(label: str, text: str) -> str:
     if stop and stop.start() > 0:
         val = val[:stop.start()]
     return val.strip()
+
+
+# The minutes always print the disposition as "ACTION:" starting its own line. `_after`
+# is unanchored and case-insensitive, so it happily matched the "action" inside
+# "attractions"/"satisfaction" and returned that sentence as the disposition. Anchoring is
+# the whole fix; the leading class allows the &nbsp; indents the archive uses.
+ACTION_LINE = re.compile(r"(?im)^[^\S\r\n]*ACTION[^\S\r\n]*:[^\S\r\n]*")
+# These words also occur in ordinary prose — "No Action is required of the Commission"
+# truncated the disposition to "No" because the stop list matched the word `action` inside
+# the value. A stop only counts as a LABEL when it starts a line or is followed by a colon.
+_STOP = re.compile(
+    r"(?im)^[^\S\r\n]*(?:RESOLUTION|MOTION|EXCUSED|ABSENT|RECUSED|NOES|NAYES|AYES|ACTION|"
+    r"SPEAKERS?|PRELIMINARY|DRA)\b"
+    r"|(?:RESOLUTION|MOTION|EXCUSED|ABSENT|RECUSED|NOES|NAYES|AYES|ACTION|SPEAKERS?|DRA)"
+    r"[^\S\r\n]*\(?s?\)?[^\S\r\n]*:"
+    r"|<<Project")
+
+
+def action_text(block: str) -> tuple[str, str]:
+    """(the ACTION line's value, everything from ACTION to the end of the block).
+
+    The second half exists because a disposition often reads only "Approved" and then
+    enumerates its conditions below; the conditions belong to this item, whereas text
+    ABOVE the action can be describing a PRIOR entitlement's conditions.
+    """
+    m = ACTION_LINE.search(block)
+    if not m:
+        return "", ""
+    tail = block[m.end():]
+    stop = _STOP.search(tail)
+    line = tail[:stop.start()] if stop and stop.start() > 0 else tail
+    return line.strip(), block[m.start():]
+
+
+_MONTHS = {m: i for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august",
+     "september", "october", "november", "december"], 1)}
+
+
+def _iso_date(s: str) -> str:
+    """'April 21, 2005' -> '2005-04-21'. Empty string when it will not parse."""
+    import datetime
+    s = (s or "").strip()
+    n = re.match(r"(\d{1,2})/(\d{1,2})/(\d{2,4})$", s)
+    if n:
+        mo, day, yr = (int(x) for x in n.groups())
+        yr += 1900 if 90 <= yr <= 99 else (2000 if yr < 90 else 0)
+        try:
+            return datetime.date(yr, mo, day).isoformat()
+        except ValueError:
+            return ""
+    m = re.match(r"([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})", s)
+    if not m:
+        return ""
+    mo = _MONTHS.get(m.group(1).lower())
+    if not mo:
+        return ""
+    try:
+        return datetime.date(int(m.group(3)), mo, int(m.group(2))).isoformat()
+    except ValueError:
+        return ""
 
 
 def _names(s: str) -> list[str]:
@@ -132,8 +223,8 @@ def extract(block: str, meeting_date: str = "") -> dict:
 
     cm = CASE_RE.search(block)
     if cm:
-        rec["case_number"] = cm.group(1)
-        rec["request_type"] = derive_request_type(cm.group(1))
+        rec["case_number"] = normalise_case(cm.group(1))
+        rec["request_type"] = derive_request_type(rec["case_number"])
 
     # parcel / districts
     b = re.search(r"Assessor.{0,3}s?\s+Block\s+([0-9A-Z]+)", block, re.I)
@@ -169,16 +260,37 @@ def extract(block: str, meeting_date: str = "") -> dict:
         rec["staff_planner"] = re.sub(r"\s+", " ", pl.group(1).strip()).title()
     rec["preliminary_recommendation"] = _after("Preliminary Recommendation", block)
     rec["preliminary_recommendation_category"] = _prelim_cat(rec["preliminary_recommendation"])
-    cont = re.search(r"continu\w+\s+to\s+([A-Z][a-z]+ \d{1,2},? \d{4})", block, re.I)
+    # The archive writes the target date both ways — "April 21, 2005" and "3/12/98".
+    #
+    # Search the ACTION LINE FIRST. A block routinely carries "(Proposed for Continuance to
+    # June 20, 2024)" above its ACTION, and that parenthetical is the agenda's proposal, not
+    # the Commission's decision: of the 1,552 blocks printing both, the two dates disagree on
+    # 233. Scanning the whole block takes the first match, which is always the proposal.
+    _CONT_DATE = r"continu\w+\s+to\s+([A-Z][a-z]+ \d{1,2},? \d{4}|\d{1,2}/\d{1,2}/\d{2,4})"
+    _act_txt, _act_tail = action_text(block)
+    cont = (re.search(_CONT_DATE, _act_txt + " " + _act_tail, re.I)
+            or re.search(_CONT_DATE, block, re.I))
     if cont:
-        rec["continued_to"] = cont.group(1)
+        # The minutes write "April 21, 2005"; the schema stores ISO. Without this the field
+        # scored 0% against the gold set on 88 items — every value was RIGHT and every one
+        # counted as a miss, because the comparison is exact after case/space folding.
+        rec["continued_to"] = _iso_date(cont.group(1)) or cont.group(1)
     elif re.search(r"indefinite", block, re.I) and re.search(r"continu", block, re.I):
         rec["continued_to"] = "indefinite"
-    action_txt = _after("ACTION", block)
+    action_txt, action_tail = action_text(block)
     rec["action"] = _action_enum(action_txt)
-    # conditions_imposed / project_modified are orthogonal flags derived from the ACTION text
+    # conditions_imposed / project_modified are orthogonal flags. `conditions_imposed` reads
+    # the ACTION line AND everything after it: the disposition often says only "Approved"
+    # and then enumerates the conditions below, so the ACTION line alone finds "with
+    # conditions" on 10% of items while the block carries it on 32%. Text BEFORE the action
+    # is deliberately excluded — a request to amend "the conditions of approval imposed
+    # under Motion No. 17518" describes a PRIOR entitlement's conditions, not this one's.
     al = action_txt.lower()
-    if re.search(r"with (the )?(following |modified )?condition", al):
+    after_action = action_tail.lower()
+    if re.search(r"with (the )?(following |modified )?condition", al) or (
+            al and not re.search(r"continu|withdraw", al)
+            and re.search(r"subject to the (following |attached )?conditions?"
+                          r"|conditions? of approval", after_action)):
         rec["conditions_imposed"] = "yes"
     if "as modified" in al or "as amended" in al or "revised plan" in al or "modified condition" in al:
         rec["project_modified"] = "yes"

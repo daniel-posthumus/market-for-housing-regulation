@@ -91,6 +91,12 @@ def meetings_in(path: Path) -> list[dict]:
         rec = M.prefill(win, date_line, extended=ext)
         rec["meeting_date"] = date
         rec["line_no"] = ln
+        # k is this meeting's index among the document's headers, in document order. It is
+        # the join key to the item level: `assign_meeting_dates.py` walks the same
+        # `header_dates()` output over the same text and stamps each item with the index of
+        # the header it falls under. Two meetings on one day in one document (a joint
+        # session then the regular one) are distinguishable this way and not by date.
+        rec["ordinal"] = k
         out.append(rec)
     return out
 
@@ -132,7 +138,8 @@ def main():
             # a gold row exists when a human confirmed a meeting at (or very near) this line
             verified = any(k[0] == stem and abs(k[1] - rec["line_no"]) < 40 for k in gold)
             rows.append({"source_file": src, "year": year, "meeting_date": d, "era": era,
-                         "line_no": rec["line_no"], "hand_verified": int(verified),
+                         "line_no": rec["line_no"], "ordinal": rec["ordinal"],
+                         "hand_verified": int(verified),
                          **{f: rec.get(f) for f in FIELDS}})
 
     # names are reconciled across the whole corpus at once, as validated
@@ -142,23 +149,24 @@ def main():
 
     with OUT_CSV.open("w", newline="") as fh:
         w = csv.writer(fh)
-        head = ["source_file", "year", "meeting_date", "era", "line_no",
+        head = ["source_file", "year", "meeting_date", "era", "line_no", "ordinal",
                 "hand_verified"] + FIELDS
         w.writerow(head)
         for r in rows:
             w.writerow([r["source_file"], r["year"], r["meeting_date"], r["era"],
-                        r["line_no"], r["hand_verified"]] +
+                        r["line_no"], r["ordinal"], r["hand_verified"]] +
                        ["; ".join(r.get(f) or []) if isinstance(r.get(f), list)
                         else (r.get(f) or "") for f in FIELDS])
 
     con.execute("DROP TABLE IF EXISTS meetings_all")
     con.execute("CREATE TABLE meetings_all(source_file TEXT, year INTEGER, "
-                "meeting_date TEXT, era TEXT, line_no INTEGER, hand_verified INTEGER, "
+                "meeting_date TEXT, era TEXT, line_no INTEGER, ordinal INTEGER, "
+                "hand_verified INTEGER, "
                 + ", ".join(f"{f} TEXT" for f in FIELDS) + ")")
     con.executemany(
-        "INSERT INTO meetings_all VALUES(" + ",".join("?" * (6 + len(FIELDS))) + ")",
+        "INSERT INTO meetings_all VALUES(" + ",".join("?" * (7 + len(FIELDS))) + ")",
         [[r["source_file"], r["year"], r["meeting_date"], r["era"], r["line_no"],
-          r["hand_verified"]] +
+          r["ordinal"], r["hand_verified"]] +
          ["; ".join(r.get(f) or []) if isinstance(r.get(f), list) else (r.get(f) or "")
           for f in FIELDS] for r in rows])
     con.commit()

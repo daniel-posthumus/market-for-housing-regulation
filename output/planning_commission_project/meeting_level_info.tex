@@ -40,9 +40,11 @@ The remaining error is not spread evenly. From 2002 onward the error rate is
 and that single formatting habit accounts for most of what is left.
 
 \medskip\noindent
-The validated extraction has now been run over the whole corpus --- 1{,}086 documents
-yielding \textbf{1{,}179 meetings}, 1998--2026 --- with no hand-marking. Part III reports
-what that data shows.
+The validated extraction has now been run over the whole corpus --- 1{,}125 documents
+yielding \textbf{1{,}219 meetings}, 1998--2026 --- with no hand-marking. Part III reports
+what that data shows. The 2018 scraping gap that ran through the first version of this memo
+was closed on 2026-09-04: the year now holds 42 meetings rather than two, and every figure
+and table here is computed on the refilled corpus.
 \end{abstract}
 
 \section{Why a meeting level exists}
@@ -327,7 +329,7 @@ this.}
 
 \noindent
 The practical consequence: \textbf{this is the difference between having meeting-level data
-for the 135 hand-marked meetings and having it for all 1{,}179}. Round 4 then confirmed the
+for the 135 hand-marked meetings and having it for all 1{,}219}. Round 4 then confirmed the
 fix against ground truth, scoring 96.0\% with every boundary placed by machine.
 
 \paragraph{Where the error actually is.} The gold set now spans both archive formats, and
@@ -378,8 +380,8 @@ is a question for a human, a wrong name is a silent error.
 \section{Part III --- The full corpus}
 
 The extraction described above has now been run over \textbf{every document in the corpus},
-not just the hand-labelled sample: 1{,}086 documents, 1998--2026, producing
-\textbf{1{,}179 meetings}. 134 of them are hand-verified; the rest carry the machine's
+not just the hand-labelled sample: 1{,}125 documents, 1998--2026, producing
+\textbf{1{,}219 meetings}. 134 of them are hand-verified; the rest carry the machine's
 answer. Output is \texttt{meetings\_all.csv} and the \texttt{meetings\_all} table.
 
 \begin{table}[h]
@@ -388,23 +390,81 @@ answer. Output is \texttt{meetings\_all.csv} and the \texttt{meetings\_all} tabl
 \toprule
 Field & Populated & \% \\
 \midrule
-\texttt{location}      & 1{,}179 & 100.0 \\
-\texttt{meeting\_time} & 1{,}169 &  99.2 \\
-\texttt{meeting\_type} & 1{,}164 &  98.7 \\
-\texttt{present}       & 1{,}137 &  96.4 \\
-\texttt{staff}         & 1{,}110 &  94.1 \\
-\texttt{presiding}     & 1{,}106 &  93.8 \\
-\texttt{absent}        &   531 &  45.0 \\
+\texttt{location}      & 1{,}219 & 100.0 \\
+\texttt{meeting\_time} & 1{,}209 &  99.2 \\
+\texttt{meeting\_type} & 1{,}204 &  98.8 \\
+\texttt{present}       & 1{,}177 &  96.6 \\
+\texttt{staff}         & 1{,}150 &  94.3 \\
+\texttt{presiding}     & 1{,}145 &  93.9 \\
+\texttt{absent}        &   553 &  45.4 \\
 \bottomrule
 \end{tabular}
-\caption{Field coverage across all 1{,}179 meetings. \texttt{absent} is low because most
+\caption{Field coverage across all 1{,}219 meetings. \texttt{absent} is low because most
 meetings record no absences, not because the field fails.}
 \end{table}
 
-\paragraph{A sanity check the data passes.} \textbf{1{,}162 of 1{,}179 meetings fall on a
+\paragraph{A sanity check the data passes.} \textbf{1{,}202 of 1{,}219 meetings fall on a
 Thursday} (98.6\%), the Commission's sitting day. The 17 that do not are 7 Tuesdays, 5
-Mondays and 5 Fridays --- special and joint sittings, which is what one would expect. No
+Mondays and 5 Fridays --- special and joint sittings, which is what one would expect. The
+share is unchanged by the 2018 refill, whose 42 recovered meetings are all Thursdays. No
 date was ever tuned to produce this.
+
+\subsection{Joining an item to its meeting}
+
+The meeting table is only useful if every item can find its row in it, and the obvious key
+--- the date --- is not one. Seven archive-era documents hold two meetings on the same day:
+the Commission sat jointly with another body and then in its own regular session, each with
+its own roll call and adjournment. \textbf{203 items} sit in one of those documents, and a
+date-only join would have put all 203 in whichever meeting happened to be indexed first,
+silently mixing a joint sitting's attendance into a regular one and vice versa. The correct
+split is 182 regular and 21 joint.
+
+The key is therefore \textbf{(document, header ordinal)}: the index of the meeting header an
+item falls under, counted in document order. Both sides derive it from the same
+\texttt{header\_dates()} call over the same text --- \texttt{assign\_meeting\_dates.py}
+stamps it on each item as \texttt{meeting\_ordinal}, \texttt{extract\_all\_meetings.py}
+writes it on each meeting --- so the two enumerations are the same enumeration and the join
+is exact rather than approximate. Modern-era items, whose parsed \texttt{tagged/} filenames
+no longer correspond one-to-one with the raw documents, fall back to the date, and to the
+archive's own filename token (\texttt{cal\_min} vs \texttt{jnthrgcpc\_min}) on the thirteen
+days that hold two meetings.
+
+\textbf{23{,}021 of 23{,}043 items (99.9\%) resolve to a meeting.} Only 22 do not: one
+scraped page that returned a JavaScript stub instead of minutes (2016-04-21, 1 item) and one
+2020 \emph{corrected} minutes file with no raw counterpart (21 items). Those items keep
+their dates, which come from their filenames; only the hearing-level attributes are missing,
+and they are left blank rather than inferred.
+
+This is the first number the 2018 refill moved, and it moved a long way. Before it, 781
+items were unmatched and 759 of them were 2018: their minutes had been parsed on a machine
+that was subsequently lost, so the blocks survived in \texttt{labels.db} while the documents
+their headers would be read from did not. Recovering the PDFs took item coverage from
+96.6\% to 99.9\% and gave 773 items a hearing --- 724 regular, 49 joint.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+Meeting type of the item's hearing & Items & \% \\
+\midrule
+\texttt{regular}        & 22{,}026 & 95.6 \\
+\texttt{special}        &     451 &  2.0 \\
+\texttt{joint}          &     336 &  1.5 \\
+\texttt{closed\_session} &      57 &  0.2 \\
+(type not read)         &     151 &  0.7 \\
+\midrule
+No meeting record       &      22 &  0.1 \\
+\bottomrule
+\end{tabular}
+\caption{All 23{,}043 items, by the character of the hearing they were decided at.}
+\end{table}
+
+\paragraph{Where this shows up.} The item-level labeling app reads the join and shows the
+meeting above the form --- date and weekday, meeting type, the other body when it is a joint
+hearing, gavel time, room, and who sat. None of it is typed by hand, which is the point:
+\texttt{meeting\_date} was removed from the item schema in August 2026 precisely because it
+is a property of the hearing, and the meeting bar is what replaces it. Items whose meeting
+could not be resolved say so in place of showing a guess.
 
 \subsection{Meeting type and frequency}
 
@@ -414,35 +474,37 @@ date was ever tuned to produce this.
 \toprule
 Period & Meetings & Regular & Special & Joint & Non-regular \\
 \midrule
-1998--2004 &  302 &  270 & 10 & 15 & 10.6\% \\
-2005--2011 &  379 &  279 & 73 & 20 & \textbf{26.4\%} \\
-2012--2018 &  222 &  194 &  4 & 15 & 12.6\% \\
+1998--2004 &  303 &  270 & 10 & 15 & 10.9\% \\
+2005--2011 &  377 &  279 & 72 & 20 & \textbf{26.0\%} \\
+2012--2018 &  263 &  231 &  5 & 18 & 12.2\% \\
 2019--2026 &  276 &  261 &  1 & 14 &  5.4\% \\
 \midrule
-All        & 1{,}179 & 1{,}004 & 88 & 64 & 14.8\% \\
+All        & 1{,}219 & 1{,}041 & 88 & 67 & 14.6\% \\
 \bottomrule
 \end{tabular}
-\caption{Meeting type over time. 15 meetings (1.3\%) have no type recorded and 8 are closed
-sessions.}
+\caption{Meeting type over time. 15 meetings (1.2\%) have no type recorded and 8 are closed
+sessions. The 2012--2018 row is the one the 2018 refill changed: 41 more meetings, of which
+3 are joint sittings and 1 special.}
 \end{table}
 
 \noindent
-The striking pattern is the \textbf{special-meeting surge in 2005--2011}: 73 of the 88
-special meetings in the entire corpus fall in that seven-year window, and non-regular
-sittings run at 26.4\% against 5--13\% in every other period. Whatever drove it --- the
+The striking pattern is the \textbf{special-meeting surge in 2005--2011}: 72 of the 88
+special meetings in the entire corpus fall in that seven-year window --- 25 of them in 2007
+and 17 in 2008 alone --- and non-regular sittings run at 26.0\% against 5--12\% in every
+other period. Refilling 2018 did not touch it: the year contributed no special meetings. Whatever drove it --- the
 housing cycle, a change in how the Commission scheduled contested items, or a change in how
 minutes were headed --- it is a sharp and specific feature of the middle of the panel, and
 it is the kind of thing the meeting level exists to surface. It deserves a look before it is
 used as a covariate.
 
-The Commission sits roughly weekly: 35--66 meetings a year, with the low years being those
-where the archive itself is thin.
+The Commission sits roughly weekly: 27--66 meetings a year, with the low years being those
+where the archive itself is thin (2015--2017 sit at 27--29). 2018, at 42, is now mid-range.
 
 \subsection{Attendance}
 
-Attendance is recorded for 1{,}137 meetings. Mean commissioners present is \textbf{6.19}
+Attendance is recorded for 1{,}177 meetings. Mean commissioners present is \textbf{6.19}
 (median 6, of a seven-member Commission), and \textbf{45\% of meetings record at least one
-absence}, 682 absences in total.
+absence}, 709 absences in total.
 
 \begin{table}[h]
 \centering
@@ -455,14 +517,18 @@ Alexander        & 55 & 174 & 31.6\% \\
 Chan             & 18 &  68 & 26.5\% \\
 Ruiz             & 18 &  70 & 25.7\% \\
 Boyd             & 17 &  79 & 21.5\% \\
-Bell             & 36 & 178 & 20.2\% \\
+Bell             & 36 & 176 & 20.5\% \\
 Fay              & 13 &  74 & 17.6\% \\
 Feldstein        & 11 &  71 & 15.5\% \\
+Richards         & 25 & 189 & 13.2\% \\
 Borden           & 36 & 278 & 12.9\% \\
 Theoharis        & 19 & 147 & 12.9\% \\
-Richards         & 19 & 149 & 12.8\% \\
+Hughes           & 20 & 168 & 11.9\% \\
+Johnson          & 24 & 206 & 11.7\% \\
+Melgar           & 13 & 119 & 10.9\% \\
+Fong             & 34 & 319 & 10.7\% \\
 \midrule
-\emph{``Lee'' (unresolved)} & 36 & 192 & 18.8\% \\
+\emph{``Lee'' (unresolved)} & 36 & 169 & 21.3\% \\
 \bottomrule
 \end{tabular}
 \caption{Absence rates for commissioners seated at 20 or more meetings. The denominator is
@@ -474,30 +540,33 @@ very different tenures.}
 both served, and many roll calls print only ``Lee''. Where the meeting says enough --- a
 roll naming two Lees names both; a Lee who called the meeting to order is Sue; a bare Lee
 opposite an identified Lee is the other person --- the two are separated, giving Sue Lee 232
-meetings and William L. Lee 220, each with a single recorded absence. \textbf{192 meetings
+meetings and William L. Lee 220, each with a single recorded absence. \textbf{169 meetings
 retain an unresolved ``Lee''}, carrying 36 absences between them.
 
 That row is deliberately left in the table. An earlier version assigned every unresolved
 case to William, which produced a 9\% absence rate for him against 0.4\% for Sue --- an
 artefact of the tie-break, not a fact about either commissioner. A visible ambiguity is
 worth more than a confident wrong answer, and anyone using per-commissioner attendance
-should either drop those 192 meetings or resolve them by hand.
+should either drop those 169 meetings or resolve them by hand.
 
 \subsection{Who presides, where, and when}
 
 Fong presided over 137 meetings, Olague 125, Miguel 101, Bell 88, Koppel 82, a Lee 73,
-Theoharis 64, Tanner 63, Chinchilla 62 --- a genuine rotation rather than a dominant chair.
+Theoharis 64, Tanner 63, Chinchilla 62, Hillis 57 --- a genuine rotation rather than a
+dominant chair.
 
-\textbf{1{,}025 meetings sat at City Hall}, 51 at the War Memorial Building (the pre-2001
+\textbf{1{,}065 meetings sat at City Hall}, 51 at the War Memorial Building (the pre-2001
 home), and \textbf{80 were remote hearings} --- the pandemic-era teleconference period, now
-a clean flag. Eight meetings (0.7\%) have an unrecognisable venue string.
+a clean flag. The remaining 23 (1.9\%) name none of the three. Two of those are real offsite
+sittings --- 1600 Holloway Avenue (San Francisco State) and Mission High School --- and the
+other 21 are extraction failures: page chrome, a bare date, or the literal word ``text''.
 
-Start times cluster hard: 480 at 1:30 PM, 294 at 12:00 PM, 212 at 1:00 PM. The shift from
+Start times cluster hard: 480 at 1:30 PM, 294 at 12:00 PM, 251 at 1:00 PM. The shift from
 1:30 to 12:00 tracks the modern era.
 
-\textbf{64 joint sittings} are recorded, most often with the Recreation and Park Commission
-(16), Building Inspection (7), Health (8 across two spellings), Historic Preservation (7
-across two spellings) and the Redevelopment Agency (4).
+\textbf{67 joint sittings} are recorded, most often with the Recreation and Park Commission
+(16), Health (9 across two spellings), Building Inspection (8 across two spellings), Historic
+Preservation (7 across two spellings) and the Redevelopment Agency (5 across two spellings).
 
 \subsection{Two series over time}
 
@@ -530,23 +599,30 @@ President & Term & Meetings & Absence rate & Staff \\
 \midrule
 Chinchilla & 1998-01 -- 1999-01 &  47 & 15.4\% &  9.6 \\
 Theoharis  & 1999-02 -- 2002-01 & 112 & 11.3\% & 10.5 \\
+Chinchilla & 2002-01 -- 2002-05 &  16 &  9.8\% & 12.6 \\
 Bell       & 2002-05 -- 2005-01 & 106 & 10.0\% & 11.1 \\
 Lee        & 2005-01 -- 2006-11 &  81 & 13.9\% & 10.7 \\
 Alexander  & 2006-11 -- 2007-09 &  47 &  7.4\% &  7.8 \\
 Olague     & 2007-09 -- 2009-01 &  70 &  6.6\% & 11.1 \\
 Miguel     & 2009-01 -- 2011-01 &  91 &  6.2\% & 10.6 \\
+Olague     & 2011-01 -- 2011-12 &  45 &  7.3\% &  9.8 \\
+Miguel     & 2011-12 -- 2012-02 &  11 &  1.4\% &  9.3 \\
 Fong       & 2012-03 -- 2014-03 &  90 &  7.3\% &  9.0 \\
 Wu         & 2014-03 -- 2015-02 &  35 &  2.0\% & 10.3 \\
 Fong       & 2015-03 -- 2017-01 &  55 &  8.8\% &  9.4 \\
-Melgar     & 2019-01 -- 2019-12 &  36 & 12.2\% & 10.4 \\
+\textbf{Hillis} & \textbf{2017-02 -- 2019-01} & \textbf{61} & \textbf{10.3\%} & \textbf{10.0} \\
+Melgar     & 2019-01 -- 2019-12 &  35 & 12.5\% & 10.4 \\
 Koppel     & 2019-12 -- 2022-01 &  83 &  6.1\% &  9.7 \\
 Tanner     & 2022-01 -- 2024-01 &  71 &  6.7\% &  9.4 \\
+Diamond    & 2024-02 -- 2024-09 &  21 &  4.4\% &  8.0 \\
 So         & 2024-09 -- 2026-03 &  56 &  7.4\% &  8.6 \\
 \bottomrule
 \end{tabular}
-\caption{Inferred presidency terms of 35 meetings or more (five shorter terms are omitted
-here but appear as bands in Figure~\ref{fig:series}). Absence rate is the mean share of the
-seated Commission missing a sitting.}
+\caption{All 19 inferred presidency terms. Absence rate is the mean share of the seated
+Commission missing a sitting. \textbf{Hillis is new to this table}: the term spans 2018, and
+while that year was a hole in the corpus the run fragmented below the six-meeting floor and
+was absorbed into its neighbours. Recovering 2018 recovered a two-year presidency ---
+a reminder that a scraping gap does not stay confined to the years it covers.}
 \end{table}
 
 \paragraph{The clearest pattern is not about presidents.} \textbf{Absence during remote
@@ -559,9 +635,10 @@ were unusual.
 
 \paragraph{Absence by presidency varies more than one would expect, but tracks the era.}
 The range across terms is wide --- 2.0\% under Wu against 15.4\% under Chinchilla --- yet
-the pattern is chronological rather than personal: the four highest rates are the four
-earliest presidencies, and Fong's two separate terms differ from each other (7.3\% then
-8.8\%) by more than many presidents differ from their neighbours. That is the signature of a
+the pattern is mostly chronological rather than personal: three of the four highest rates
+are the three earliest presidencies (Melgar's 12.5\% in 2019 is the exception), and Fong's
+two separate terms differ from each other (7.3\% then 8.8\%) by more than many presidents
+differ from their neighbours. That is the signature of a
 period effect, not a chair effect. \textbf{We would not read these numbers as evidence that
 some presidents commanded better attendance than others.} If that question matters, it needs
 a specification that separates chair from period --- commissioner fixed effects and a time
@@ -575,30 +652,38 @@ minutes are written; and \texttt{staff} is the least accurate field in the schem
 here for completeness, not as a variable to lean on.
 
 \medskip\noindent
-Both panels break at 2018, where the corpus holds only two documents. The break is drawn
-rather than interpolated so a gap in the scrape is not read as a change in the Commission.
+Earlier versions of both panels broke at 2018, where the corpus held only two documents. The
+year was refilled on 2026-09-04 and now carries 42 meetings, mid-range for the panel, so
+both series run continuously from 1998 to 2026. The gap-drawing machinery stays in the plot
+script with an empty list of sparse years: the rule --- draw a gap rather than a line
+through one --- outlives the instance that prompted it.
 
 \section{Reproducing this}
 
 \begin{verbatim}
 cd code/commission_minutes_processing
-python assign_meeting_dates.py --apply --sync-labels   # dates
+python minutes_scraping/scrape_minutes.py --year 2018  # refill 2018
+python assign_meeting_dates.py --apply --sync-labels   # dates + ordinals
 python meeting_headers.py --export                     # meeting fields + CSV
 
-python extract_all_meetings.py                         # ALL 1,179 meetings -> CSV + table
-python plot_extraction_accuracy.py                     # the accuracy figure
-python draw_validation_sample.py --seed S --round N    # a further validation round
+python extract_all_meetings.py                # all 1,219 meetings -> CSV + table
+python plot_extraction_accuracy.py            # the accuracy figure
+python plot_meeting_timeseries.py             # Figure 1
+python draw_validation_sample.py --seed S --round N   # another round
 
 cd date_boundary_app
-python app.py                 # mark boundaries (:5006), confirm meetings (/meetings)
+python app.py                 # mark boundaries (:5006); /meetings confirms
 python app.py --score --csv   # date agreement vs the gold set
 \end{verbatim}
 
+\begin{sloppypar}
+\noindent
 Outputs: \texttt{date\_assignment\_audit.csv} (per page: status, headers found, items
 changed), \texttt{date\_boundary\_app/date\_gold\_score.csv} (per document: gold vs detected
 dates), \texttt{date\_boundary\_app/meetings\_pilot.csv} (the hand-labelled gold meetings), and
-\texttt{meetings\_all.csv} (all 1{,}179 extracted meetings, with an \texttt{era} column and
+\texttt{meetings\_all.csv} (all 1{,}219 extracted meetings, with an \texttt{era} column and
 a \texttt{hand\_verified} flag).
+\end{sloppypar}
 
 \section{Limitations}
 
@@ -619,15 +704,24 @@ would raise measured agreement by roughly 1.5 points without changing any code.
 link, with no roll call or items. They should be filtered from any denominator.
 \item \textbf{One boundary is marked on a page breadcrumb.} For 2010-02-18 the window covers
 page chrome and no venue is recoverable. The date is unaffected.
-\item \textbf{The corpus has a 2018 hole.} Only two documents exist for 2018 in
-\texttt{raw/2018/}, against 27--44 for its neighbours, so 2018 is a scraping gap rather than
-a year the Commission did not sit. It must be filled before any year-on-year series crosses
-it.
-\item \textbf{Eight meetings (0.7\%) carry an unusable venue string} and 15 (1.3\%) no
-meeting type. These are visible in \texttt{meetings\_all.csv} and should be dropped or
-repaired rather than analysed.
+\item \textbf{The 2018 hole is closed, and what it cost is worth recording.} Until
+2026-09-04 only two documents existed for 2018, against 27--44 for its neighbours. It was a
+scraping gap, not a year the Commission did not sit: 40 further minutes PDFs were recovered
+from the S3 packet prefix, taking the year to 42 meetings. While it was open it accounted
+for 759 of the 781 unmatched items, suppressed a two-year Hillis presidency from the
+inferred term calendar, and forced a drawn break through the middle of both time series.
+A further 8 documents surfaced that \texttt{labels.db} has never held (roughly 200 items);
+those are extracted at the meeting level but are not yet in the item-level queue, so any
+item-level count for 2018 is still short by that much until the next ingest. Twelve 2018
+Thursdays have no document at any URL --- New Year, Independence Day, the August recess,
+Thanksgiving and Christmas weeks --- and are recess, not gap.
+\item \textbf{Twenty-one meetings (1.7\%) carry an unusable venue string} --- page chrome,
+a bare date, the literal word ``text'' --- and 15 (1.2\%) no meeting type. Two further
+meetings name a venue that is real but not one of the three the pipeline recognises (1600
+Holloway Avenue, Mission High School); those are correct data, not errors. All are visible in
+\texttt{meetings\_all.csv} and should be dropped or repaired rather than analysed.
 \item \textbf{The special-meeting surge of 2005--2011 is a finding, not yet an explanation.}
-73 of the corpus's 88 special meetings fall in that window. It could be substantive or an
+72 of the corpus's 88 special meetings fall in that window, 25 of them in 2007 alone. It could be substantive or an
 artefact of how minutes were headed in those years, and it should be checked before use.
 \item \textbf{Accuracy is not uniform across the corpus.} The \texttt{era} column in
 \texttt{meetings\_all.csv} exists so that downstream work can weight it: 3.8\% field error

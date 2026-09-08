@@ -10,9 +10,12 @@ Purpose : Assign every parsed block its true meeting date. This is a SEPARATE st
           boundary rules can never silently misalign dates again.
 Inputs  : labels.db (items: source_file, item_index, block_text), raw HTML pages under
           MFHR_DATA_ROOT/meeting_minutes/<locality>/raw/<year>/<stem>.html
-Outputs : items.meeting_date updated in place (--apply); date_assignment_audit.csv with a
-          per-page record of what was assigned and why. Labels are untouched unless
-          --sync-labels is passed.
+Outputs : items.meeting_date and items.meeting_ordinal updated in place (--apply);
+          date_assignment_audit.csv with a per-page record of what was assigned and why.
+          Labels are untouched unless --sync-labels is passed. The ordinal is the index of
+          the meeting header the item sits under within its source document, which is what
+          joins an item to its row in the meeting-level table (`extract_all_meetings.py`) —
+          the date alone is not a key, since two meetings can share a day and a document.
 Author  : Dan Post
 Created : 2026-08-29
 
@@ -324,7 +327,8 @@ def assign_page(src: str, rows: list[tuple[int, int, str, str]]) -> dict:
     year = int(src.split("/")[1])
     text = page_text_for(src)
     if text is None:
-        return dict(src=src, status="missing_page", n=len(rows), assigned={}, hdrs=[])
+        return dict(src=src, status="missing_page", n=len(rows), assigned={}, ordinals={},
+                    hdrs=[])
 
     hdrs = header_dates(text)
     td = title_date(text)
@@ -337,15 +341,24 @@ def assign_page(src: str, rows: list[tuple[int, int, str, str]]) -> dict:
 
     # A block we could not locate sits between the two we could, so it inherits the date of
     # the last located block — blocks are contiguous, so that is its meeting by definition.
-    assigned, unplaced, last = {}, 0, None
+    #
+    # Alongside the date we keep the ORDINAL of the header the block fell under: its index
+    # in `hdrs`, in document order. The date alone does not identify a meeting — the
+    # Commission sat jointly with another body and then in regular session on the same day,
+    # in the same document, seven times in the archive era — but (document, ordinal) does.
+    # `extract_all_meetings.py` enumerates the same `header_dates()` output over the same
+    # text, so its ordinals are these ordinals and the two tables join exactly.
+    assigned, ordinals, unplaced, last = {}, {}, 0, None
+    default = (hdrs[0][1], 0) if hdrs else None
     for (item_id, _idx, _blk, cur), off in zip(rows, offs):
         if off is None:
             unplaced += 1
-            assigned[item_id] = last if last else (hdrs[0][1] if hdrs else cur)
-            continue
-        prior = [d for p, d in hdrs if p <= off]
-        assigned[item_id] = prior[-1] if prior else (hdrs[0][1] if hdrs else cur)
-        last = assigned[item_id]
+            hit = last or default or (cur, None)
+        else:
+            prior = [k for k, (p, _d) in enumerate(hdrs) if p <= off]
+            hit = (hdrs[prior[-1]][1], prior[-1]) if prior else (default or (cur, None))
+            last = hit
+        assigned[item_id], ordinals[item_id] = hit
 
     # ── validation, all mechanical ──
     problems = []
@@ -375,7 +388,7 @@ def assign_page(src: str, rows: list[tuple[int, int, str, str]]) -> dict:
         problems.append(f"mostly_non_thursday={n_thu}/{n_dates}")
 
     return dict(src=src, status="ok" if not problems else "check", n=len(rows),
-                assigned=assigned, hdrs=hdrs, problems=problems,
+                assigned=assigned, ordinals=ordinals, hdrs=hdrs, problems=problems,
                 n_dates=len(set(assigned.values())))
 
 
@@ -400,6 +413,7 @@ def main():
         f"SELECT DISTINCT source_file FROM items WHERE {where} ORDER BY source_file", params)]
 
     results, updates = [], []   # updates: (new_date, item_id, old_date)
+    ord_updates = []            # (ordinal, item_id) — rewritten wholesale every run
     for src in srcs:
         rows = con.execute(
             "SELECT id, item_index, block_text, meeting_date FROM items "
@@ -411,6 +425,9 @@ def main():
         for item_id, d in res["assigned"].items():
             if d and d != cur_by_id[item_id]:
                 updates.append((d, item_id, cur_by_id[item_id]))
+        # the ordinal is derived, not corrected: there is no old value worth keeping, so
+        # every item is rewritten each run rather than diffed.
+        ord_updates += [(o, i) for i, o in res["ordinals"].items()]
 
     if a.page:
         for res in results:
@@ -450,13 +467,25 @@ def main():
 
     con.executemany("UPDATE items SET meeting_date=? WHERE id=?",
                     [(new, i) for new, i, _old in updates])
+    ensure_ordinal_column(con)
+    con.executemany("UPDATE items SET meeting_ordinal=? WHERE id=?", ord_updates)
     con.commit()
     print(f"✓ updated {len(updates)} item dates")
+    placed = sum(1 for o, _i in ord_updates if o is not None)
+    print(f"✓ wrote {placed}/{len(ord_updates)} meeting ordinals")
 
     if a.sync_labels:
         n = sync_labels(con, {i: (old, new) for new, i, old in updates})
         print(f"✓ synced {n} label records to the corrected dates")
     con.close()
+
+
+def ensure_ordinal_column(con: sqlite3.Connection) -> None:
+    """`items.meeting_ordinal` is added in place — labels.db predates it and nothing else
+    in the pipeline needs a rebuild to gain it."""
+    cols = {r[1] for r in con.execute("PRAGMA table_info(items)")}
+    if "meeting_ordinal" not in cols:
+        con.execute("ALTER TABLE items ADD COLUMN meeting_ordinal INTEGER")
 
 
 def sync_labels(con: sqlite3.Connection, moves: dict[int, tuple[str, str]]) -> int:

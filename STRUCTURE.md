@@ -30,7 +30,14 @@ market-for-housing-regulation/
 | File | Role |
 |---|---|
 | `paths.py` | **Where the data lives** — `DATA_ROOT`/`MEETING_MINUTES`, env-overridable via `MFHR_DATA_ROOT`. `MEETING_MINUTES` resolves to the *active locality* (`MFHR_LOCALITY`, default `san_francisco`) so the pipeline scales across the Bay Area. Everything imports paths from here. |
-| `extraction_common.py` | **The 35-field `SCHEMA`** (single source of truth) → `FIELDS`, `PROMPT_INSTRUCTION`, `coerce_record()`, `score_examples()`. |
+| `extraction_common.py` | **The 29-field `SCHEMA` v2** (single source of truth) → `FIELDS`, `build_prompt()`/`item_suffix()`/`prompt_sha()`, `coerce_record()`, `compare_field()`, `verify_evidence()`. The help strings ARE the prompt: `build_prompt()` generates it from them (audit: `output/planning_commission_project/help_string_audit.md`). |
+| `normalize.py` | **The storage layer** — one rule per field, applied to hand labels and model output alike, so gold and prediction are never compared across a formatting difference neither side chose. `iso_date`, `lot_list`, `block_key` (unpadded — pad at query time), `clean_name`, `address_core`, `request_for_clause`/`descr_proposal`, `normalize_record`. Self-testing: `python normalize.py`. |
+| `provenance.py` | `extraction_runs` / `predictions` / `verification_failures` in `labels.db`: which run, model, prompt SHA, schema version and gold version produced any value. Append, never overwrite. Also the `gold_version` registry (`bakeoff/gold_versions.json`). |
+| `review_queue.py` | ONE queue for every kind of re-review — `field_redefined`, `migration_ambiguous`, `adjudication`, `new_item` — field-level and sorted so the same field is worked consecutively. Served by the labelling app. |
+| `migrate_gold_v1_v2.py` | Carries the hand-labelled gold from schema v1 to v2. **Proposes, does not decide**: AUTO where a value derives unambiguously, FLAG into the review queue otherwise. Freezes `bakeoff/gold/gold_v1_snapshot.json` first and reads from it thereafter. |
+| `gold_split.py` | The frozen train/test split, stratified by (era, year), with a content SHA. `--verify` reports drift and the `gold_version`; `--refreeze` re-hashes when labels changed but membership did not; `--rebuild` only when the item set changed. |
+| `bakeoff_extract.py` / `bakeoff_report.py` / `bakeoff_memo.py` | Method × field comparison (regex vs Claude) over the Batch API, split-aware scoring with accuracy and over-extraction reported separately, and the LaTeX tables for `extraction_method_comparison.tex`. |
+| `build_adjudication.py` | Queues every gold-vs-model disagreement for a three-way verdict (gold right / model right / both wrong) and mirrors it into `review_queue`. Some measured "model error" is gold error. |
 | `autoextract.py` | Regex/heuristic best-guess extraction from a raw block (form pre-fill + builder derivations). |
 | `minutes_scraping/scrape_minutes.py` | Consolidated, idempotent scraper (S3 HTML 1998–2014; live archive PDFs 2015–present). Legacy scrapers deprecated alongside. |
 | `parse_sf_meeting_minutes.py` | Scrape/parse archived **HTML (1998–2014)** → `tagged/{year}/*.txt` blocks + meeting metadata. |
@@ -44,7 +51,7 @@ market-for-housing-regulation/
 | `run_extraction.py` | **Corpus-wide** structured extraction with periodic QA. Pluggable engine (`heuristic`/`hf`/`anthropic`), schema-aligned via `extraction_common`, resumable → `processed/structured_data.jsonl` + `extracted_results.csv` + `extraction_qa_report.md` (coverage, distributions, accuracy-vs-gold). Supersedes `inference.py`. |
 | `inference.py` | Legacy single-file/old-schema demo (kept for reference; use `run_extraction.py`). |
 | `data_collect.py` | JSONL → `processed/extracted_results.csv`. |
-| `labeling_app/` | Local web app to hand-label items: `ingest.py` (corpus → `labels.db`), `app.py` (Flask UI), `queue_order.py` (rare-class-first + year-balanced queue), `templates/` + `static/`, `README.md`. |
+| `labeling_app/` | Local web app to hand-label items: `ingest.py` (corpus → `labels.db`), `app.py` (Flask UI, port 5005), `queue_order.py` (rare-class-first + year-balanced queue), `templates/` + `static/`, `README.md`. Carries the unified review queue, the speaker row editor with read-only derived counts, era display/filter, and a structured-outputs LLM pre-fill (no model pin). |
 | `scratch_code/` | Prototypes (pdfplumber, LoRA variants). |
 
 Run order: `scrape_minutes → parse_sf_meeting_minutes (1998–2014) + parse_modern_minutes

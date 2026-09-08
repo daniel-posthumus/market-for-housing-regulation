@@ -879,6 +879,95 @@ def export(con) -> Path:
     return CSV_OUT
 
 
+# ── linking an item to the meeting it was heard at ────────────────────────────
+# The corpus-wide meeting table (`extract_all_meetings.py` → `meetings_all`) is keyed by
+# source document and header ordinal. An item carries the same two keys, so the join is
+# exact — but only for the HTML era. Modern-era items were parsed out of `tagged/` text
+# files whose names no longer correspond one-to-one with the raw documents on disk, so
+# they fall back to the date, and to the archive's own filename token when a day holds two
+# meetings. Anything still ambiguous returns None: a blank meeting is a question, a wrong
+# one is a silent error on every item heard that day.
+
+_DOC_EXT = (".html", ".htm", ".pdf", ".txt")
+_DATE_IN_NAME = re.compile(r"(?:19|20)\d{2}-?\d{2}-?\d{2}")
+
+
+def _stem(source_file: str) -> str:
+    """Reduce a document reference to a form both sides of the join agree on.
+
+    The archive's own names already end in '.htm', and the scraper saved each one with a
+    further '.html' on top — so labels.db holds 'min0198-documentid=4743.htm' while the
+    file (and the meeting table) says '…4743.htm.html'. Stripping one extension is what
+    makes those two disagree; stripping every trailing extension makes them meet."""
+    while True:
+        low = source_file.lower()
+        for ext in _DOC_EXT:
+            if low.endswith(ext):
+                source_file = source_file[: -len(ext)]
+                break
+        else:
+            return source_file
+
+
+def _doc_token(source_file: str) -> str:
+    """The archive's own name for a document, minus its date: '20190124_Jnthrgcpc_min.pdf'
+    → 'jnthrgcpcmin'. This is what tells a joint hearing from the regular one when both
+    were held on the same day."""
+    name = source_file.rsplit("/", 1)[-1]
+    for _ in range(2):                       # '…pdf.html' is one file with two extensions
+        for ext in _DOC_EXT:
+            if name.lower().endswith(ext):
+                name = name[: -len(ext)]
+                break
+    name = _DATE_IN_NAME.sub("", name)
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def load_meetings(db: Path | None = None) -> list[dict]:
+    """Every meeting in `meetings_all`, as dicts. Empty if the table has not been built."""
+    db = Path(db or DB)
+    if not db.exists():          # sqlite would otherwise create an empty store here
+        return []
+    con = sqlite3.connect(db)
+    con.row_factory = sqlite3.Row
+    try:
+        rows = [dict(r) for r in con.execute("SELECT * FROM meetings_all")]
+    except sqlite3.OperationalError:         # table absent — run extract_all_meetings.py
+        rows = []
+    finally:
+        con.close()
+    return rows
+
+
+def meeting_lookup(rows: list[dict] | None = None):
+    """Build the item → meeting resolver: meeting_for(source_file, date, ordinal) → row."""
+    rows = load_meetings() if rows is None else rows
+    by_ord: dict[tuple[str, int], dict] = {}
+    by_stem_date: dict[tuple[str, str], dict] = {}
+    by_date: dict[str, list[dict]] = collections.defaultdict(list)
+    for r in rows:
+        stem = _stem(r["source_file"])
+        by_ord.setdefault((stem, r.get("ordinal")), r)
+        by_stem_date.setdefault((stem, r["meeting_date"]), r)
+        by_date[r["meeting_date"]].append(r)
+
+    def meeting_for(source_file: str, meeting_date: str = "",
+                    ordinal: int | None = None) -> dict | None:
+        stem = _stem(source_file or "")
+        if ordinal is not None and (stem, ordinal) in by_ord:
+            return by_ord[(stem, ordinal)]
+        if (stem, meeting_date) in by_stem_date:
+            return by_stem_date[(stem, meeting_date)]
+        cands = by_date.get(meeting_date, [])
+        if len(cands) == 1:
+            return cands[0]
+        tok = _doc_token(source_file or "")
+        hits = [c for c in cands if _doc_token(c["source_file"]) == tok]
+        return hits[0] if len(hits) == 1 else None
+
+    return meeting_for
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--before", type=int, default=15, help="non-blank lines before the mark")

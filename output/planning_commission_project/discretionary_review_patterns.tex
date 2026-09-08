@@ -1,0 +1,452 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+
+\title{What 16{,}199 Discretionary Land-Use Decisions Look Like:\\
+\large San Francisco Planning Commission, 1998--2026}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This memo reports what the item-level dataset contains now that it exists. Every item the San
+Francisco Planning Commission heard between 1998 and mid-2026 that carries a case number ---
+\textbf{16{,}199 items across 8{,}987 distinct cases} --- has been extracted into 29 structured
+fields. It describes the composition of the docket, what the Commission does to what comes
+before it, how long projects take, how individual commissioners vote, where in the city the
+activity is, and which parts of the Planning Code are actually invoked.
+
+\medskip\noindent
+Four findings organise the rest. \textbf{Outright denial is close to non-existent} --- 1.4\%
+of items across twenty-eight years, and effectively zero since 2020 --- while
+\textbf{conditioning has more than tripled}, from 13.8\% of items in 1998 to 45.7\% in 2023.
+The Commission has not become more permissive; it has moved from a denial technology to a
+conditioning technology. \textbf{Delay is the second margin}: 45\% of all items are a repeat
+appearance of a case already heard, and the 90th-percentile case now takes a year from first
+hearing to last, up from five months in the late 1990s. \textbf{Discretionary review has
+collapsed} as a share of the docket, from 28.6\% to 8.6\%, following the 2013 reforms.
+
+\medskip\noindent
+The memo closes on what the data cannot yet do. The regulatory burden a developer faces is
+not a disposition but an \emph{expectation} formed before filing --- over delay, over
+conditions, over the probability of either. The dataset now measures realised outcomes well.
+Turning those into a measure of \emph{ex ante} cost and uncertainty is the modelling problem
+the paper rests on, and \S\ref{sec:uncertainty} sets out four routes into it. A tested
+linkage to the city's building-permit records --- \textbf{97.5\% of parsed permit numbers
+match} --- shows that construction outcomes are observable on the other side of the
+entitlement.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{The data}
+
+\subsection{What is in it}
+
+One row is one item on one agenda: a request heard by the Commission on a date. The corpus
+runs from January 1998 to the last scraped meeting of 2026 and holds \textbf{16{,}199 items}
+carrying a case number, drawn from 985 meeting documents. Blocks with no case number ---
+public comment, the Director's report, the weekly recap, adjournment --- are agenda
+scaffolding and are excluded by rule.
+
+Extraction is Claude Haiku~4.5 with six retrieved, era-matched worked examples, run over the
+Batch API against a schema of 29 fields. On a frozen 139-item test half that no prompt was
+tuned against, the configuration scores \textbf{96.8\%} at the field level: 97.4\% on the
+1998--2014 HTML minutes and 94.0\% on the 2015--2026 PDF minutes. The companion memo,
+\emph{Item-Level Field Extraction}, documents the method, the metric and the failure modes;
+this memo takes the output as given and asks what it says.
+
+\subsection{Two coverage gaps to keep in view}
+
+\textbf{1998--2000 is thin.} Those years hold 12 meeting documents each against roughly 40 in
+every year from 2001. The Commission met weekly throughout; the archive does not. Rates
+computed within those years are usable, counts are not comparable, and the composition
+figures should be read as describing the meetings that survive.
+
+\textbf{2025--2026 is incomplete.} Eight documents each, against 34--41 in the preceding
+years, because the scrape reached the archive before the archive reached the present. Every
+count for those years is a floor, and the memo's figures mark the boundary rather than
+letting a reader infer a collapse in Commission activity that did not happen.
+
+\section{The composition of the docket}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{fig_composition.pdf}
+\caption{Items heard per year (top) and their composition (bottom). The thin years at each end
+are archive coverage, not Commission activity.}
+\end{figure}
+
+Table~\ref{tab:composition} gives the numbers. Three movements matter.
+
+\textbf{Discretionary review collapsed.} DR was 28.6\% of the docket in 1998 and 38.8\% in
+2003 --- at its peak, the single largest category, and the mechanism by which any member of
+the public could pull an as-of-right building permit in front of the Commission. By 2013 it
+was 12.5\% and by 2025, 8.6\%. The timing points at the 2010--2013 DR reforms, which raised
+the bar for a request to be heard at all. This is the clearest structural break in the
+dataset and it changes what the Commission's docket \emph{is}: a body that spent a third of
+its agenda reviewing individual permits now spends a twelfth.
+
+\textbf{Conditional use grew to fill the space}, from 35.9\% to 48.4\% at its 2023 peak. Some
+of this is composition rather than volume --- the denominator shrank as DR left --- but the
+absolute count of CU items is also higher in the 2020s than the 2000s despite a smaller
+docket overall.
+
+\textbf{Legislative business roughly doubled}, from 6.6\% to 15.6\%, and \emph{informational}
+items went from a rounding error to 14.8\% of the 2025 docket. The Commission increasingly
+spends its time on rules rather than on projects. For a study of regulation as a market, that
+is not a nuisance category: it is the supply side of rule-making appearing in the same series
+as the demand side of individual permissions.
+
+\section{What the Commission does}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{fig_outcomes.pdf}
+\caption{Outcome rates. Faint lines are the annual series; bold lines are a three-year centred
+mean.}
+\end{figure}
+
+Table~\ref{tab:outcomes} is the central result of this memo.
+
+\subsection{Denial is not the instrument}
+
+Across twenty-eight years the Commission disapproved \textbf{1.4\%} of the items before it. In
+1998 the rate was 4.1\%; since 2020 it rounds to zero. If regulatory stringency were measured
+by refusal, San Francisco would look like one of the most permissive jurisdictions in the
+country, which is not a conclusion anybody believes.
+
+\subsection{Conditioning is}
+
+Over the same period the share of items carrying conditions rose from \textbf{13.8\%} to
+\textbf{45.7\%}. The Commission has substituted along a margin that a denial-rate measure
+cannot see: it says yes, and attaches terms. Approval with conditions is the modal outcome of
+a modern conditional-use hearing.
+
+This substitution is the single most important pattern for the paper's framing. A discretionary
+tax that operates through conditions rather than refusals is invisible to any measure of
+approval probability, and it is precisely the kind of burden that is costly to anticipate ---
+which is where uncertainty enters.
+
+\subsection{Continuance is the third margin}
+
+39\% of all items end in a continuance, though the rate has fallen from 46\% to 25\%.
+Table~\ref{tab:outcomes} understates how much of the docket this represents, because a
+continued item returns: \textbf{45\% of all 16{,}199 items are a repeat appearance of a case
+already heard}. Nearly half the Commission's agenda is re-hearing.
+
+\subsection{The disposition depends on what is asked}
+
+Pooling all request types hides that these are different proceedings. Conditional use is
+approved 54.9\% of the time and continued 35.9\%. Discretionary review is approved 1.3\% of
+the time --- because ``approval'' is not its vocabulary: 26.8\% end in \emph{did not take DR}
+and 15.4\% in \emph{took DR and approved}, so the modal DR outcome is the permit proceeding
+essentially untouched. Variances are continued 44.6\% of the time and approved 15.4\%, which
+reflects that the Zoning Administrator, not the Commission, is the usual variance authority.
+
+\section{Delay}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{fig_delay.pdf}
+\caption{Repeat hearings and elapsed time, by year of first hearing.}
+\end{figure}
+
+A case heard more than once is a project the Commission saw and did not finish with. Chaining
+items by case number gives 8{,}987 cases, of which \textbf{37.9\% were heard more than once};
+the record is a case that took 3{,}423 days --- nine years and four months --- across its
+appearances.
+
+Table~\ref{tab:delay} shows the distribution by cohort. The median has been stable at about
+five weeks, which is roughly the Commission's own calendar cycle: a routine continuance moves
+an item two or three meetings. \textbf{The tail is what moved.} The 90th percentile went from
+147 days for cases first heard in the late 1990s to \textbf{360 days} for the 2015--2019
+cohort. The typical case is not slower. The unlucky case is more than twice as slow.
+
+That is a statement about \emph{variance}, and it matters more than the median for a developer
+deciding whether to file. Elapsed time also sorts on outcome in a way that is intuitive but
+worth having measured: cases ending in approval run a median 28 days from first to last
+hearing, those ending \emph{continued indefinitely} run 84, and those ending in no action run
+116.
+
+\medskip\noindent\textbf{Two cautions.} First, this measures hearing-to-hearing time, not the
+full entitlement clock: it begins when an item first reaches an agenda, which is already well
+downstream of filing. Second, recent cohorts are right-censored --- a case first heard in 2024
+cannot yet show a three-year tail --- so the recent decline in Table~\ref{tab:delay} is partly
+an artefact and is flagged as such rather than read as an improvement.
+
+\section{Commissioners}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=0.95\textwidth]{fig_commissioners.pdf}
+\caption{Dissent rate for commissioners with 200 or more recorded votes.}
+\end{figure}
+
+The minutes record roll-call votes on both sides, so this is a census rather than a sample:
+\textbf{79{,}855 individual votes by 84 named commissioners}. Table~\ref{tab:commissioners}
+gives the twenty most active.
+
+The striking feature is how \textbf{rarely anyone dissents}. Rates run from 1.1\% to 7.9\%, and
+the Commission is close to unanimous on the overwhelming majority of items. The spread is
+nonetheless real and persistent: Moore (7{,}608 votes, 7.2\%), Sugaya (7.9\%) and Olague
+(7.8\%) dissent five to seven times as often as Diamond (1.1\%), Borden (1.2\%) or Koppel
+(1.4\%), and these are not small samples.
+
+Two things this enables. First, a commissioner fixed effect is estimable for the two dozen
+members with enough votes, which makes it possible to ask whether \emph{who is sitting} moves
+outcomes conditional on what is asked. Second, because the roll call is per item and the
+composition of the Commission turns over, the panel has within-project variation in
+composition for cases heard repeatedly --- the same project, a different room.
+
+\section{Geography}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{fig_geography.pdf}
+\caption{Assessor blocks appearing most often before the Commission, 1998--2026.}
+\end{figure}
+
+\textbf{84.1\% of items carry a usable parcel key} --- an assessor block and at least one lot
+--- covering 2{,}557 distinct blocks and 8{,}295 distinct parcels. This is the join that makes
+everything downstream possible, and it is the reason \texttt{project\_address} was demoted to
+a validation field: the block-and-lot pair is what the city's own records key on, and it
+scores 98--100\% where the address needs a geocoder.
+
+Concentration is high. The most-heard block (3736, South of Market at the Rincon Hill/Transbay
+edge) appears 95 times; the top ten are almost entirely SoMa and the Downtown core --- 3704,
+3721, 3753, 3787, 3788 --- with two North Beach blocks (131, 287) as the exception. These are
+the blocks where large projects, phased approvals and repeated returns concentrate.
+
+Hot spots are a genuine finding but they need care: a block appears often both because a lot
+of building is proposed there \emph{and} because a single large project can generate a dozen
+items across a decade. Separating those is a matter of collapsing to the case level and is
+straightforward with the chain construction of \S4.
+
+\section{Which parts of the Planning Code are actually used}
+
+Table~\ref{tab:citations} lists the sections cited in the request text. \textbf{1{,}347
+distinct sections} appear at least once; the distribution is extremely skewed.
+
+The result is a validity check as much as a finding. Nothing told the extractor what the
+Planning Code contains, yet the mapping from section to request type recovers the Code's own
+structure: \S303 (conditional use procedure) is cited by 2{,}468 conditional-use items;
+\S309 (permit review in C-3 districts) by 252 downtown-project items; \S329 (large project
+authorization) by 179 LPA items; \S321 (office development annual limit) by 209
+office-allocation items. Where the extraction assigns a request type, the cited section
+independently agrees.
+
+Substantively, four sections carry most of the discretionary weight:
+
+\begin{itemize}
+\item \textbf{\S31.04} (2{,}899 items) is the Administrative Code's approval-action provision
+for CEQA. Its ubiquity is procedural boilerplate, but it dates the moment at which the
+entitlement becomes appealable.
+\item \textbf{\S303} (2{,}701) is the conditional-use standard --- the ``necessary or
+desirable'' test, which is the discretion.
+\item \textbf{\S101.1} (923) is the eight Priority Policies. It appears on legislative items
+and is the general-welfare hook that makes almost any objection cognisable.
+\item \textbf{\S134} (912, rear yard) and \textbf{\S140} (358, dwelling-unit exposure) are the
+two bulk standards that generate the most variance requests --- the physical constraints that
+bind hardest on infill.
+\end{itemize}
+
+\S317, the demolition control, appears on 660 items and is the single most direct instrument
+of housing-stock protection in the dataset.
+
+\section{What the patterns say}
+
+\subsection{Stringency moved from the extensive to the intensive margin}
+
+The headline pattern is a substitution: denial fell to zero while conditioning tripled. A
+regulator that rarely refuses but usually attaches terms is not a permissive regulator; it is
+one whose burden is expressed in the content of the approval rather than in its existence.
+Any measure of regulatory stringency built on approval rates will read San Francisco as
+permissive and will be wrong.
+
+\subsection{The binding constraint is time, and specifically its variance}
+
+Half the docket is re-hearing. The median case moves at the speed of the meeting calendar, but
+the 90th percentile more than doubled. For a developer with financing costs, the relevant
+quantity is not expected delay but the width of its distribution --- and that width has grown
+even as the centre has not.
+
+\subsection{Discretionary review's collapse is a natural experiment}
+
+DR fell from 38.8\% of the docket to 8.6\% following reforms that changed who could trigger a
+hearing. That is a sharp, dated, policy-induced change in the \emph{intensity} of discretionary
+review --- exactly the parameter the supply model needs to move --- and it is identified by
+something other than the demand for housing.
+
+\section{From this dataset to a cost of uncertainty}
+\label{sec:uncertainty}
+
+The honest position is that this dataset measures \textbf{realised outcomes} well and
+\textbf{ex ante burden} not at all. A developer choosing whether to file faces a distribution
+over delay, over conditions and over approval; the dataset records one draw from it. Four
+routes seem worth trying, in increasing order of ambition.
+
+\subsection{The problem with \texttt{conditions\_imposed} as it stands}
+
+A concrete obstacle first, because it is the binding one. \texttt{conditions\_imposed} is
+populated on 25.9\% of items --- but its median length is \textbf{three characters}. It is a
+yes/no flag. The minutes very often say that conditions were imposed without enumerating them,
+and the schema faithfully records that. \texttt{modifications} does carry text (median 108
+characters) but is populated on only 10.7\% of items.
+
+So the dataset can currently answer \emph{whether} a project was conditioned, and almost never
+\emph{how}. That is the gap between the pattern in \S3 and a cost measure, and closing it is
+the highest-value next step. Three options:
+
+\begin{enumerate}
+\item \textbf{Motions and resolutions.} The Commission's conditions live in the numbered motion
+or resolution, not in the minutes. \texttt{action\_instrument} and
+\texttt{action\_instrument\_no} are extracted on 40\% of items and give the document number
+directly. Those documents are public and are the actual text of the burden.
+\item \textbf{The Planning Department's own condition-of-approval templates.} Conditions are
+substantially standardised. A modest taxonomy --- affordability, transportation demand
+management, open space, hours of operation, design review, monitoring --- would convert most
+condition text into a handful of indicators.
+\item \textbf{Cost-relevant coding.} Not every condition is costly. The distinction that
+matters is between conditions that change the project (units, height, envelope) and those that
+change its obligations (fees, monitoring, reporting). The \texttt{project\_modified} flag
+already separates these in principle.
+\end{enumerate}
+
+\subsection{Route one: realised delay as a predictable quantity}
+
+The chain construction gives, for every case, the number of hearings and elapsed days. Regress
+that on what was observable \emph{at first hearing} --- request type, district, block, staff
+recommendation, speaker turnout --- and the fitted value is an expected delay conditional on
+observables, while the residual variance is the part a developer cannot forecast. That
+residual is the natural first proxy for uncertainty, and it is available now without new data.
+
+\subsection{Route two: the staff recommendation as a prior}
+
+\texttt{preliminary\_recommendation\_category} is populated on 78.7\% of items and is issued
+\emph{before} the hearing. It is a public, dated signal of the expected outcome. Two
+quantities follow: the follow rate (how often the Commission does what staff asked), which
+prices how much residual discretion the Commission exercises; and the subset where the
+Commission departs from staff, which is where the unpredictable burden concentrates. A model
+in which the developer's prior is the staff recommendation and the Commission's deviation is
+the shock is both estimable and economically legible.
+
+\subsection{Route three: speakers as a mobilisation shock}
+
+Public turnout is recorded per item with a stance where the minutes mark one. Turnout is
+plausibly the most visible predictor of trouble, and it is observable to the developer only
+imperfectly at filing. Its usefulness is limited by the field's own accuracy --- 69.6\% on
+the test half, the weakest field in the schema --- so this route needs the stance work
+finished before it can carry weight.
+
+\subsection{Route four: the option value of not filing}
+
+The deepest version of the question is not measurable in this dataset at all, and it should be
+said plainly. Projects that were never filed because the process was too uncertain do not
+appear in Commission minutes. Any estimate of the cost of uncertainty built only on the
+observed docket is conditioned on selection into it. The permit records of \S9 are the only
+route to the counterfactual: parcels where a permit was filed and abandoned, or where an
+entitlement was granted and never built, are the observable trace of a project that lost its
+bet.
+
+\section{Linking to the city's permit records}
+\label{sec:permits}
+
+The dataset's value multiplies if the entitlement can be followed to construction. This
+section reports a first, tested pass.
+
+\subsection{Permit numbers parse and they match}
+
+3{,}932 items mention a building or demolition permit in their request text. A permit number
+can be parsed from \textbf{2{,}778} of them, yielding 1{,}752 distinct permits in three printed
+forms --- the modern \texttt{2013.10.21.9832}, the packed \texttt{201310219832}, and the
+1990s eight-digit \texttt{9725973}.
+
+Tested against DataSF's Building Permits dataset (1{,}295{,}048 rows, dataset
+\texttt{i98e-djp9}) on a random sample of 120 parsed numbers, \textbf{117 matched --- 97.5\%}.
+The join works, and it works on the exact identifier the minutes print.
+
+\subsection{What the match buys}
+
+The DBI record carries \texttt{filed\_date}, \texttt{issued\_date},
+\texttt{first\_construction\_document\_date}, \texttt{status}, \texttt{estimated\_cost},
+\texttt{revised\_cost}, \texttt{proposed\_units} and \texttt{existing\_units}. So for a matched
+item we can observe, on the far side of the discretionary hearing:
+
+\begin{itemize}
+\item \textbf{whether the permit was ever issued}, and how long after entitlement;
+\item \textbf{whether construction started}, via the first construction document;
+\item \textbf{whether it was withdrawn or expired} --- the abandonment outcome that \S8.5
+identifies as the trace of a lost bet;
+\item \textbf{how much it cost} and \textbf{how many units} resulted, against how many were
+proposed at the hearing.
+\end{itemize}
+
+Sampled records show all four states occurring: permits complete, permits issued but not
+completed, and permits withdrawn after filing.
+
+\subsection{The parcel route is broader but noisier}
+
+Where no permit number is printed, the block-and-lot key reaches further: on a random sample
+of 150 parcels from the minutes, \textbf{68\% had at least one DBI permit}. But the median
+matched parcel carries \emph{15} permits, most of them plumbing, electrical and small
+alterations irrelevant to the entitlement. The parcel join therefore needs a date window and a
+permit-type filter before it identifies the right permit, and its precision should be
+validated against the permit-number subset --- which is exactly what that subset is for.
+
+\subsection{What is not yet established}
+
+Whether the \emph{conditions} attached at the hearing are observable in the permit record is
+unresolved. DBI records the permit's own status and scope, not the Planning Commission's
+conditions of approval. Recovering those means the motions and resolutions of \S8.1, not
+DataSF. The permit join gives outcomes; it does not give the burden.
+
+\section{Where the data lives}
+
+The corpus pass is stored under \verb|$MFHR_DATA_ROOT/extraction/corpus_v2_g3/| in three forms
+kept separately and never conflated:
+
+\begin{itemize}
+\item \texttt{raw/} --- the model's replies exactly as returned, never rewritten;
+\item \texttt{interim/} --- unwrapped from the evidence envelope and type-coerced;
+\item \texttt{clean/} --- normalised; the analysis input for this memo;
+\item \texttt{evidence/} --- the supporting spans, and \texttt{verification\_failures.csv};
+\item \texttt{manifest.json} --- batch ids, run ids, token counts, cost, prompt SHA, schema and
+gold versions.
+\end{itemize}
+
+The separation is not fastidiousness. Every serious defect found while building the gold set
+was a \emph{normalisation} defect --- one silently emptied a field on 122 of 232 gold records
+--- and each was recoverable only because the untouched replies had been kept. Re-deriving
+\texttt{clean} from \texttt{raw} is a local loop; re-querying the corpus is \$69.
+
+\section{Limitations}
+
+\begin{enumerate}
+\item \textbf{Coverage is uneven at both ends.} 1998--2000 and 2025--2026 hold roughly a fifth
+of the meeting documents of the intervening years. Rates are usable; counts are not.
+\item \textbf{Field accuracy is 96.8\%, not 100\%.} At the item level the errors compound: an
+analysis conditioning on five fields at once is working with materially fewer clean rows than
+the field-level rate suggests, and whole-record accuracy should be reported wherever that is
+the operative unit.
+\item \textbf{\texttt{conditions\_imposed} is a flag, not a description}, which is the binding
+limitation on measuring stringency and the subject of \S8.1.
+\item \textbf{Case-number chains are an imperfect project identifier.} A project can change
+case number across a re-filing, and one case number can cover several agenda sub-items heard
+the same day. The chains in \S4 are a lower bound on how often projects return.
+\item \textbf{Delay is measured from first hearing}, which is already downstream of filing.
+The pre-hearing clock --- often the longer one --- is invisible here and lives in the
+Department's own records.
+\item \textbf{Speaker stance is the weakest field} (69.6\%) and the stance rule changed after
+the scored run. Any mobilisation analysis should wait for a re-run.
+\item \textbf{No causal claim is made anywhere in this memo.} The DR collapse in \S7.3 is
+described as a candidate natural experiment, not as an estimate.
+\end{enumerate}
+
+\input{corpus_tables}
+
+\end{document}

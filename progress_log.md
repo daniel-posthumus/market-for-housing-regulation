@@ -1,5 +1,92 @@
 # Progress Log
 
+## 2026-09-07 — Schema v2, gold set finished and adjudicated, corpus extracted, two memos
+
+**Goal**: Follow `extraction_pipeline_v2_spec.md` end to end — migrate the schema, rebuild the
+labelling app around one unified review queue, finish the hand-labelling, then run the chosen
+configuration over the whole corpus and report what the data says.
+
+**What was done**:
+- **Schema v2**: `speakers` became a list of objects with a stance and a `stance_basis`
+  (marker vs inferred); `resolution_or_motion_no` split into `action_instrument` +
+  `action_instrument_no`; speaker counts became derived; `project_address` demoted to
+  validation. New enum values earned from the data: `dra`, `informational`, `adopted`,
+  `certified`, `upheld`, `initiated`.
+- **New modules**: `normalize.py` (the storage layer, 32 self-tests), `provenance.py`
+  (runs/predictions/verification_failures), `review_queue.py` (one queue, four typed reasons),
+  `migrate_gold_v1_v2.py`, `merge_split_tails.py`, `resolve_speaker_refs.py`,
+  `extract_corpus.py`, `analyze_corpus.py`.
+- **App rebuilt**: structured-outputs pre-fill (model pin gone), speaker row editor with
+  read-only derived counts, era filter, one unified queue with evidence-span highlighting.
+- **Hand-labelling finished**: 232 `project_descr` re-labelled, 113 migration rows, 62 modern
+  items (2015–2026) labelled from scratch, 187 gold-vs-model adjudications judged.
+- **Corpus pass**: 16,199 of 16,203 items extracted with few-shot Haiku 4.5, $69.17, stored on
+  Dropbox in raw/interim/clean/evidence forms with a manifest.
+- **Two memos**: `extraction_method_comparison` rewritten against gold g3 (16pp);
+  `discretionary_review_patterns` written from the corpus output (17pp, six figures).
+
+**Key decisions / findings**:
+- **Adjudication changed the accuracy story**: of 187 judged disagreements, **52% were label
+  errors, not model errors**. Measured accuracy against unadjudicated gold is a lower bound of
+  unknown size, and the bias is larger for better models.
+- **Prompt ordering is worth $38**: putting the constant instructions ahead of the per-item
+  examples makes 3,600 tokens cacheable. Identical accuracy (96.8% both), corpus cost
+  $108 → $70.
+- **First modern-era measurement**: 97.4% HTML / 94.0% PDF on the frozen test half.
+- **Speaker stance is anchored to the request, not the Commission's action.** Anchoring to the
+  action is circular — the same words would be `support` or `oppose` depending on the outcome,
+  so the label could no longer be used to study outcomes.
+- **Silent data loss found and repaired**: `lot_number` was declared `scalar` while the
+  normaliser stored a list, so `coerce_record` stringified `[8]` to `"[8]"` and the value was
+  dropped — **122 of 232 gold records**. Recoverable only because the v1 snapshot is frozen and
+  raw model replies are kept. This is why raw/interim/clean are stored separately.
+- **`conditions_imposed` is a yes/no flag, not text** (median 3 characters). The dataset can
+  say *whether* a project was conditioned, almost never *how* — the binding gap for measuring
+  stringency.
+- **Substantive pattern**: disapproval fell to ~0% while conditioning rose 13.8% → 45.7%. The
+  Commission substituted from denial to conditioning. Delay's 90th percentile doubled
+  (147 → 360 days) while the median held.
+- **Permit linkage works**: 117 of 120 parsed permit numbers (97.5%) match DataSF's DBI
+  records, which carry issue dates, status, cost and units.
+- Parser repairs: 110 merged blocks re-split, 104 truncated blocks re-merged, 362 corrupted
+  case numbers fixed, 146 broken-keyword blocks handled.
+
+**Next steps**:
+- Draw a **second 60 modern items** — 61 items standing in for 4,855 is the binding constraint
+  on every era-level claim.
+- **Recover conditions from motions/resolutions** — `action_instrument_no` gives the document
+  number on 40% of items; that text is the actual burden.
+- Re-run the corpus parser from source so the block repairs hold upstream, not just in
+  `labels.db`.
+- Work the 6 deferred punctuation-level adjudications before the appendix's accuracy figure is
+  final.
+- Re-run extraction for `speakers` — the stance rule changed after the scored run.
+
+**Files touched**:
+- `code/commission_minutes_processing/extraction_common.py` — modified (schema v2, prompt,
+  evidence verification, enum additions)
+- `code/commission_minutes_processing/normalize.py` — created (storage layer + tests)
+- `code/commission_minutes_processing/provenance.py` — created
+- `code/commission_minutes_processing/review_queue.py` — created
+- `code/commission_minutes_processing/migrate_gold_v1_v2.py` — created
+- `code/commission_minutes_processing/gold_split.py` — created (`--extend`, `--refreeze`,
+  gold versioning)
+- `code/commission_minutes_processing/extract_corpus.py` — created (chunked, resumable)
+- `code/commission_minutes_processing/analyze_corpus.py` — created (figures + tables)
+- `code/commission_minutes_processing/merge_split_tails.py`, `resolve_speaker_refs.py`,
+  `bakeoff_*.py`, `build_adjudication.py` — created
+- `code/commission_minutes_processing/autoextract.py`, `parse_sf_meeting_minutes.py` —
+  modified (case-number and header regex repairs)
+- `code/commission_minutes_processing/labeling_app/{app.py,static/app.js,static/style.css,templates/index.html}`
+  — modified (queue, speaker editor, structured outputs)
+- `output/planning_commission_project/extraction_method_comparison.tex` — modified (rewritten
+  against gold g3)
+- `output/planning_commission_project/discretionary_review_patterns.tex` — created
+- `output/planning_commission_project/fig_{composition,outcomes,delay,commissioners,geography,citations}.pdf`
+  — created
+- `output/planning_commission_project/help_string_audit.md` — created
+- `STRUCTURE.md` — modified
+
 ## 2026-09-04 — Meeting-level extraction validated over four rounds, run corpus-wide, and closed out
 
 **Goal**: Finish the meeting-level layer: validate the extraction against hand labels until

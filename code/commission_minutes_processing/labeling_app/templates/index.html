@@ -10,6 +10,11 @@
   <header id="topbar">
     <strong>SF Planning Minutes — Labeler</strong>
     <span id="progress" class="progress"></span>
+    <!-- click to filter the queue down to the QA-review backlog -->
+    <button id="reviewLeft" class="review-left" title="items still flagged for QA review — click to filter to them"></button>
+    <!-- the schema-v2 review queue: migration review, adjudication and new labelling in one pile -->
+    <button id="queueLeft" class="review-left q" title="the unified schema-v2 review queue — click to work it"></button>
+    <button id="btnQueueMode" title="list review-queue rows instead of items">queue mode</button>
     <span class="spacer"></span>
     <label>prefill:
       <select id="prefillBackend">
@@ -18,12 +23,25 @@
       </select>
     </label>
     <button id="btnPrefill" title="Re-fill the form from the raw text (overwrites)">Re-prefill (p)</button>
+    <button id="btnRaw" title="whitespace reflowed for reading; the stored text is unchanged">compact (t)</button>
     <button id="btnExport" title="Write status=done labels to {year}_labeled.json">Export done →</button>
   </header>
 
   <div id="layout">
     <aside id="sidebar">
-      <div class="filters">
+      <!-- queue mode: the list is review_queue ROWS, filtered by reason and field, so the
+           same field is worked consecutively rather than one item at a time -->
+      <div class="filters" id="queueFilters" hidden>
+        <select id="fReason">
+          <option value="">all reasons</option>
+          <option value="field_redefined">field redefined</option>
+          <option value="migration_ambiguous">migration ambiguous</option>
+          <option value="adjudication">gold vs model</option>
+          <option value="new_item">new items (modern)</option>
+        </select>
+        <select id="fQField"><option value="">all fields</option></select>
+      </div>
+      <div class="filters" id="itemFilters">
         <select id="fStatus">
           <option value="">all status</option>
           <option value="todo">todo</option>
@@ -31,27 +49,20 @@
           <option value="done">done</option>
           <option value="flagged">flagged</option>
           <option value="review">review (QA)</option>
+          <option value="not_an_item">not an item</option>
         </select>
         <select id="fYear"><option value="">all years</option></select>
+        <select id="fEra" title="which minutes format the item came from">
+          <option value="">both eras</option>
+          <option value="html_1998_2014">HTML 1998-2014</option>
+          <option value="pdf_2015_2026">PDF 2015-2026</option>
+        </select>
         <select id="fOrder" title="queue order">
           <option value="priority">rare-class first</option>
           <option value="chrono">chronological</option>
         </select>
-        <select id="fFocus" title="show only flags touching this field; items where it's the ONLY flag float to the top">
+        <select id="fFocus" title="show only items whose note flags this field; items where it's the ONLY flag float to the top">
           <option value="">focus: any field</option>
-          <option value="action">action</option>
-          <option value="staff_planner">staff_planner</option>
-          <option value="absent">absent</option>
-          <option value="ceqa_determination">ceqa_determination</option>
-          <option value="ayes">ayes</option>
-          <option value="height_and_bulk_district">height_and_bulk_district</option>
-          <option value="type_district_descr">type_district_descr</option>
-          <option value="assessor_block">assessor_block</option>
-          <option value="lot_number">lot_number</option>
-          <option value="type_district">type_district</option>
-          <option value="excused">excused</option>
-          <option value="resolution_or_motion_no">resolution_or_motion_no</option>
-          <option value="recused">recused</option>
         </select>
         <input id="fSearch" type="search" placeholder="search case / text">
       </div>
@@ -59,6 +70,23 @@
     </aside>
 
     <main id="main">
+      <!-- The meeting the item was heard at: read once per meeting by the meeting-level
+           pipeline, never typed here. Date is context, not a field. -->
+      <div id="meetingBar" class="meeting-bar">
+        <span id="mbDate" class="mb-date"></span>
+        <span id="mbType" class="mb-type"></span>
+        <span id="mbEra" class="mb-era"></span>
+        <span id="mbDetail" class="mb-detail"></span>
+        <span class="spacer"></span>
+        <span id="mbRoll" class="mb-roll"></span>
+      </div>
+      <!-- the unified review queue for THIS item: every open question about it, in one place -->
+      <div id="queuePanel" class="queue-panel" hidden>
+        <div class="q-panel-head">REVIEW QUEUE <span class="q-keys">a accept · s skip · ⌥↓ next · c collapse</span>
+          <button id="btnQueueCollapse" type="button" title="collapse the panel to get the raw text back (c)">collapse</button>
+        </div>
+        <div id="queueBody"></div>
+      </div>
       <div id="reviewNote" class="review-note" hidden>
         <span class="rn-tag">REVIEW</span>
         <span id="reviewNoteText"></span>
@@ -78,6 +106,7 @@
               <option value="done">done</option>
               <option value="flagged">flagged</option>
               <option value="review">review (QA)</option>
+              <option value="not_an_item">not an item</option>
             </select>
           </label>
           <label class="chk"><input type="checkbox" id="flagged"> flag uncertain</label>

@@ -13,6 +13,9 @@ on 2026-06-05:
   • 2015–now   (PDF)   — the live archive page https://sfplanning.org/cpc-hearing-archives
                          links every minutes PDF at a stable host
                          citypln-m-extnl.sfgov.org/.../YYYYMMDD_{cal,cpc}_min.pdf
+  • 2018       (PDF)   — direct S3 keys. The archive page lists only two 2018 files
+                         (against 44 for 2019); the rest are on S3 but unlinked, so
+                         that year is fetched by probing dates, not by scraping links.
 
 Design:
   • requests.Session with retry/backoff, timeout, real User-Agent, polite delay.
@@ -24,12 +27,13 @@ Usage:
   python scrape_minutes.py --list                 # show source coverage, fetch nothing
   python scrape_minutes.py --year 2010 --dry-run  # show what WOULD be fetched
   python scrape_minutes.py --year 2010            # fetch one year
-  python scrape_minutes.py --era modern           # fetch all 2015+ PDFs
+  python scrape_minutes.py --era modern           # fetch all 2015+ PDFs (incl. direct-URL years)
+  python scrape_minutes.py --year 2018            # fetch the unlisted 2018 minutes
   python scrape_minutes.py                         # fetch everything (idempotent)
   python scrape_minutes.py --year 2010 --refresh  # re-download even if present
 """
 from __future__ import annotations
-import argparse, hashlib, json, logging, re, sys, time
+import argparse, datetime, hashlib, json, logging, re, sys, time
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -242,6 +246,105 @@ def scrape_modern(session, want_years: set[str] | None, manifest, dry, refresh) 
     return stats
 
 
+# ── direct-URL years (the 2018 hole) ─────────────────────────────────────────
+# Why this path exists: the archive page at MODERN_ARCHIVE does not list 2018. It
+# links 44 minutes PDFs for 2019 and 2 for 2018 — the year is simply missing from the
+# page, not from the web. The files themselves are still on S3 under the same key
+# pattern the two surviving 2018 documents came from (recorded in raw/_manifest.json):
+#
+#     https://sfplanning.s3.amazonaws.com/commissions/cpcpackets/YYYYMMDD_<suffix>.pdf
+#
+# The bucket denies ListObjects, so the keys can't be enumerated — they have to be
+# guessed and probed. Two facts make that cheap. (1) The Commission sits on Thursdays:
+# every one of the 318 modern minutes PDFs in the corpus is dated a Thursday, as is
+# every 2018 document the parsed corpus remembers, so 52 candidate dates cover a year.
+# (2) The suffix vocabulary is small, and observable from the neighbouring years.
+# A missing key answers 403, not 404 — the bucket hides absence rather than reporting
+# it — so a HEAD separates present from absent without downloading anything.
+DIRECT_S3_PREFIX = "https://sfplanning.s3.amazonaws.com/commissions/cpcpackets/"
+DIRECT_URL_YEARS = {"2018"}
+# Every suffix that appears on a modern minutes PDF anywhere in the corpus, spelled
+# exactly as the department spelled it. S3 keys are case-sensitive and the department
+# was not consistent — 20180906_JntHealthCommission_min.pdf serves while the all-lower
+# 20180906_jnthealthcommission_min.pdf answers 403 — so each observed casing is its own
+# candidate. Downstream naming lowercases (parse_modern_minutes.output_stem), so the
+# capitalisation here only has to satisfy S3.
+DIRECT_SUFFIXES = (
+    "cal_min", "cpc_min", "cal._min",        # the ordinary weekly sitting (212+88+1 files)
+    "cal_offsite_min", "joint_offsite_min",  # sittings held away from City Hall
+    "jntbic_min", "Jntbic_min", "jntbic_cal_min",     # joint w/ Building Inspection
+    "JntHealthCommission_min", "JntHealth_cal_min",   # joint w/ Health
+    "jnthealth_cal_min", "jnt_health_cal_min",
+    "Jnthrgcpc_min", "jnthpc_cal_min",                # joint w/ Historic Preservation
+    "Jnt_RecPark_min", "RecParkJnthrg_min",           # joint w/ Rec & Park
+    "RecParkjnthrng_min", "cpc_jnt_RecPark_min",
+)
+
+
+def direct_candidates(year: str) -> list[tuple[str, str]]:
+    """[(filename, url)] for every Thursday of `year` x every known suffix."""
+    d = datetime.date(int(year), 1, 1)
+    out = []
+    while d.year == int(year):
+        if d.weekday() == 3:                       # Thursday
+            for suf in DIRECT_SUFFIXES:
+                name = f"{d:%Y%m%d}_{suf}.pdf"
+                out.append((name, DIRECT_S3_PREFIX + name))
+        d += datetime.timedelta(days=1)
+    return out
+
+
+def key_exists(session, url: str) -> bool:
+    """HEAD the S3 key. 200 with a PDF content-type means the object is there; the
+    bucket answers 403 AccessDenied for keys that do not exist, so anything else is
+    'absent' and no GET is attempted."""
+    try:
+        r = session.head(url, timeout=TIMEOUT, allow_redirects=True)
+    except requests.RequestException as e:
+        log.error("HEAD failed %s — %s", url, e)
+        return False
+    return r.status_code == 200 and "pdf" in (r.headers.get("Content-Type") or "").lower()
+
+
+def scrape_direct(session, want_years: set[str] | None, manifest, dry, refresh) -> dict:
+    """Fetch the direct-URL years by date probe rather than by link scraping."""
+    stats = {"fetched": 0, "skipped": 0, "error": 0}
+    years = sorted(y for y in DIRECT_URL_YEARS if (not want_years or y in want_years))
+    for year in years:
+        ydir = RAW / year
+        on_disk = {f.name for f in ydir.iterdir()} if ydir.is_dir() else set()
+        # macOS is case-insensitive where S3 is not, so `dest.exists()` alone would let a
+        # case-variant of a suffix silently shadow a file already held (and, on a
+        # case-sensitive filesystem, save the same document twice). Match on the lowered
+        # name instead: one document per key, whatever the department capitalised.
+        lowered = {n.lower() for n in on_disk}
+        cands = direct_candidates(year)
+        log.info("direct %s: probing %d candidate keys on %s", year, len(cands),
+                 DIRECT_S3_PREFIX)
+        found = 0
+        for name, url in cands:
+            dest = ydir / name
+            if name in on_disk and not refresh:
+                download(session, url, dest, manifest, dry, refresh)   # backfills manifest
+                stats["skipped"] += 1
+                found += 1
+                continue
+            if name.lower() in lowered and not refresh:
+                continue                           # same document, different casing
+            if not key_exists(session, url):
+                time.sleep(PAUSE)                  # polite between probes, not just fetches
+                continue
+            found += 1
+            res = download(session, url, dest, manifest, dry, refresh)
+            if res in stats:
+                stats[res] += 1
+            if res == "fetched":
+                on_disk.add(name)
+                lowered.add(name.lower())
+        log.info("direct %s: %d keys present of %d probed", year, found, len(cands))
+    return stats
+
+
 # ── repair: re-download corrupt local PDFs ───────────────────────────────────
 def find_corrupt_modern_pdfs() -> list[Path]:
     """Modern raw PDFs whose bytes aren't a real PDF (failed/partial downloads)."""
@@ -333,6 +436,8 @@ def main(argv=None):
     if args.list:
         print("HTML era (S3 index pages): " + ", ".join(sorted(YEAR_INDEX)))
         print(f"Modern era (PDF): 2015–present via {MODERN_ARCHIVE}")
+        print("Direct-URL years (archive page omits them): "
+              + ", ".join(sorted(DIRECT_URL_YEARS)) + f" via {DIRECT_S3_PREFIX}")
         return 0
 
     want = parse_years(args.year)
@@ -361,6 +466,11 @@ def main(argv=None):
 
     if do_modern:
         for k, v in scrape_modern(session, want, manifest, args.dry_run, args.refresh).items():
+            totals[k] = totals.get(k, 0) + v
+        if not args.dry_run:
+            save_manifest(manifest)
+        # years the archive page omits are fetched by direct S3 key probe instead
+        for k, v in scrape_direct(session, want, manifest, args.dry_run, args.refresh).items():
             totals[k] = totals.get(k, 0) + v
         if not args.dry_run:
             save_manifest(manifest)

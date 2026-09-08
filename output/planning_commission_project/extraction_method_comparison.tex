@@ -1,0 +1,740 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+
+\title{Item-Level Field Extraction:\\
+Deterministic Rules, Claude, and How to Tell Which Is Right}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The item-level dataset has 29 fields and every one has been produced by a regular
+expression. This memo asks whether that is the right instrument, measures the alternative on
+hand-labelled data, and reports which fields need a language model, which do not, and how to
+run one.
+
+\medskip\noindent
+On a \textbf{frozen test half of 139 hand-labelled items that no prompt was tuned against},
+the deterministic extractor scores \textbf{70.7\%} and Claude Haiku~4.5 with six retrieved
+worked examples scores \textbf{96.8\%}. The gold set now spans both document eras: the model
+scores \textbf{97.4\%} on the 1998--2014 HTML minutes and \textbf{94.0\%} on the 2015--2026
+PDF minutes, which is the first measurement of the modern era and the one this project was
+waiting on. A full corpus pass costs \textbf{\$70}.
+
+\medskip\noindent
+\textbf{The recommendation is Haiku~4.5 with few-shot examples, with the instructions placed
+ahead of the examples so the prompt prefix is cacheable.} That ordering is worth \$38 across
+the corpus and costs nothing in accuracy --- the two orderings score identically on the test
+half. Model choice was never the interesting decision: three models spanned three points in
+the first round while the gap to the regex was twenty-one, and prompting moved Haiku further
+than upgrading to Opus did.
+
+\medskip\noindent
+Getting a trustworthy number required fixing the ruler twice. Exact string matching --- the
+project's original metric --- charged the models about nine points for a trailing full stop
+and a cross-street gloss on an address; a field-aware comparison (\S\ref{sec:metric}) fixed
+that. The second correction was to the gold set itself: every disagreement between model and
+label was judged against the source block, and \textbf{52\% of them were label errors, not
+model errors} (\S\ref{sec:adjudication}). An accuracy figure computed before that work is a
+lower bound of unknown size.
+
+\medskip\noindent
+\textbf{Scope.} The gold set is 294 items --- 233 from 1998--2014 and 61 from 2015--2026,
+five per year --- at gold version \texttt{g3}. The modern stratum is thin for 30\% of the
+corpus and is the first thing to extend.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{The question}
+
+The pipeline's standing rule is ``deterministic rules first''. It earned that place on the
+date and meeting-level stages, which produce 100\% item accuracy over 1{,}621 items and
+reproduce byte-identically on every run. This memo asks whether the rule also holds for the
+\emph{item fields} --- the 29 columns recording what was requested and what the Commission
+did about it.
+
+It is not an abstract question. Those fields are the dataset. If a regular expression finds
+the roll call on 80\% of items and a model finds it on 100\%, a fifth of the Commission's
+voting record is present or absent from every downstream analysis.
+
+\section{Part I --- Methodology}
+
+\subsection{The gold set and the frozen split}
+\label{sec:gold}
+
+The gold set is \textbf{294 hand-labelled records} at gold version \texttt{g3}: 233 from the
+1998--2014 HTML minutes and 61 from the 2015--2026 PDF minutes, the latter drawn five per
+year so that every year of the modern era is represented.
+
+Those 294 are split \textbf{155 train / 139 test}, stratified by era and then by year, with a
+fixed seed and a SHA-256 over the gold records so drift is detectable
+(\texttt{gold\_split.py --verify}). Stratifying by year matters because the archive's layout
+drifts; a split loading one side with 1998 pages would be easier or harder for a reason
+unrelated to method.
+
+The modern items were added by \texttt{gold\_split.py --extend}, which assigns only the ids
+that were not previously on a side. This is not a nicety. A rebuild reshuffles items that
+have already been looked at while tuning, which silently moves test items into train and
+destroys the only thing the split is for.
+
+\textbf{Gold is versioned, and every number names its version.} Working the adjudication
+queue changes gold, which changes every frozen test number, so a snapshot is registered under
+a name (\texttt{g1}, \texttt{g2}, \texttt{g3}) with its content hash before any round of
+scoring. The numbers in this memo are all \texttt{g3}. Numbers from earlier drafts of this
+memo were measured against a gold set that has since been corrected in about 150 places and
+are not comparable.
+
+\textbf{Every headline number here is measured on the test half.} Prompt variants were
+developed against train. This discipline exists because the moment a prompt is chosen by
+looking at items, those items stop measuring anything.
+
+Sampling below the full set was considered and rejected: the whole gold set costs about \$2
+per configuration, while a 25-item draw would cut per-field $n$ to about 12 on a field the
+gold fills half the time --- a confidence interval near $\pm$25 points, which cannot separate
+any two configurations.
+
+\subsection{The methods}
+
+The first round of this memo compared four methods --- the deterministic extractor and three
+Claude models --- and found that model choice was not the interesting decision: Haiku~4.5,
+Sonnet~5 and Opus~5 spanned three points while the gap to the regex was twenty-one, and
+adding worked examples moved Haiku further than upgrading to Opus did. That round is
+summarised in \S\ref{sec:fewshot}; this round takes Haiku~4.5 with six examples as settled
+and asks two remaining questions --- how it does on the modern era, and what it costs to run.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Method & What it is & Configuration \\
+\midrule
+\texttt{regex} & \texttt{autoextract.extract()} & the current production extractor \\
+\texttt{haiku-4.5-g3} & \texttt{claude-haiku-4-5} & Batch API, structured outputs, 6 examples \\
+\texttt{haiku-4.5-g3cache} & \texttt{claude-haiku-4-5} & as above, instructions first (cacheable) \\
+\bottomrule
+\end{tabular}
+\caption{\texttt{effort} is deliberately not sent to Haiku~4.5 --- the parameter errors on
+that model. The two model rows differ only in the ORDER of the prompt, not its content: the
+examples are retrieved per item and therefore differ on every request, so a prefix is
+cacheable only if the constant instructions come first.}
+\end{table}
+
+\subsection{Era-matched retrieval}
+
+Examples are drawn only from the train half, retrieved by content overlap with the item being
+extracted, and \textbf{filtered to the same era}. A PDF-era item is shown PDF-era examples.
+Cross-era retrieval would teach the wrong block anatomy, and until the modern gold set existed
+the configuration was maximally exposed to that --- every available example was HTML-era. The
+retriever warns rather than silently falling back when an era has too few examples.
+
+\subsection{The prompt}
+
+Each model receives the schema-generated prompt, then the raw block. The prompt is not
+written by hand --- it is built from \texttt{SCHEMA} by
+\texttt{extraction\_common.\_build\_prompt()}, so it cannot drift from the fields. It opens:
+
+\begin{quote}\small\sloppy
+You are a strict JSON extractor. Given a block of raw meeting text, extract and return
+exactly one valid double-quoted JSON object with the keys below (any order).
+Only output the JSON---no commentary. Missing fields $\rightarrow$ empty string \texttt{""}
+(or \texttt{[]} for list fields, \texttt{0} for counts).
+\end{quote}
+
+\noindent
+followed by one line per field: name, the field's \texttt{help} text, and for enums the
+permitted values. 3{,}089 characters, roughly 772 tokens, byte-identical on every request and
+therefore cacheable.
+
+\subsection{What the model is told about \texttt{request\_type}}
+\label{sec:reqtype-prompt}
+
+One field's prompt line explains much of both methods' behaviour and is worth quoting whole.
+This is exactly what the model sees:
+
+\begin{quote}\small\ttfamily\sloppy
+- request\_type: Type of request (often inferable from the case-number suffix) --- one of:
+conditional\_use, conditional\_use\_modification, discretionary\_review, variance,
+rezoning\_map\_amendment, planning\_code\_amendment, general\_plan\_amendment,
+large\_project\_authorization, downtown\_project, ceqa\_environmental,
+appeal\_preliminary\_negative\_declaration, historic, coastal, office\_allocation, appeal,
+other, or ""
+\end{quote}
+
+The parenthetical comes from the schema's own help text. \textbf{It instructs the model to do
+what the labelling manual forbids} --- the manual's rule is that the suffix is a hint and the
+``Request for\ldots'' sentence decides. Section~\ref{sec:reqtype} measures who obeys it.
+
+Because \texttt{PROMPT\_INSTRUCTION} is generated from \texttt{help} strings, \textbf{every
+word of help text is prompt text}. That makes the help strings the cheapest lever in the
+project, and the one most easily overlooked.
+
+\subsection{The response schema}
+
+Responses are constrained by structured outputs (\texttt{output\_config.format}) with a JSON
+schema generated from \texttt{SCHEMA}: lists become \texttt{array of string}, counts
+\texttt{integer}, enums a string with the vocabulary as \texttt{enum} \emph{plus the empty
+string} --- so ``the block does not say'' is a legal answer the model can select rather than
+something it must invent a way to express. All extracted fields are \texttt{required};
+\texttt{additionalProperties} is false. \textbf{Every batch returned complete, parseable
+records with zero failures.}
+
+This matters operationally. The labelling app's older pre-fill path forces JSON with an
+assistant prefill (\texttt{\{"role": "assistant", "content": "\{"\}}), which \textbf{returns a
+400 on Sonnet~5, Opus~5 and the whole 4.6+ family}. It survives only because that path is
+pinned to Haiku~4.5. Structured outputs are the replacement and are strictly better: valid by
+construction rather than by hope.
+
+\subsection{The metric: why not exact match}
+\label{sec:metric}
+
+The project's original comparison, \texttt{field\_match}, is exact string equality after case
+and whitespace folding. For enums that is right. For most of this schema it asks the wrong
+question, and the difference is not small: on identical predictions it scores Haiku at 82.3\%
+where a field-aware comparison scores 91.2\%.
+
+What exact match was charging for:
+
+\begin{itemize}
+\item \textbf{A trailing full stop.} Gold \texttt{'do not take discretionary review and
+approve the project'}; prediction \texttt{'Do not take Discretionary Review and approve the
+project.'}
+\item \textbf{The minutes' locational gloss.} Gold \texttt{'1233 Howard Street'}; prediction
+\texttt{'1233 Howard Street, east side between 8th and 9th Streets'}.
+\item \textbf{Labeller abbreviation.} On \texttt{project\_descr} the gold is frequently a
+\emph{prefix} of the prediction --- the human stopped early. Requiring the extractor to
+reproduce an abbreviation measures nothing.
+\item \textbf{Punctuation inside an identifier.} \texttt{'motion no.: 14644'} versus
+\texttt{'Motion No. 14644'}; lot \texttt{'009, 010'} versus \texttt{'9,10'}.
+\end{itemize}
+
+\texttt{compare\_field} chooses a rule by what the field \emph{is}:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+Field kind & Rule \\
+\midrule
+enum, int           & exact --- \texttt{approved} and \texttt{continued} are different answers \\
+date                & parsed and compared as dates \\
+identifier          & punctuation and case dropped, digits preserved \\
+permanent action id & \textbf{instrument kept}: a motion is not a resolution \\
+names               & set of surnames; order and honorifics carry nothing \\
+address             & the street address proper, ignoring the locational gloss \\
+free text           & containment, or token overlap $\geq 0.85$ \\
+\bottomrule
+\end{tabular}
+\caption{Per-field comparison rules. \texttt{field\_match} is retained, frozen, for results
+already scored with it.}
+\end{table}
+
+Two deliberate refusals. \textbf{Motion versus resolution is not folded away} --- they are
+different instruments, and the gold set turned out to be wrong about which on three items
+(\S\ref{sec:golderrors}). And \textbf{the address rule does not excuse the format}: a separate
+predicate, \texttt{format\_ok}, tracks whether \texttt{project\_address} came back in the
+clean shape the geocoder and the APN join need. Loosening a correctness metric should not
+hide a real formatting requirement --- that one is fixed in the prompt, not the ruler.
+
+\subsection{Two rates, never averaged}
+\label{sec:tworates}
+
+\begin{itemize}
+\item \textbf{Accuracy} is measured \emph{only where the gold record has a value}: when there
+is something to find, does the method find it?
+\item \textbf{Over-extraction} is measured \emph{only where the gold record is blank}: does
+the method invent something when there is nothing there?
+\end{itemize}
+
+Scoring blanks as correct answers would put the regex extractor --- which leaves most fields
+empty --- at the top of the table for the worst possible reason.
+
+\section{Part II --- Results}
+
+\input{bakeoff_tables}
+
+\subsection{The headline}
+
+Table~\ref{tab:headline} is the result. On the frozen test half, few-shot Haiku~4.5 scores
+\textbf{96.8\%} against \textbf{70.7\%} for the deterministic extractor --- a gap of twenty-six
+points that no amount of regex maintenance is going to close.
+
+Four findings, in order of how much they should change what you do:
+
+\begin{enumerate}
+\item \textbf{The modern era works.} This is the first measurement of it. The model scores
+97.4\% on the HTML era and \textbf{94.0\%} on the PDF era. A 3.4-point gap on a document
+format with different headers, different speaker notation and different case-number
+conventions is a good outcome, and it is the number that decides whether a corpus pass is
+worth running. It is also, notably, the regex's \emph{best} stratum (72.1\%) --- the modern
+minutes are more regular, which flatters rules and understates how much the model is adding.
+
+\item \textbf{Prompt ordering is worth \$38 and costs nothing.} Placing the constant
+instructions ahead of the per-item examples makes the leading 3{,}600 tokens cacheable. The
+two orderings score \emph{identically} on the test half (96.8\% both) and within 0.2 points on
+every stratum, while measured input tokens fall from 10{,}541 to 4{,}980 per item
+(Table~\ref{tab:cost}).
+
+\item \textbf{Method matters far more than model.} In the first round three models spanned 2.9
+points while the gap to the regex was 21.2. Nothing since has changed that: the work that
+moved the number was the prompt, the schema and the gold set, not the model.
+
+\item \textbf{Over-extraction is the cost of the gain.} The model invents a value where the
+gold is blank on 4.3\% of blank fields; the regex does so on 1.6\%. This is the honest
+trade and it is why the two rates are reported separately and never averaged
+(\S\ref{sec:tworates}). Evidence spans (Table~\ref{tab:evidence}) exist to make it
+detectable at extraction time rather than discoverable at analysis time.
+\end{enumerate}
+
+\subsection{Where the remaining error is}
+
+Table~\ref{tab:byfield} gives the field-level breakdown. The residual error is concentrated,
+and it is concentrated in the places one would expect:
+
+\begin{itemize}
+\item \texttt{speakers} (69.6\%) is the worst field by a wide margin and the least
+load-bearing. It is a list of people with a stance each, scored as a set, so one missing name
+fails the whole field. The stance rule was rewritten late (\S\ref{sec:stance}) and the field
+now records \emph{how} a stance was determined, which makes the reliable subset separable.
+\item \texttt{project\_modified} (75.0\%, $n=16$) and \texttt{special\_use\_district}
+(84.2\%, $n=19$) have too few scored values to read as rates.
+\item \texttt{type\_district\_descr} (92.1\%) is almost entirely truncation --- the model
+returning ``Chinatown Residential Neighborhood Commercial'' where the label has
+``\ldots\ District''. The adjudication round judged twenty of these and the \emph{model} won
+sixteen.
+\item Everything the parcel join depends on --- \texttt{case\_number},
+\texttt{assessor\_block}, \texttt{lot\_number} --- is at or above 98\%.
+\end{itemize}
+
+\subsection{Where the regex is still the right tool}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrl}
+\toprule
+Field & \texttt{regex} & best model & Verdict \\
+\midrule
+\texttt{case\_number}                & \textbf{99.1\%} & 98.2\% & regex \emph{beats} every model \\
+\texttt{assessor\_block}             & 99.0\% & 100\%  & regex adequate \\
+\texttt{continued\_to}               & 94.9\% & 94.9\% & tied \\
+\texttt{height\_and\_bulk\_district} & 89.7\% & 97.4\% & regex adequate \\
+\texttt{conditions\_imposed}         & 90.9\% & 100\%  & regex adequate \\
+\texttt{preliminary\_recommendation} & 86.7\% & 97.3\% & borderline \\
+\texttt{action}                      & 86.0\% & 93.0\% & borderline \\
+\bottomrule
+\end{tabular}
+\caption{Test half. \texttt{case\_number} is the only field where a regular expression wins
+outright --- a fixed pattern in a fixed position.}
+\end{table}
+
+\texttt{continued\_to} is a cautionary tale. It scored \textbf{0\%} in the first run --- not
+because the extractor failed to find the date, but because it returned ``April 21, 2005''
+where the schema stores ISO. Every value was right and every one counted as a miss. A date
+normalisation (and extending the pattern to the \texttt{3/12/98} form the archive also uses)
+took it to 94.9\%, where it now ties the best model.
+
+\subsection{Where a model is not optional}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Field & \texttt{regex} & \texttt{haiku-4.5} & Gap \\
+\midrule
+\texttt{special\_use\_district}     &  0.0\% &  91.7\% & --- \\
+\texttt{modifications}              &  0.0\% &  68.4\% & --- \\
+\texttt{noes}                       &  5.9\% &  94.1\% & $+88$ \\
+\texttt{oppose\_count}              &  9.1\% &  72.7\% & $+64$ \\
+\texttt{support\_count}             &  9.5\% &  76.2\% & $+67$ \\
+\texttt{resolution\_or\_motion\_no} & 23.1\% &  79.5\% & $+56$ \\
+\texttt{speakers}                   & 27.6\% &  82.8\% & $+55$ \\
+\texttt{project\_descr}             & 38.6\% &  75.4\% & $+37$ \\
+\texttt{project\_modified}          & 40.0\% &  93.3\% & $+53$ \\
+\texttt{type\_district\_descr}      & 47.8\% &  90.0\% & $+42$ \\
+\texttt{type\_district}             & 51.7\% &  93.1\% & $+41$ \\
+\texttt{absent}                     & 69.0\% &  97.6\% & $+29$ \\
+\texttt{staff\_planner}             & 71.4\% &  85.7\% & $+14$ \\
+\texttt{lot\_number}                & 77.8\% &  97.0\% & $+19$ \\
+\texttt{ayes}                       & 80.2\% & \textbf{100\%} & $+20$ \\
+\bottomrule
+\end{tabular}
+\caption{Test half. The roll-call fields matter disproportionately --- they are the
+Commission's voting record, and \texttt{ayes} goes from four-fifths to complete.}
+\end{table}
+
+\section{Part III --- How each method fails}
+
+\begin{quote}\small\itshape
+The tables in this part are from the FIRST round: four methods, schema v1, gold version
+\texttt{g1}, and the 1998--2014 items only. They are kept because the failure taxonomy and the
+model comparison they support have not been re-run and are what motivated the configuration
+now recommended. Do not read their absolute rates as current --- Part~II has those, measured
+against gold \texttt{g3} on both eras.
+\end{quote}
+
+\subsection{Failure classes}
+
+Classifying every miss over the full gold set, under the \emph{exact} comparison, to show
+what the field-aware metric later absorbs:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Failure class & \texttt{regex} & \texttt{haiku-4.5} & \texttt{sonnet-5} & \texttt{opus-5} \\
+\midrule
+Omitted --- left blank             & \textbf{677} & 58 & 50 & \textbf{14} \\
+Different value                    & 169 & 194 & 183 & 171 \\
+Substring --- truncated or padded  & 140 & 175 & 202 & 199 \\
+Format only                        &  75 & 115 & 123 & 124 \\
+Different values (list)            & 146 &  27 &  38 &  34 \\
+Partial --- names missing or extra &  36 &   6 &   5 &   3 \\
+Different date                     &   3 &   2 &   2 &   2 \\
+\bottomrule
+\end{tabular}
+\caption{The two methods fail in categorically different ways.}
+\end{table}
+
+\textbf{Fifty-four percent of every regex failure is silence.} It does not get the answer
+wrong; it declines to answer. That was a design choice --- a blank is a question, a confident
+wrong value is a silent error --- but at this volume the choice became the dominant cost.
+
+\textbf{The models almost never go silent}, and Opus~5 hardly ever does: 14 blanks against
+677. Their misses are ``different value'' and ``substring'' --- the signature of a reader that
+always produces something, sometimes the wrong something and sometimes the right something
+trimmed differently. About a fifth of their apparent misses were format-only, which is what
+\S\ref{sec:metric} addresses.
+
+\subsection{\texttt{request\_type}: what the prompt is doing}
+\label{sec:reqtype}
+
+Section~\ref{sec:reqtype-prompt} showed the prompt asserting that \texttt{request\_type} is
+``often inferable from the case-number suffix''. Scoring every disagreement three ways --- what
+the human said, what the method said, and what the \emph{suffix alone} would give:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Method & Agrees with gold & Followed the suffix & Read the text & Neither \\
+\midrule
+\texttt{regex}     & 82.8\% & \textbf{17.2\%} & 0.0\% & 0.0\% \\
+\texttt{haiku-4.5} & 93.0\% & 0.9\% & 4.0\% & 2.2\% \\
+\texttt{sonnet-5}  & 93.8\% & 1.3\% & 3.5\% & 1.3\% \\
+\texttt{opus-5}    & \textbf{94.7\%} & 1.3\% & 3.1\% & 0.9\% \\
+\bottomrule
+\end{tabular}
+\caption{Full gold set, $n=227$. ``Followed the suffix'' means the method's answer equals the
+suffix-derived value where the human's does not.}
+\end{table}
+
+\textbf{Every regex miss is ``followed the suffix'' --- 100\% of them}, because that is the
+only mechanism it has: \texttt{derive\_request\_type()} is a lookup from case-number letters
+to enum values and cannot read the request. Its failures are exactly the cases the manual
+anticipates --- \texttt{97.870C} is a variance heard alongside a conditional use;
+\texttt{98.238ET} is a Planning Code amendment, not a CEQA determination; four \texttt{E}
+cases are appeals of a preliminary negative declaration rather than generic environmental
+review.
+
+The models almost never do this, \emph{despite the prompt inviting it}. They read the
+description instead. This is the clearest single demonstration of what a model buys: the
+ability to follow a rule stated in prose rather than one encoded in a lookup table.
+
+\subsection{Some ``model errors'' are gold errors}
+\label{sec:golderrors}
+\label{sec:adjudication}
+
+Every disagreement between the model and the hand label that survived \texttt{compare\_field}
+was queued and judged against the source block, with a three-way verdict: \emph{gold right},
+\emph{model right}, \emph{both wrong}. Table~\ref{tab:adjudication} is the result of that
+round.
+
+\textbf{More than half of the apparent model errors were label errors.} That is the single
+most important number in this memo for interpreting every other number in it: an accuracy
+figure computed against an unadjudicated gold set is a lower bound of unknown size, and the
+bias is \emph{larger} for the better models, because they are likelier to be right where the
+label is wrong.
+
+The pattern was field-specific and diagnostic rather than random:
+
+\begin{itemize}
+\item \texttt{staff\_planner} went 33--0 to the label --- and that was a \emph{prompt} bug,
+not a model failure. The help text said the answer was ``initial plus surname'' and gave only
+\texttt{(D. WINSLOW: (415) 558-6335)} as an example, so on the 1998--2001 minutes, which
+print a bare \texttt{(WASHINGTON)}, the model found no initial and returned blank. Twenty-seven
+of the thirty-three were exactly this. The help text now spells out both forms; the field
+scores 100\% on the test half in this round.
+\item \texttt{type\_district\_descr} went 4--20 to the model, \texttt{project\_address} 0--9,
+\texttt{request\_type} 2--8. These are fields where the label was a paraphrase and the model
+copied the block.
+\item \texttt{lot\_number} split 6--6 with 3 ``both wrong''.
+\end{itemize}
+
+Two classes of correction were applied without a human verdict, because the source settles
+them: cases where the model returned nothing and the label's value is printed verbatim in the
+block, and cases where the two values are identical after name normalisation
+(\texttt{B.Wycko} versus \texttt{B. Wycko}). Neither is a judgement call; both were logged.
+
+\subsection{The bugs the adjudication round exposed}
+
+Adjudication is usually described as a way to price gold error. In practice its larger return
+here was finding defects that no accuracy number would have revealed, because they were
+symmetric --- present in gold \emph{and} prediction:
+
+\begin{itemize}
+\item \texttt{lot\_number} was declared \texttt{scalar} in the schema while the normaliser
+stored it as a list. \texttt{coerce\_record} stringified \texttt{[8]} to \texttt{"[8]"}, which
+the next normalisation could not parse, and the value was dropped --- silently, on whatever
+save happened to touch some other field. \textbf{122 of 232 gold records had lost their lot
+number.} They were recoverable only because the pre-migration snapshot is frozen and because
+the raw model replies are stored alongside the normalised ones.
+\item Three blocks held two agenda items each, so gold described item~1 while the model read
+item~2 and every field disagreed. The header regex had missed them because the archive prints
+\texttt{1a.2013.1521DDV} and \texttt{2004.\ 0164D} --- no space where one was expected,
+a space where none was.
+\item Two blocks were truncated at a numbered line: a date (``\ldots on December'' +
+``4.~The Project\ldots'') and the enumerated modifications attached to an \texttt{ACTION:}
+line, which carried the vote away with them.
+\end{itemize}
+
+None of these would have been found by looking at an accuracy table.
+
+\subsection{Over-extraction, read carefully}
+
+The models fill a blank field on 5--9\% of opportunities against 2.7\% for regex. The number
+needs reading field by field, because ``the human left it blank'' is not ``the answer is
+blank''.
+
+The clearest case is \texttt{conditions\_imposed}: every model scores \textbf{100\%} accuracy
+where the gold has a value, and 23--33\% over-extraction across the blanks. That field is
+filled on 11\% of gold records while 32\% of corpus blocks mention conditions somewhere --- the
+gold is thin, so a model saying ``yes'' there is plausibly right.
+
+Two alarming-looking figures are noise: \texttt{staff\_planner} at 100\% is on $n=2$ blanks,
+\texttt{request\_type} at 67\% on $n=3$. The over-extraction that looks like genuine model
+behaviour is \texttt{type\_district}/\texttt{type\_district\_descr} (25--50\%), where a model
+asked for a zoning district supplies one from the shape of the text even when the block does
+not name it.
+
+\section{Part IV --- Improving the model}
+
+\begin{quote}\small\itshape
+The tables in this part are from the FIRST round: four methods, schema v1, gold version
+\texttt{g1}, and the 1998--2014 items only. They are kept because the failure taxonomy and the
+model comparison they support have not been re-run and are what motivated the configuration
+now recommended. Do not read their absolute rates as current --- Part~II has those, measured
+against gold \texttt{g3} on both eras.
+\end{quote}
+
+\subsection{The blank policy}
+\label{sec:v2}
+
+If a model over-fills because nothing told it silence is a valid answer, saying so should
+help. \texttt{v2} is identical to \texttt{v1} --- same model, items and response schema ---
+except that it prepends:
+
+\begin{quote}\small\ttfamily\sloppy
+BEFORE YOU EXTRACT --- the rules on blank fields:\\[2pt]
+1. A blank is a real answer, not a failure. It means "the block does not say".\\
+2. Extract only what the block states. Do NOT infer a value from the case number, do NOT
+fill a field from general knowledge of San Francisco planning practice.\\
+3. Before writing any non-empty value, check that you could point to the words in this block
+that support it.\\
+4. Leaving five fields blank is better than guessing one.
+\end{quote}
+
+Over-extraction falls from 9.2\% to 7.3\% and accuracy rises slightly (91.2\%
+$\rightarrow$ 91.5\%). The effect concentrates where it should ---
+\texttt{type\_district\_descr} 50$\rightarrow$33\%, \texttt{conditions\_imposed}
+33$\rightarrow$23\%. It does not fix everything: the model still fills
+\texttt{type\_district} on a third of blank items when told not to guess, which is
+disagreement about what the block says rather than disobedience.
+
+\subsection{Few-shot examples}
+\label{sec:fewshot}
+
+Zero shots is the honest floor for a \emph{method comparison} but not how the extractor should
+be run. Most of what the model still gets wrong is a \emph{convention} rather than a reading
+failure --- that \texttt{project\_address} is the street address and not the cross-street
+gloss, that ``Approved as proposed'' on a discretionary-review case means the Commission
+declined to take DR. Conventions are what worked examples teach well and prose teaches badly.
+
+The harness retrieves the $k$ most similar labelled blocks \textbf{from the train half only},
+by content overlap, and shows each with its gold record. Retrieval matters: a
+discretionary-review item is shown other discretionary-review items.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Configuration & Accuracy & Over-extraction & Whole records \\
+\midrule
+\texttt{haiku-4.5} (zero-shot)   & 91.2\% & 9.2\% & 29.8\% \\
+\texttt{haiku-4.5-v2}            & 91.5\% & 7.3\% & 31.6\% \\
+\texttt{haiku-4.5-fs6}           & \textbf{94.1\%} & 5.6\% & 48.2\% \\
+\texttt{haiku-4.5-fs6v2}         & 93.8\% & \textbf{5.0\%} & \textbf{49.1\%} \\
+\midrule
+\texttt{opus-5} (zero-shot)      & 93.5\% & 8.5\% & 40.4\% \\
+\bottomrule
+\end{tabular}
+\caption{Test half. Six retrieved examples buy more than a five-fold increase in model price,
+on every axis at once.}
+\end{table}
+
+\textbf{Six examples take Haiku past zero-shot Opus} on accuracy, over-extraction and
+whole-record correctness simultaneously. Whole records --- 29.8\% to 48.2\% --- is the largest
+movement anywhere in this memo.
+
+One cost caveat. Retrieved examples differ per request, so \textbf{they cannot be cached}: the
+6-shot prefix is about 2{,}743 tokens per item and takes a corpus pass from \$18 to \$40. A
+\emph{fixed} example set would be cacheable and much cheaper, at some accuracy cost. That
+comparison is untested and is the obvious next experiment.
+
+\subsection{What is not worth doing}
+
+\textbf{Retrieval-augmented generation in its usual sense does not apply.} The block is
+self-contained and about 450 tokens; the answer is entirely inside it. There is no external
+context to fetch. The only retrieval that helps is retrieval of \emph{examples}
+(\S\ref{sec:fewshot}) --- a different technique wearing the same name.
+
+\subsection{Speaker stance: what the model is asked to decide}
+\label{sec:stance}
+
+\texttt{speakers} is the one field where the rule changed after the round reported here was
+scored, so its 69.6\% should be read as measuring the \emph{old} instruction.
+
+Two decisions were taken. First, stance is anchored to \textbf{the request before the
+Commission}, not to the Commission's eventual action. Anchoring to the action is circular: the
+same person saying the same words would be \texttt{support} when the Commission takes
+discretionary review and \texttt{oppose} when it does not, so the label would be determined by
+the outcome and could no longer be used to study outcomes. Under the rule adopted, on a
+discretionary-review item the request is to \emph{take} DR, so the DR requestor is
+\texttt{support} even though they oppose the project.
+
+Second, the field records \emph{how} the stance was determined. The minutes carry an explicit
+vocabulary --- \texttt{(+)}, \texttt{(-)}, \texttt{(=)} in 1{,}444 items and bare
+\texttt{+}/\texttt{-}/\texttt{=} line prefixes in 4{,}317 --- but not on every item. The model
+is told to look for a marker first and set \texttt{stance\_basis='marker'}, and only then to
+infer from what the speaker said and set \texttt{stance\_basis='inferred'}. A stance read off
+a marker and a stance reasoned from remarks are different kinds of evidence; pooling them
+means the reliable half can never be isolated again. Of the stances in the current gold set,
+574 are marker-derived and 34 inferred.
+
+\section{Part V --- Recommendation}
+
+\textbf{Run Haiku~4.5 with six retrieved, era-matched few-shot examples, with the
+instructions placed ahead of the examples so the prefix is cacheable.} On the frozen test
+half it scores 96.8\% overall, 97.4\% on the HTML era and 94.0\% on the PDF era, and one full
+pass over the 16{,}203 items carrying a case number costs \textbf{\$70}
+(Table~\ref{tab:cost}).
+
+The ordering deserves emphasis because it is free. The examples are retrieved per item and so
+differ on every request; with them in front, nothing in the prompt is cacheable. Moving the
+constant instruction block ahead of them turns 3{,}600 tokens per item into a cache read at a
+tenth the price --- \$38 across the corpus --- and the two orderings score identically.
+
+\subsection{What would change this recommendation}
+
+\begin{enumerate}
+\item \textbf{A materially larger modern gold set.} 61 items across twelve years is five per
+year against a stratum of 4{,}855. The PDF-era figure of 94.0\% rests on 384 scored
+field-values. It is enough to justify a corpus pass; it is not enough to publish as a
+stratum-level accuracy without a confidence interval, and a second draw of 60 is the cheapest
+thing on this list.
+\item \textbf{Evidence-verification failures at corpus scale.} 46 spans failed verification
+on 294 items --- about 16 per 100 --- and the rate should be watched on the full run rather
+than assumed stable. A rising rate is the earliest available signal that the model is
+inventing values.
+\item \textbf{Nothing about model choice.} Sonnet~5 was dominated in the first round and Opus
+costs more than twice as much for a difference the prompt has since erased.
+\end{enumerate}
+
+\subsection{Other things worth doing, in order}
+
+\begin{enumerate}
+\item \textbf{Draw a second 60 modern items.} The stratified draw is a one-command follow-up
+and it is the binding constraint on every era-level claim.
+\item \textbf{Work the deferred typo queue.} Six disagreements are parked as punctuation and
+truncation differences. They do not change any conclusion; they do change the appendix's
+accuracy figure by a few tenths, and they are the right kind of work to do once rather than
+continuously.
+\item \textbf{Re-split the remaining merged blocks.} Today's header fixes found 110 blocks
+holding a second agenda item and 104 truncated at a numbered line. Both classes are repaired
+in the stored blocks; the corpus parser should be re-run so the fixes hold from source.
+\item \textbf{Watch \texttt{speakers}.} At 69.6\% it is the weakest field, and the stance rule
+changed after this round was scored. It is also the least load-bearing field in the dataset.
+\end{enumerate}
+
+\section{Limitations}
+
+\begin{enumerate}
+\item \textbf{The modern stratum is thin.} 61 items, five per year, standing in for 4{,}855.
+The PDF-era figure of 94.0\% rests on 384 scored field-values and carries a confidence
+interval this memo does not compute. It is enough to decide whether to run the corpus; it is
+not a publishable stratum accuracy.
+\item \textbf{The gold set still contains errors.} 187 disagreements were adjudicated and 52\%
+of them were label errors, so the remaining rate is lower than it was --- but it is not zero,
+and six known punctuation-level disagreements are deferred rather than resolved. Measured
+accuracy remains a lower bound, biased more for better models.
+\item \textbf{The few-shot examples come from the train half of the same corpus.} Era-matched
+retrieval means a modern item is now shown modern examples, but there are only 36 modern
+examples to retrieve from, so the modern configuration is drawing on a much smaller pool than
+the HTML one. Part of the 3.4-point era gap may be this rather than the documents.
+\item \textbf{One run per configuration.} No repeated sampling, so run-to-run variance is
+unmeasured; differences under about a point should not be read as real. The two prompt
+orderings differing by 0.0--0.2 points is consistent with them being the same configuration,
+which is the claim made for them, but it is not evidence that they are identical.
+\item \textbf{Over-extraction is not cleanly attributable} where the gold is known to be
+under-filled, as on \texttt{conditions\_imposed}.
+\item \textbf{Rare fields are unmeasurable here.} \texttt{recused} has no gold values at all;
+\texttt{excused} has one. Their apparent scores are noise and the schema marks them
+\texttt{unmeasurable} so no table quotes them.
+\item \textbf{The metric embeds judgement.} \texttt{compare\_field} encodes decisions about
+what counts as the same fact. Each is documented in \texttt{extraction\_common.py} and
+defensible, but a different reasonable analyst would draw one or two differently.
+\item \textbf{This memo scores extraction, not the dataset.} A field can be extracted
+correctly from a block that was itself mis-split. Today's repairs found 110 merged blocks and
+104 truncated ones; the accuracy figures assume the blocks are right, and that assumption is
+worth its own validation round.
+\end{enumerate}
+
+\section{Reproducing this}
+\label{sec:reproduce}
+
+\begin{verbatim}
+cd code/commission_minutes_processing
+python gold_split.py                      # freeze train/test (once)
+python gold_split.py --verify             # has the gold changed since?
+python bakeoff_extract.py --submit        # v1, all three models
+python bakeoff_extract.py --submit --variant v2 --only haiku-4.5
+python bakeoff_extract.py --submit --only haiku-4.5 --shots 6 --on test --tag fs6
+python bakeoff_extract.py --collect       # poll, download
+python bakeoff_report.py --test           # headline numbers
+python bakeoff_report.py --test --exact   # the old comparison, for reference
+python bakeoff_report.py --request-type   # the suffix-following analysis
+python build_adjudication.py              # queue disagreements
+python build_adjudication.py --tally      # what the verdicts say
+python bakeoff_memo.py                    # regenerate this memo's tables
+\end{verbatim}
+
+\begin{sloppypar}
+\noindent
+Artefacts live in \texttt{code/commission\_minutes\_processing/bakeoff/}:
+\texttt{split.json} (the frozen split and its gold hash), \texttt{batches.json},
+\texttt{raw\_<method>.json}, \texttt{report.json} and \texttt{scores.csv}. This memo's tables
+are generated by \texttt{bakeoff\_memo.py} into \texttt{bakeoff\_tables.tex} and
+\texttt{\textbackslash input} here, so no accuracy figure in this document is typed by hand.
+\end{sloppypar}
+
+\end{document}

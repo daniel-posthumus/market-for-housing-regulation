@@ -125,7 +125,31 @@ AGENDA_ITEM_RE = re.compile(r"^\s*\d+[a-z]?[.)]\s", re.M)
 # Requires the agenda number, so it can't match SPEAKER(S)/ACTION/AYES lines; requires
 # '(' or two capitals after it, so it can't match prose like "1. First point". Case-bearing
 # items are covered by CASE_HEADER_RE; the two match disjoint lines.
-AGENDA_NONCASE_RE = re.compile(r"(?m)^[^\S\r\n]*\d{1,2}[a-z]?[.)][^\S\r\n]+(?=\(|[A-Z]{2})")
+# The number and its title are frequently in DIFFERENT HTML elements, so get_text("\n")
+# puts a newline (or a long &nbsp; run then a newline) between them:
+#     "13.\n \n \n \n (E. WATTY: (415) 558-6620)"      (2009 pages)
+#     "13.\xa0\xa0…\xa0\n       (E.WATTY (415) 558-6620)"    (2011 pages)
+# The original same-line form required horizontal whitespace only, so it matched NOTHING on
+# those pages and every case-less item (informational hearings, CPMC/Health Commission
+# briefings) merged into the land-use item above it. Second branch: the number alone on its
+# line, then up to six padding lines, then a planner paren or an ALL-CAPS title. Requiring
+# the number to END its line is what keeps this off numbered conditions and findings lists,
+# where the text runs on after the number on the same line.
+AGENDA_NONCASE_RE = re.compile(
+    r"(?m)^[^\S\r\n]*\d{1,2}[a-z]?[.)]"
+    r"(?:[^\S\r\n]+(?=\(|[A-Z]{2})"
+    r"|[^\S\r\n]*(?:\r?\n[^\S\r\n]*){1,6}(?=\(|[A-Z]{2}))")
+
+# ...but an agenda number is not always a boundary: "SPEAKER(S): Same as those listed in
+# Item / 12." wraps the cited number onto its own line, where it is indistinguishable from a
+# header. It is a citation, so the preceding word decides.
+CROSSREF_BEFORE = re.compile(r"\bitems?$", re.I)
+
+
+def _is_crossref(text: str, pos: int) -> bool:
+    """True when the agenda number at `pos` is cited by a cross-reference, not heading one."""
+    pre = re.sub(r"[\s\xa0]+", " ", text[max(0, pos - 60):pos]).rstrip()
+    return bool(CROSSREF_BEFORE.search(pre))
 
 # Calendar SECTION dividers (NOT agenda items). SF minutes group items under lettered
 # sections ("B. PUBLIC COMMENT", "F. REGULAR CALENDAR", "D. DIRECTOR'S REPORT"). Without a
@@ -137,13 +161,20 @@ AGENDA_NONCASE_RE = re.compile(r"(?m)^[^\S\r\n]*\d{1,2}[a-z]?[.)][^\S\r\n]+(?=\(
 # anchor on the title. The letter prefix ("F.", "C.COMMISSION") is optional. Match is
 # case-SENSITIVE and vocabulary-bounded so prose ("public comment", "Discretionary Review")
 # and masthead caps ("PLANNING COMMISSION", "BOARD OF SUPERVISORS") never match.
+# The archive prints these titles with a CURLY apostrophe (U+2019) on 2010+ pages and a
+# straight one earlier; some pages carry the mojibake "?" instead. A class covering all
+# three is the difference between "C. COMMISSIONERS' QUESTIONS AND MATTERS" being a
+# boundary and 2009.0464C swallowing 15,000 characters of commissioner comments, the
+# director's report and the Board recap.
+_APOS = r"['\u2018\u2019\u02bc?]?"
+
 _SECTION_TITLES = [
     r"CONSENT CALENDAR", r"REGULAR CALENDAR",
     r"(?:SPECIAL )?DISCRETIONARY REVIEW (?:CALENDAR|HEARING)",
     r"(?:GENERAL )?PUBLIC COMMENT",
-    r"COMMISSIONERS['?]? QUESTIONS AND MATTERS", r"QUESTIONS AND MATTERS",
+    r"COMMISSIONERS" + _APOS + r" QUESTIONS AND MATTERS", r"QUESTIONS AND MATTERS",
     r"COMMISSION MATTERS", r"DEPARTMENT MATTERS",
-    r"DIRECTOR['?]?S (?:REPORT|ANNOUNCEMENTS)",
+    r"DIRECTOR" + _APOS + r"S (?:REPORT|ANNOUNCEMENTS)",
     r"CONSIDERATION OF FINDINGS",
     r"PRELIMINARY (?:MATTERS|ITEMS)",
 ]
@@ -185,10 +216,18 @@ CASE_CODE_RE   = re.compile(r"\b(?:\d{2}|\d{4})\.\d{3,}(?:[A-Za-z0-9/]+)?\b")
 # items ("THE FOLLOWING ITEMS WERE NOTICED ON AN ADDENDUM …") are lettered without a
 # leading number, so a digit-only prefix missed them and they merged into the numbered
 # item above. A case code must still follow, so this can't match condition sub-lists.
+# Two archive quirks, both of which ran a header straight into its neighbours and so hid a
+# second item inside a block. The agenda number may abut the case number ("1a.2013.1521DDV",
+# "14.1999.653D"), and the case number may abut the planner parenthesis
+# ("2013.1521DDV(T. CHANG: ...)"). Requiring whitespace at either seam missed 173 blocks —
+# most of them 2019-2023, where the modern layout has no spaces at all, plus a cluster in
+# 2000 where single blocks were holding nine agenda items each.
 CASE_HEADER_RE = re.compile(
-    r"(?m)^[^\S\r\n]*(?:(?:\d+[a-z]?|[a-z])[.)][^\S\r\n]+)?"
-    r"(?P<code>(?:\d{2}|\d{4})\.\d{3,}(?:[A-Za-z0-9/]+)?)"
-    r"(?:\s*[–-]\s*|\s*:\s*|\s+)"
+    r"(?m)^[^\S\r\n]*(?:(?:\d+[a-z]?|[a-z])[.)][^\S\r\n]*)?"
+    # "2004. 0164D" — the archive sometimes puts a space after the separator too, which hid
+    # a second agenda item inside a block that otherwise looked whole.
+    r"(?P<code>(?:\d{2}|\d{4})[.\-][^\S\r\n]*\d{3,}(?:[A-Za-z0-9/]+)?)"
+    r"(?:\s*[–-]\s*|\s*:\s*|\s+|(?=\())"
 )
 
 def _clean(val: str, multiline=False) -> str:
@@ -267,7 +306,8 @@ def add_project_tags(text: str) -> str:
     #    lines (CASE_HEADER_RE needs a case code; AGENDA_NONCASE_RE needs '(' or two capitals
     #    right after the agenda number), so their positions never collide on one line.
     positions = sorted(set(m.start() for m in CASE_HEADER_RE.finditer(text))
-                       | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text))
+                       | set(m.start() for m in AGENDA_NONCASE_RE.finditer(text)
+                             if not _is_crossref(text, m.start()))
                        | set(m.start() for m in SECTION_HEADER_RE.finditer(text))
                        | set(m.start() for m in ADJOURN_RE.finditer(text))
                        | set(m.start() for m in MINUTES_ADOPTION_RE.finditer(text)))

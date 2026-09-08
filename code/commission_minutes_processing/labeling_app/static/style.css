@@ -61,3 +61,114 @@ button:hover { filter: brightness(1.05); }
   background: #111827; color: #fff; padding: 8px 14px; border-radius: 8px; opacity: 0;
   transition: opacity .2s; pointer-events: none; }
 #toast.show { opacity: .95; }
+
+/* the meeting bar — hearing-level context above the item form. Colour carries the one
+   distinction that changes how an item reads: a joint session is a different body. */
+.meeting-bar { display: flex; align-items: baseline; gap: 10px; padding: 7px 12px;
+  background: #f1f5f9; border-bottom: 1px solid #cbd5e1; font-size: 12.5px; color: #334155; }
+.meeting-bar .mb-date { font-weight: 700; font-variant-numeric: tabular-nums; color: #0f172a; }
+.meeting-bar .mb-type { font-size: 10px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 10px;
+  background: #e2e8f0; color: #475569; }
+.meeting-bar .mb-type.t-regular { background: #dbeafe; color: #1d4ed8; }
+.meeting-bar .mb-type.t-joint { background: #ede9fe; color: #6d28d9; }
+.meeting-bar .mb-type.t-special { background: #ffedd5; color: #c2410c; }
+.meeting-bar .mb-type.t-closed_session { background: #fee2e2; color: #b91c1c; }
+.meeting-bar .mb-type.t-unknown { background: #e2e8f0; color: #64748b; }
+.meeting-bar .mb-detail { color: #475569; }
+.meeting-bar .mb-roll { color: #64748b; font-variant-numeric: tabular-nums; }
+.meeting-bar.no-record { background: #fffbeb; border-bottom-color: #fcd34d; }
+.badge.mt { background: #ede9fe; color: #6d28d9; margin-right: 4px; }
+
+/* the QA-review counter in the topbar — amber while there is a backlog, green when
+   it is cleared. Clicking it filters the queue to exactly those items. */
+#topbar button.review-left { background: #f59e0b; border-color: #f59e0b; color: #422006;
+  font-weight: 700; font-variant-numeric: tabular-nums; padding: 3px 9px; font-size: 11.5px; }
+#topbar button.review-left.clear { background: #16a34a; border-color: #16a34a; color: #fff; }
+
+/* a block with no case number is agenda scaffolding, not a discretionary decision */
+.s-not_an_item { background: #e2e8f0; color: #475569; }
+
+/* adjudication: gold and machine side by side, one row per disagreeing field */
+
+/* ── schema v2: speakers, derived counts, field affordances ─────────────── */
+.field.derived .derived-val { display:inline-block; min-width:2.2em; padding:2px 8px;
+  background:#eef1f4; border:1px solid #d5dbe1; border-radius:3px; color:#4a5560;
+  font-variant-numeric:tabular-nums; }
+.field.derived label .t { color:#8a94a0; font-style:italic; }
+.field.validation-only label .t { color:#a07a3a; }
+.field.unmeasurable { opacity:.7; }
+.field.instrument select { font-weight:600; border-color:#7a8ba0; background:#fbfcfe; }
+
+.sp-box { display:flex; flex-direction:column; gap:3px; }
+.sp-row { display:flex; gap:4px; align-items:center; }
+.sp-row .sp-name { flex:1 1 auto; min-width:0; }
+.sp-row .sp-stance { flex:0 0 6.5em; }
+.sp-row .sp-stance.st-support { background:#e8f5ea; }
+.sp-row .sp-stance.st-oppose  { background:#fdeceb; }
+.sp-row .sp-stance.st-neutral { background:#f2f2f2; }
+.sp-row .sp-del { flex:0 0 auto; border:none; background:none; color:#a33; cursor:pointer;
+  font-size:15px; line-height:1; padding:0 4px; }
+.sp-bar { display:flex; gap:5px; margin-top:2px; }
+button.mini { font-size:11px; padding:2px 7px; border:1px solid #ccd2d8; background:#f7f8fa;
+  border-radius:3px; cursor:pointer; margin-top:3px; }
+button.mini.rule-request_for { border-color:#5c9; background:#eefaf2; }
+button.mini.rule-opener      { border-color:#dba24a; background:#fdf6e8; }
+button.mini.rule-none        { border-color:#d0d0d0; background:#f4f4f4; color:#999; }
+.chip.warn { display:inline-block; margin-top:3px; font-size:11px; padding:2px 7px;
+  border:1px solid #dba24a; background:#fdf6e8; border-radius:3px; cursor:pointer; }
+
+/* ── the unified review queue ───────────────────────────────────────────── */
+.review-left.q { background:#eaf1fb; border-color:#9db7dd; }
+.review-left.q.clear { background:#eef7f0; border-color:#a8cdb3; }
+#btnQueueMode.on { background:#2b4a7a; color:#fff; border-color:#2b4a7a; }
+
+/* The panel must never squeeze the panes out of existence. A 4,000-character proposal made
+   the card taller than the window, and the raw text below it became unreachable — you could
+   not check the block against the value you were being asked to accept. Three guards: the
+   panel is capped and shrinkable, each value pane scrolls inside itself, and the whole panel
+   collapses with one key. */
+.queue-panel { border:1px solid #b9c8dd; background:#f6f9fd; border-radius:4px;
+  margin:0 0 8px; padding:6px 8px; max-height:32vh; min-height:0; flex:0 1 auto;
+  overflow-y:auto; }
+.queue-panel.collapsed { max-height:none; }
+.queue-panel.collapsed #queueBody { display:none; }
+.q-panel-head { font-size:11px; letter-spacing:.06em; color:#4a6285; font-weight:700;
+  display:flex; align-items:baseline; gap:8px; position:sticky; top:-6px;
+  background:#f6f9fd; padding:2px 0; }
+#btnQueueCollapse { font-size:10px; padding:1px 7px; margin-left:auto; }
+.q-keys { font-weight:400; color:#8494aa; letter-spacing:0; }
+.q-card { border-top:1px solid #dde5ef; padding:6px 0 5px; }
+.q-card.focus { background:#fffbe8; margin:0 -8px; padding-left:8px; padding-right:8px;
+  border-left:3px solid #e0b23c; }
+.q-head { display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; font-size:12px; }
+.q-detail { color:#5c6b7d; font-size:11px; }
+.q-cmp { display:flex; gap:12px; margin:3px 0; font-size:12px; }
+.q-cmp .g, .q-cmp .p { flex:1 1 0; min-width:0; padding:3px 6px; border-radius:3px;
+  overflow-wrap:anywhere; max-height:18vh; overflow-y:auto; }
+.q-cmp .g { background:#f0f0f0; }
+.q-cmp .p { background:#eaf3ea; }
+.q-btns { display:flex; gap:5px; }
+.q-btns button { font-size:11px; padding:2px 8px; border:1px solid #c3ccd8; background:#fff;
+  border-radius:3px; cursor:pointer; }
+.q-btns button.primary { background:#2b4a7a; color:#fff; border-color:#2b4a7a; }
+.badge.q-field_redefined     { background:#e5edf9; color:#2b4a7a; }
+.badge.q-migration_ambiguous { background:#fdf1e2; color:#8a5a12; }
+.badge.q-adjudication        { background:#f2e8f7; color:#653c7d; }
+.badge.q-new_item            { background:#e6f5ec; color:#1f6b3c; }
+.badge.fld { background:#eef0f3; color:#4a5560; font-family:ui-monospace, monospace; }
+.badge.era.pdf { background:#f0ebf7; color:#5b4a7d; }
+.field.q-focus { outline:2px solid #e0b23c; outline-offset:2px; border-radius:3px; }
+.mb-era { font-size:11px; padding:1px 6px; border-radius:3px; }
+.mb-era.html { background:#eef1f4; color:#5a6472; }
+.mb-era.pdf  { background:#f0ebf7; color:#5b4a7d; }
+mark.ev { background:#cfe8d0; box-shadow:0 0 0 1px #8dbb90; }
+
+/* A long description in a 46px box is unreadable. The field grows with its content up to a
+   third of the window, then scrolls — so the raw text underneath stays reachable. */
+#f_project_descr, #f_modifications { max-height:34vh; }
+#panes { min-height:0; }
+#main { overflow:hidden; }
+.sp-hint { font-size:10px; color:#8a94a0; margin-left:6px; align-self:center; }
+.sp-row .sp-basis { flex:0 0 5.5em; font-size:11px; color:#6b7280; }
+.sp-row .sp-stance { flex:0 0 6em; }

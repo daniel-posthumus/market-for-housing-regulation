@@ -76,3 +76,6 @@ code/commission_minutes_processing/meetings_all.csv
 
 # figures are committed as PDF; the PNG twins are for quick viewing only
 output/**/*.png
+
+# bake-off model output — regenerable, and data rather than source
+code/commission_minutes_processing/bakeoff/

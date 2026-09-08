@@ -43,8 +43,11 @@ data files. `labels.db` and `date_gold.db` are local stores and are git-ignored.
 - Faint raw series behind a bold smoothed line is the house style for time series. Say what
   the smoothing window is, and prefer a window of calendar time over a fixed number of
   observations when the observation frequency varies.
-- Draw gaps rather than interpolating across them. 2018 has only two documents in the
-  corpus; a line drawn through it would show a trend that does not exist.
+- Draw gaps rather than interpolating across them: a line through a year the corpus barely
+  covers shows a trend that does not exist. 2018 was that year until 2026-09-04, when it was
+  refilled from the S3 packet prefix (2 documents to 42). `SPARSE_YEARS` in
+  `plot_meeting_timeseries.py` is where such a year gets named; it is empty now, and the
+  rule stands for the next one.
 
 ## Extraction work
 

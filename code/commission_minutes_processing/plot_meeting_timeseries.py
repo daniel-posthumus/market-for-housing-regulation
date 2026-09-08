@@ -24,9 +24,12 @@ counted as zero, and so are the handful that record absences with nobody present
 are a missed roll call, not a meeting nobody attended, and they would otherwise appear as
 100% spikes.
 
-2018 is a hole in the CORPUS, not in the Commission's calendar: only two documents were
-scraped for that year. Both series are drawn with a gap there rather than interpolated
-across it, so the reader is not shown a trend that rests on two meetings.
+Years the corpus barely covers are drawn as a GAP rather than interpolated across, so a
+hole in the scrape is never read as a change in the Commission. `SPARSE_YEARS` is the list
+of them and is currently empty: 2018 was the one such year — two documents against 27-44
+for its neighbours — and it was refilled from the S3 packet prefix on 2026-09-04, taking it
+to 42 meetings, mid-range for the panel. The mechanism stays because the rule does; if a
+future year comes up thin, name it there rather than letting a line run through it.
 
 Presidency terms are INFERRED from who called each meeting to order, not read from a roster
 the project holds. A raw run of the `presiding` field breaks into 188 fragments because a
@@ -51,7 +54,7 @@ HERE = Path(__file__).resolve().parent
 CSV = HERE / "meetings_all.csv"
 OUT = HERE.parents[1] / "output" / "planning_commission_project"
 WINDOW_DAYS = 183          # +/- half a year
-SPARSE_YEARS = {2018}      # corpus gap, not a real lull
+SPARSE_YEARS: set[int] = set()   # years too thin to draw through — see the note above
 MODE_WINDOW = 7            # +/- meetings, for smoothing the presiding series
 MIN_TERM = 6               # runs shorter than this are absorbed into their neighbours
 
@@ -170,7 +173,7 @@ def panel(ax, dates, vals, colour, ylabel, title, terms, remote, pct=False, labe
         ax.plot(xs, ys, lw=2.4, color=colour)
 
     ax.set_ylabel(ylabel, fontsize=10)
-    ax.set_title(title, fontsize=11.5, pad=18 if label_terms else 8)
+    ax.set_title(title, fontsize=11.5, pad=31 if label_terms else 8)
     ax.grid(axis="y", alpha=.22)
     ax.spines[["top", "right"]].set_visible(False)
     ax.xaxis.set_major_locator(mdates.YearLocator(4))
@@ -180,20 +183,19 @@ def panel(ax, dates, vals, colour, ylabel, title, terms, remote, pct=False, labe
 
     lo, hi = ax.get_ylim()
     if label_terms:
-        # stagger alternate labels: consecutive short terms would otherwise overlap
+        # Stagger the labels over THREE rows, not two. Two was enough while 2018 was a
+        # hole; refilling it resolved a Hillis term and pushed Diamond over the cut, and
+        # at 16 labels a two-row stagger overprints "Olague" on its neighbours.
         shown = [t for t in terms if t["n"] >= 20]
         for i, t in enumerate(shown):
             mid = t["start"] + (t["end"] - t["start"]) / 2
-            ax.annotate(t["name"], (mid, hi), xytext=(0, 3 + 11 * (i % 2)),
+            ax.annotate(t["name"], (mid, hi), xytext=(0, 3 + 11 * (i % 3)),
                         textcoords="offset points", ha="center", va="bottom",
                         fontsize=7.5, color="#334155")
     if remote:
         mid = remote[0] + (remote[1] - remote[0]) / 2
         ax.annotate("remote\nhearings", (mid, lo + (hi - lo) * .06), ha="center",
                     fontsize=7.5, color="#7c3aed")
-    ax.axvspan(dt.date(2018, 1, 1), dt.date(2019, 1, 1), color="#94a3b8", alpha=.30, lw=0)
-    ax.annotate("2018 gap", (dt.date(2018, 7, 1), lo + (hi - lo) * .06), ha="center",
-                fontsize=7, color="#64748b", rotation=90)
     ax.set_ylim(lo, hi)
 
 

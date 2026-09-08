@@ -32,6 +32,12 @@ cd code/commission_minutes_processing/labeling_app
 python ingest.py
 ```
 
+`ingest.py` creates `labels.db` (SQLite) with one row per project block.
+Each gets a pre-filled label: your migrated record if the case number matches
+(status `prelabeled`), else a heuristic guess (status `todo`). It is **idempotent** —
+re-running adds only new items and never overwrites your edits (`--reset` to rebuild,
+`--years 2010-2014` to scope).
+
 ### Dates are a separate stage
 
 `ingest.py` and `rebuild_review_db.py` stamp each block with a provisional date (the
@@ -47,11 +53,29 @@ It locates each block back inside its source page by content and reads off the m
 header it falls under, so it stays correct no matter how the parser's block boundaries
 change. `../date_boundary_app/` is where you hand-mark meeting starts to check it.
 
-`ingest.py` creates `labels.db` (SQLite) with one row per project block.
-Each gets a pre-filled label: your migrated record if the case number matches
-(status `prelabeled`), else a heuristic guess (status `todo`). It is **idempotent** —
-re-running adds only new items and never overwrites your edits (`--reset` to rebuild,
-`--years 2010-2014` to scope).
+It writes two columns: `items.meeting_date` and `items.meeting_ordinal` — the index of
+the meeting header the block sits under, within its source document. The ordinal exists
+because a date is not a key: seven archive-era documents hold a joint session and the
+regular meeting on the same day, and the item level has to tell them apart.
+
+### The meeting bar
+
+The strip above the item form is the meeting the item was heard at — date and weekday,
+meeting type (**joint** / special / closed session are badged; regular is the default),
+the other body when it is a joint hearing, gavel time, room, and present/absent counts
+(hover for the names). **None of it is labeled.** It is read once per meeting by the
+meeting-level pipeline and joined in, which is why `meeting_date` is not a form field:
+it is a property of the hearing, not of the item.
+
+```bash
+python ../extract_all_meetings.py      # rebuild the corpus-wide meeting table
+```
+
+That writes `meetings_all` into `../date_boundary_app/date_gold.db`, which the app reads
+at startup (restart it to pick up a rebuild). The bar turns amber and reads *no meeting
+record* where the raw document is not in the corpus — 2018, whose PDFs were lost and
+which the re-scrape recovered only two of. The date is still right on those items; only
+the hearing-level attributes are missing.
 
 ## Audit existing labels first (the QA gate)
 
@@ -96,6 +120,17 @@ list capped at 5,000 and later years were unreachable.)
 
 - **Left pane**: raw item text, case number highlighted. **Right pane**: the schema
   form, pre-filled.
+- **compact / verbatim** (`t`) switches how the left pane is rendered. The 1998–2014
+  archive breaks a line at every HTML tag boundary and pads with blanks — 54% of all
+  stored block text is whitespace, and the worst single item is 2,051 lines — so
+  **compact** reflows each paragraph onto one line, keeping a break before every
+  labelled field (`ACTION`, `AYES`, `Preliminary Recommendation`, …) and rejoining a
+  label to its value. Corpus-wide that is 1.29M rendered lines down to 308k, and it
+  makes the HTML and PDF eras read the same shape. **This is display only** —
+  `items.block_text` is never modified, because that exact string is what the trainer
+  sees and what `assign_meeting_dates.py` matches back into its source page. Hit `t`
+  whenever you need to check the stored text character-for-character; the choice
+  sticks across items and sessions.
 - **Correct, then Save & next** (button or **⌘/Ctrl+Enter**). Status becomes `done`.
 - **Re-prefill** (`p`) re-runs extraction on the raw text (overwrites the form) —
   choose `heuristic` (offline) or `anthropic` (needs `pip install anthropic` +
@@ -147,7 +182,10 @@ compute-heavy (a full fine-tune per point) and resumable (skips done points).
 - `labels.db` — your labeling store (SQLite; not the training output).
 - `../label_qa.py` — audit/back-fill existing labels (the QA gate above).
 - `../assign_meeting_dates.py` — the date stage (which meeting each block belongs to).
-- `../date_boundary_app/` — hand-mark meeting starts; scores the date stage against them.
+- `../extract_all_meetings.py` — the corpus-wide meeting-level table the meeting bar reads.
+- `../meeting_headers.py` — meeting-level schema, pre-fill, and the item → meeting join.
+- `../date_boundary_app/` — hand-mark meeting starts; scores the date stage against them;
+  `/meetings` is where meeting-level records are confirmed by hand.
 - `../learning_curve.py` — how-many-labels learning curve.
 
 ## Extending to other Bay Area jurisdictions
