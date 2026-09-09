@@ -19,28 +19,28 @@ Specification & $N$ & $R^2$ & Adj.\ $R^2$ & Residual s.d.\\\midrule
 Request type only & 8,382 & 0.045 & 0.043 & 1.937\\
 $+$ staff recommendation & 8,382 & 0.121 & 0.118 & 1.860\\
 $+$ zoning district & 8,382 & 0.124 & 0.119 & 1.859\\
-$+$ supervisor district & 8,382 & 0.128 & 0.122 & 1.856\\
-$+$ year of first hearing & 8,382 & 0.142 & 0.133 & 1.844\\
-$+$ speakers at first hearing & 8,382 & 0.169 & 0.160 & 1.815\\
-$+$ arrived already continued & 8,382 & 0.169 & 0.160 & 1.815\\
+$+$ supervisor district & 8,382 & 0.129 & 0.123 & 1.855\\
+$+$ year of first hearing & 8,382 & 0.143 & 0.134 & 1.843\\
+$+$ speakers at first hearing & 8,382 & 0.170 & 0.161 & 1.814\\
+$+$ arrived already continued & 8,382 & 0.170 & 0.161 & 1.814\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
 \caption{The full specification on three outcomes. The level is fitted two to three times as well as the tail indicators, and no outcome gets past a fifth of its variance.}\label{tab:tails}
 \begin{tabular}{lrrrr}\toprule
 Outcome & $N$ & Mean & $R^2$ & Unexplained variance\\\midrule
-$\log(\text{days}+1)$ & 8,382 & 1.339 & 0.169 & 83.1\%\\
-$\mathbb{1}[\text{days}>180]$ & 8,382 & 0.047 & 0.088 & 91.2\%\\
-$\mathbb{1}[\text{days}>365]$ & 8,382 & 0.018 & 0.054 & 94.6\%\\
+$\log(\text{days}+1)$ & 8,382 & 1.339 & 0.170 & 83.0\%\\
+$\mathbb{1}[\text{days}>180]$ & 8,382 & 0.047 & 0.090 & 91.0\%\\
+$\mathbb{1}[\text{days}>365]$ & 8,382 & 0.018 & 0.055 & 94.5\%\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
 \caption{Out of sample. The model is fitted on cases first heard through 2015 and used to forecast cases first heard from 2016 on; year fixed effects are dropped because they cannot extrapolate. One test case is excluded for carrying a category level that never appears in the training years. Out-of-sample $R^2$ is computed against the training mean, so a negative value would mean the model forecasts worse than that constant.}\label{tab:oos}
 \begin{tabular}{lrrrrr}\toprule
 Outcome & Train $N$ & Test $N$ & In-sample $R^2$ & Out-of-sample $R^2$ & Test mean\\\midrule
-$\log(\text{days}+1)$ & 6,155 & 2,226 & 0.174 & 0.096 & 1.298\\
-$\mathbb{1}[\text{days}>180]$ & 6,155 & 2,226 & 0.078 & 0.054 & 0.070\\
-$\mathbb{1}[\text{days}>365]$ & 6,155 & 2,226 & 0.045 & 0.032 & 0.032\\
+$\log(\text{days}+1)$ & 6,155 & 2,226 & 0.176 & 0.096 & 1.298\\
+$\mathbb{1}[\text{days}>180]$ & 6,155 & 2,226 & 0.080 & 0.054 & 0.070\\
+$\mathbb{1}[\text{days}>365]$ & 6,155 & 2,226 & 0.047 & 0.032 & 0.032\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
@@ -48,10 +48,10 @@ $\mathbb{1}[\text{days}>365]$ & 6,155 & 2,226 & 0.045 & 0.032 & 0.032\\
 \begin{tabular}{lrr}\toprule
 Quantile & Pseudo-$R^2$ & Unconditional value (days)\\\midrule
 $\tau=0.10$ & 0.135 & 8\\
-$\tau=0.25$ & 0.106 & 21\\
-$\tau=0.50$ & 0.111 & 49\\
-$\tau=0.75$ & 0.136 & 105\\
-$\tau=0.90$ & 0.156 & 238\\
+$\tau=0.25$ & 0.108 & 21\\
+$\tau=0.50$ & 0.112 & 49\\
+$\tau=0.75$ & 0.138 & 105\\
+$\tau=0.90$ & 0.158 & 238\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
@@ -59,15 +59,15 @@ $\tau=0.90$ & 0.156 & 238\\
 \begin{tabular}{lrrrrrr}\toprule
 Decile & Cases & Expected & Median & 75th & 90th & $>$365 d\\\midrule
 1 & 839 & 0.2 & 0 & 0 & 21 & 1.2\%\\
-2 & 838 & 0.8 & 0 & 0 & 14 & 0.5\%\\
-3 & 838 & 1.3 & 0 & 0 & 35 & 1.0\%\\
-4 & 841 & 1.7 & 0 & 0 & 42 & 1.2\%\\
-5 & 835 & 2.1 & 0 & 7 & 49 & 0.8\%\\
-6 & 838 & 2.6 & 0 & 21 & 65 & 1.3\%\\
-7 & 838 & 3.3 & 0 & 22 & 93 & 1.8\%\\
-8 & 838 & 4.3 & 0 & 35 & 93 & 1.9\%\\
-9 & 838 & 7.2 & 7 & 56 & 141 & 3.5\%\\
-10 & 839 & 22.4 & 49 & 122 & 266 & 5.1\%\\
+2 & 840 & 0.8 & 0 & 0 & 14 & 0.5\%\\
+3 & 836 & 1.3 & 0 & 0 & 35 & 1.0\%\\
+4 & 841 & 1.7 & 0 & 0 & 35 & 1.0\%\\
+5 & 835 & 2.1 & 0 & 0 & 49 & 1.0\%\\
+6 & 841 & 2.6 & 0 & 21 & 70 & 1.0\%\\
+7 & 835 & 3.3 & 0 & 28 & 98 & 2.0\%\\
+8 & 838 & 4.3 & 0 & 35 & 93 & 2.0\%\\
+9 & 838 & 7.2 & 7 & 56 & 141 & 3.7\%\\
+10 & 839 & 22.5 & 49 & 126 & 266 & 5.0\%\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
@@ -78,9 +78,9 @@ Cases in the estimation sample & 8,382\\
 \quad heard on more than one day & 39.1\%\\
 \quad with a positive elapsed time & 34.1\%\\
 Cases used here (days $>$ 0) & 2,862\\
-$R^2$ & 0.189\\
+$R^2$ & 0.191\\
 Dependent-variable s.d.\ (log points) & 1.163\\
-\textbf{Residual s.d.\ (log points)} & \textbf{1.064}\\
+\textbf{Residual s.d.\ (log points)} & \textbf{1.063}\\
 \quad as a multiplicative factor & 2.9$\times$\\
 Top predicted decile ($n=287$): 10th pct & 28 days\\
 \quad median & 175 days\\

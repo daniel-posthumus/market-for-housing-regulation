@@ -8,10 +8,18 @@ writes the dataset plus a quality report. Everything is schema-aligned through
 extraction_common (the single source of truth), so output can never drift from the
 labeling form / training target.
 
+SUPERSEDED for the production corpus pass by `extract_corpus.py`, which is what actually
+produced the 16,199-record `corpus_v2_g3` table every memo reads: it runs over the Batch API
+in resumable chunks, uses structured outputs with evidence spans, keeps raw/interim/clean
+separately, and records provenance. This script is kept for the local engines and its QA
+report. Its `anthropic` engine still uses the old assistant-prefill trick ({"role":
+"assistant", "content": "{"}) to force JSON, which 400s on Sonnet 5, Opus 5 and the whole
+4.6+ family — structured outputs replaced it. Use extract_corpus.py for anything billable.
+
 Engines (swap with one flag — the rest of the run is identical):
   heuristic : autoextract regex (free, instant; the v0 / accuracy floor)
   hf        : a local fine-tuned seq2seq model (T5) prompted with PROMPT_INSTRUCTION
-  anthropic : Claude few-shot, schema-constrained (needs ANTHROPIC_API_KEY + anthropic)
+  anthropic : legacy single-call path, Haiku-4.5-pinned (see above; prefer extract_corpus.py)
 
 Periodic checks ("is extraction working?") every --check-every blocks:
   • field coverage  — % of records with a non-empty value, per key field

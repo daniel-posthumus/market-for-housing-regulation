@@ -73,6 +73,13 @@ CREATE TABLE IF NOT EXISTS review_queue(
 );
 CREATE INDEX IF NOT EXISTS ix_rq_open ON review_queue(status, sort_key);
 CREATE INDEX IF NOT EXISTS ix_rq_item ON review_queue(item_id);
+-- The table-level UNIQUE above cannot hold a `new_item` row, whose `field` is NULL: SQLite
+-- treats NULLs as DISTINCT in a unique constraint, so `INSERT OR IGNORE` never conflicts
+-- and re-running `--seed-new-items` would append a second copy of every row. Coalescing the
+-- nullable columns gives the constraint the meaning it was written to have. Kept alongside
+-- rather than replacing the original, which still does the work for field-level rows.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_rq_row
+    ON review_queue(item_id, COALESCE(field,''), reason, COALESCE(model,''));
 """
 
 

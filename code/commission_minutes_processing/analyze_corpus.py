@@ -30,6 +30,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from paths import DATA_ROOT                                          # noqa: E402
+from normalize import parcel_keys                                    # noqa: E402
 
 import matplotlib
 matplotlib.use("Agg")
@@ -89,6 +90,9 @@ ORDER = ["Conditional use", "Discretionary review", "Variance", "Legislative",
 
 
 def fig_composition(df):
+    # Shares are computed over items that HAVE a request type (262 of 16,199 do not). The
+    # table's item count must use the same denominator or the row does not add up, so the
+    # filtered frame is returned rather than re-derived there.
     d = df[df.request_type != ""].copy()
     d["family"] = d.request_type.map(FAMILY).fillna("Other")
     tab = d.pivot_table(index="year", columns="family", values="item_id",
@@ -111,7 +115,7 @@ def fig_composition(df):
                    fontsize=7.5)
     axes[1].set_xlabel("hearing year")
     fig.savefig(FIG / "fig_composition.pdf"); plt.close(fig)
-    return tab, share
+    return tab, share, d
 
 
 # ── 2. disapproval / conditions / modification ───────────────────────────────
@@ -119,7 +123,11 @@ def fig_outcomes(df):
     d = df[df.action != ""].copy()
     d["disapproved"] = d.action.isin(["disapproved", "intent_to_disapprove"])
     d["took_dr"] = d.action.isin(["took_dr", "took_dr_and_approved"])
-    d["conditions"] = d.conditions_imposed.astype(str).str.strip().ne("")
+    # `conditions_imposed` is an enum with three states — yes / no / blank — so the test is
+    # `== "yes"`, not "is not blank". `.ne("")` counted the 151 items that explicitly say NO
+    # as conditioned, which put the all-years rate at 26.4% against a true 25.4% and 2003 at
+    # 27.1% against 24.0%. `project_modified` on the next line always had it right.
+    d["conditions"] = d.conditions_imposed.astype(str).str.strip().str.lower().eq("yes")
     d["modified"] = d.project_modified.astype(str).str.lower().eq("yes")
     d["continued"] = d.action.isin(["continued", "continued_indefinitely"])
     g = d.groupby("year")[["disapproved", "conditions", "modified", "continued", "took_dr"]]
@@ -222,9 +230,11 @@ def parcels(df):
     d["block"] = d.assessor_block.astype(str).str.strip().str.upper()
     d["has_parcel"] = d.block.ne("") & d.lot_number.apply(
         lambda x: isinstance(x, list) and len(x) > 0)
+    # `normalize.parcel_keys` pads the DIGITS of each token and keeps the letter, which is
+    # how DataSF writes a parcel (lot 17A is `017A`, block 452T is `0452T`). Padding the
+    # whole token with zfill is a no-op on a lettered one and undercounts distinct parcels.
     d["apn"] = d.apply(
-        lambda r: [f"{r.block.zfill(4)}{str(l).zfill(3)}" for l in r.lot_number]
-        if r.has_parcel else [], axis=1)
+        lambda r: sorted(parcel_keys(r.block, r.lot_number)) if r.has_parcel else [], axis=1)
     return d
 
 
@@ -301,7 +311,7 @@ def main():
     print(f"{len(df):,} items, {df.year.min()}–{df.year.max()}")
     FIG.mkdir(parents=True, exist_ok=True)
     TAB.mkdir(parents=True, exist_ok=True)
-    tab, share = fig_composition(df)
+    tab, share, typed = fig_composition(df)
     rate, n = fig_outcomes(df)
     ch = chains(df)
     fig_delay(ch)
@@ -312,11 +322,12 @@ def main():
     per_item, by_type = citations(df)
     fig_citations(per_item)
     print("figures written to", FIG)
-    write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permit_stats(df))
+    write_tables(df, typed, share, rate, n, ch, ctab, parc, per_item, by_type,
+                 permit_stats(df))
 
 
 # ── tables ───────────────────────────────────────────────────────────────────
-def write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permits):
+def write_tables(df, typed, share, rate, n, ch, ctab, parc, per_item, by_type, permits):
     """Every table in the memo, generated. Wide ones are \\resizebox'd."""
     L = []
     a = L.append
@@ -326,7 +337,9 @@ def write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permits)
     a(r"\begin{table}[htbp]\centering")
     a(r"\caption{Composition of the Commission's item-level docket, per cent of items heard "
       r"that year. Families group the 17 \texttt{request\_type} values; `Legislative' is "
-      r"Planning Code, map and General Plan amendments.}\label{tab:composition}")
+      r"Planning Code, map and General Plan amendments. `Items' counts the items carrying "
+      r"a request type, which is the denominator the shares are taken over."
+      r"}\label{tab:composition}")
     a(r"\resizebox{\textwidth}{!}{%")
     cols = [c for c in ORDER if c in share.columns]
     a(r"\begin{tabular}{l" + "r" * len(cols) + r"r}\toprule")
@@ -335,7 +348,7 @@ def write_tables(df, share, rate, n, ch, ctab, parc, per_item, by_type, permits)
         if y not in share.index:
             continue
         a(f"{y} & " + " & ".join(f"{share.loc[y, c]:.1f}" for c in cols)
-          + rf" & {int(df[df.year == y].shape[0]):,}\\")
+          + rf" & {int(typed[typed.year == y].shape[0]):,}\\")
     a(r"\bottomrule\end{tabular}}\end{table}")
     a("")
 

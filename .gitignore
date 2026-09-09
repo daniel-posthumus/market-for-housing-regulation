@@ -73,6 +73,9 @@ code/commission_minutes_processing/date_assignment_audit.csv
 code/commission_minutes_processing/date_boundary_app/meetings_pilot.csv
 
 code/commission_minutes_processing/meetings_all.csv
+# scored from meetings_all.csv by extract_all_meetings.py --score; regenerable, and
+# read by plot_extraction_accuracy.py so the figure quotes no hand-typed number
+code/commission_minutes_processing/meeting_field_score.json
 
 # figures are committed as PDF; the PNG twins are for quick viewing only
 output/**/*.png

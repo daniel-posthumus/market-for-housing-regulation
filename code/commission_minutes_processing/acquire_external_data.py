@@ -69,6 +69,7 @@ import requests
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from paths import DATA_ROOT                                          # noqa: E402
+from normalize import blklot, pad_key                                # noqa: E402
 
 import matplotlib
 matplotlib.use("Agg")
@@ -394,32 +395,11 @@ def digits(s) -> str:
     return re.sub(r"[^0-9]", "", str(s or ""))
 
 
-_ALNUM = re.compile(r"^(\d*)([A-Za-z]*)$")
-
-
-def _pad(tok: str, width: int) -> str:
-    """Zero-pad the *digits* and keep the letter. DataSF writes lot 17A as `017A` and block
-    452T as `0452T`: the padding goes on the numeric part, not the whole token.
-
-    An earlier version of this function used `zfill` on the token as a whole, which is a
-    no-op once a letter makes it long enough --- `'17A'.zfill(3) == '17A'` --- so every
-    lettered parcel silently failed to join. 27{,}822 of San Francisco's parcels carry a
-    lettered lot, and that one line was most of the memo's parcel-join shortfall."""
-    m = _ALNUM.match(tok or "")
-    if not m:
-        return tok
-    d, a = m.group(1), m.group(2)
-    return (d.zfill(width) if d else "") + a
-
-
-def blklot(block, lot) -> str:
-    """DataSF's parcel key is block padded to 4 and lot padded to 3, concatenated
-    (`3605052`, `4001017A`, `0452T044H`). The minutes print neither padded."""
-    b, l = str(block or "").strip().upper(), str(lot or "").strip().upper()
-    if not b or not l:
-        return ""
-    return _pad(b, 4) + _pad(l, 3)
-
+# `pad_key` and `blklot` moved to normalize.py on 2026-09-09 and are imported above. They
+# were defined here and only here, so `analyze_permits.py`, `analyze_delay.py`,
+# `analyze_corpus.py` and `link_permits.py` each carried a `zfill` version of the same rule
+# — the exact no-op-on-lettered-tokens bug the docstring here was written to warn about.
+# One implementation, imported everywhere, is the whole point.
 
 # An item that spans several blocks has all of them in the single `assessor_block` field,
 # comma- or semicolon-separated ("4624, 4720"), against a flat list of lots that carries no

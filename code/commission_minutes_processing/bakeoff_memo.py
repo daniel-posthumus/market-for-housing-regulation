@@ -159,6 +159,52 @@ def main():
     add(r"\bottomrule\end{tabular}}\end{table}")
     add("")
 
+    # ── the two verdict tables ──────────────────────────────────────────────
+    # These were hand-built in the memo and had gone stale three ways at once: the regex
+    # column predated the normalisation and enum fixes, the model column came from the v1
+    # zero-shot run, and one row named `resolution_or_motion_no`, a field schema v2 split in
+    # two and which no longer exists. They are the same per-field data as tab:byfield, cut
+    # two ways, so they are generated from it. The cut is a rule, stated in the caption,
+    # rather than a judgement made once and then left behind by the numbers.
+    REGEX_OK = 85.0        # a rule at or above this needs no model
+    MIN_N = 10             # below this an accuracy is not a rate
+    scored = [(f, rbf.get(f, {}).get("acc"), bf[f]["acc"], bf[f]["n"])
+              for f in EXTRACTED_FIELDS
+              if f in bf and bf[f]["n"] >= MIN_N and rbf.get(f, {}).get("acc") is not None]
+
+    wins = sorted([r for r in scored if r[1] >= REGEX_OK], key=lambda r: -r[1])
+    if wins:
+        add(r"\begin{table}[htbp]\centering")
+        add(r"\caption{Where the deterministic rules are already enough: every field with at "
+            r"least %d scored values on the held-out half where they reach %.0f\%%. "
+            r"`Verdict' compares them with the best model — \emph{rules win} where they "
+            r"score higher, \emph{tied} within half a point, \emph{adequate} otherwise.}"
+            % (MIN_N, REGEX_OK))
+        add(r"\label{tab:regexwins}")
+        add(r"\begin{tabular}{lrrrl}\toprule")
+        add(r"Field & $n$ & Rules & Best model & Verdict\\\midrule")
+        for f, r_acc, m_acc, n_f in wins:
+            v = ("rules \\emph{beat} every model" if r_acc > m_acc + 0.5
+                 else "tied" if abs(r_acc - m_acc) <= 0.5 else "rules adequate")
+            add(r"\texttt{%s} & %d & %.1f\%% & %.1f\%% & %s\\"
+                % (TEXNAME(f), n_f, r_acc, m_acc, v))
+        add(r"\bottomrule\end{tabular}\end{table}")
+        add("")
+
+    needs = sorted([r for r in scored if r[1] < REGEX_OK], key=lambda r: r[1])
+    if needs:
+        add(r"\begin{table}[htbp]\centering")
+        add(r"\caption{Where a model is not optional: the same fields, below %.0f\%% on the "
+            r"rules. `Gap' is the model's lead in points.}" % REGEX_OK)
+        add(r"\label{tab:modelneeded}")
+        add(r"\begin{tabular}{lrrrr}\toprule")
+        add(r"Field & $n$ & Rules & Best model & Gap\\\midrule")
+        for f, r_acc, m_acc, n_f in needs:
+            add(r"\texttt{%s} & %d & %.1f\%% & %.1f\%% & $%+d$\\"
+                % (TEXNAME(f), n_f, r_acc, m_acc, round(m_acc - r_acc)))
+        add(r"\bottomrule\end{tabular}\end{table}")
+        add("")
+
     # ── adjudication ────────────────────────────────────────────────────────
     tot, byf = verdicts()
     n = sum(tot.values())

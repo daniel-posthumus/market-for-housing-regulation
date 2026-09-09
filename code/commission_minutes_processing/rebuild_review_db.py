@@ -278,6 +278,27 @@ def main():
     print(f"status distribution  : {dist}")
     print(f"\n✓ wrote {a.out}")
 
+    # What this rebuild does NOT carry across, said out loud. The output is a fresh file and
+    # the caller has to swap it in by hand, so the moment to know what would be lost is now
+    # — not after the swap. `not_an_item` is the big one: those are human determinations
+    # ("this block is public comment / the director's report / adjournment, not a land-use
+    # item") and there are thousands of them, but they carry no case number, so the
+    # content-matching that re-places every other label cannot see them.
+    src = sqlite3.connect(a.cur)
+    try:
+        n_nai = src.execute(
+            "SELECT COUNT(*) FROM labels WHERE status='not_an_item'").fetchone()[0]
+        tables = {r[0] for r in src.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+    finally:
+        src.close()
+    missing = sorted(tables - {"items", "labels", "sqlite_sequence"})
+    print("\n⚠ NOT carried into the rebuilt DB — re-derive these before swapping it in:")
+    print(f"    {n_nai:,} 'not_an_item' determinations (no case number to match on)")
+    print("    items.meeting_ordinal (re-run assign_meeting_dates.py --apply)")
+    if missing:
+        print(f"    tables: {', '.join(missing)}")
+
 
 if __name__ == "__main__":
     main()

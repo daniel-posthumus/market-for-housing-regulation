@@ -62,17 +62,17 @@ Matched item--permit pairs & \texttt{---} & 3,801\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
-\caption{The parcel route, scored against the permit-number subset. `Coverage' is the share of those items for which the rule returns any candidate; precision is computed on the items where it does; recall is the share of the truly cited permits it retains. $n=2909$ items where the cited permit is present at the parcel DBI records.}\label{tab:parcelrule}
+\caption{The parcel route, scored against the permit-number subset. `Coverage' is the share of those items for which the rule returns any candidate; precision is computed on the items where it does; recall is the share of the truly cited permits it retains. $n=3274$ items where the cited permit is present at the parcel DBI records.}\label{tab:parcelrule}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrr}\toprule
 Rule (block $+$ lot, then \dots) & Coverage & Precision & Recall & Median set\\\midrule
 every permit at the parcel & 100.0\% & 0.14 & 1.00 & 10\\
-major types only, no date window & 99.7\% & 0.43 & 0.98 & 3\\
-major types, filed within $[-1, +0.5]$ yr & 56.0\% & 0.75 & 0.52 & 1\\
-major types, filed within $[-2, +1]$ yr & 86.6\% & 0.71 & 0.82 & 1\\
-major types, filed within $[-3, +1]$ yr & 94.1\% & 0.70 & 0.92 & 2\\
-\quad …\ nearest filing only & 94.1\% & 0.73 & 0.66 & 1\\
-\quad …\ nearest three filings & 94.1\% & 0.71 & 0.88 & 2\\
+major types only, no date window & 99.7\% & 0.44 & 0.98 & 3\\
+major types, filed within $[-1, +0.5]$ yr & 55.9\% & 0.75 & 0.52 & 1\\
+major types, filed within $[-2, +1]$ yr & 86.2\% & 0.72 & 0.83 & 1\\
+major types, filed within $[-3, +1]$ yr & 94.0\% & 0.72 & 0.92 & 1\\
+\quad …\ nearest filing only & 94.0\% & 0.74 & 0.67 & 1\\
+\quad …\ nearest three filings & 94.0\% & 0.72 & 0.89 & 1\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
@@ -81,6 +81,6 @@ major types, filed within $[-3, +1]$ yr & 94.1\% & 0.70 & 0.92 & 2\\
 Items & Count & Share of the 16{,}199\\\midrule
 No permit number in the text & 12,611 & 77.9\%\\
 \quad of which: block and lot present & 10,076 & 62.2\%\\
-\quad\quad parcel exists in DBI & 8,985 & 55.5\%\\
-\quad\quad\quad a candidate permit in window and type & 6,323 & 39.0\%\\
+\quad\quad parcel exists in DBI & 9,455 & 58.4\%\\
+\quad\quad\quad a candidate permit in window and type & 6,664 & 41.1\%\\
 \bottomrule\end{tabular}\end{table}

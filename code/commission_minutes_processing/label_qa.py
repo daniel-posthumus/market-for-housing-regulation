@@ -48,11 +48,21 @@ from autoextract import extract, _after, _action_enum, derive_request_type, CASE
 # processing review flagged as "a parse, not a re-read". Free-text/judgement
 # fields (project_descr, modifications, preliminary_recommendation) are intentionally
 # excluded — those need a human.
+#
+# `request_type` is NOT here. `autoextract.derive_request_type` reads it off the case-number
+# suffix, and the schema's own help says the suffix "is a weak hint and is frequently wrong
+# ... where the suffix and the text disagree, follow the text". Writing the suffix's guess
+# into a label is the one thing that field must not do.
+#
+# `resolution_or_motion_no` was here until 2026-09-09 and no longer exists; schema v2 split
+# it into the two `action_instrument` fields, which are a clean parse off the MOTION:/
+# RESOLUTION:/DRA line and belong here.
 BACKFILL_FIELDS = [
-    "case_number", "request_type", "assessor_block",
+    "case_number", "assessor_block",
     "lot_number", "type_district", "type_district_descr",
     "height_and_bulk_district", "staff_planner", "action",
-    "ayes", "noes", "absent", "recused", "excused", "resolution_or_motion_no",
+    "ayes", "noes", "absent", "recused", "excused",
+    "action_instrument", "action_instrument_no",
 ]
 
 DB = HERE / "labeling_app" / "labels.db"
@@ -69,6 +79,13 @@ ACTION_FAMILY = {
     "withdrawn": "withdraw",
     "did_not_take_dr": "no_dr", "took_dr": "dr", "took_dr_and_approved": "dr",
     "filed": "filed", "no_action": "none", "other": "",
+    # The v2 additions, each its own family. `adopted` is not `approve` — the Commission
+    # adopts its own resolutions and findings rather than granting an entitlement — and
+    # `motion_failed` is not `disapprove`, because nothing carried and the request is
+    # neither granted nor denied. Relying on the raw-value fallback would have worked, but
+    # only by accident; the point of this map is that the families are written down.
+    "adopted": "adopt", "certified": "certify", "upheld": "uphold",
+    "initiated": "initiate", "motion_failed": "failed",
 }
 NOSE_RE = re.compile(r"(?im)^\s*NOES\s*:", )
 AYES_RE = re.compile(r"(?im)^\s*AYES\s*:")
@@ -157,7 +174,8 @@ def main(argv=None):
     ap.add_argument("--backfill", action="store_true",
                     help="with --apply: additively fill recoverable empty/'other' "
                          "fields from the source block (DB backed up; never "
-                         "overwrites a real human value; changed items flagged)")
+                         "overwrites a real human value; SKIPS status='done' labels, "
+                         "whose blanks are confirmed answers; changed items flagged)")
     ap.add_argument("--min-severity", choices=["low", "med", "high"], default="low",
                     help="only count/flag items with an issue at/above this severity")
     ap.add_argument("--status", default="prelabeled,done",
@@ -192,7 +210,13 @@ def main(argv=None):
             label = coerce_record(json.loads(r["data"]) if r["data"] else {})
         except Exception:
             continue
-        if args.backfill:
+        # A blank in a CONFIRMED label is a human answer, not a gap: "the block does not
+        # say" is the schema's stated blank policy and a `done` label has been read by a
+        # person who left it empty on purpose. Filling it from the regex overwrites that
+        # judgement with a guess and leaves no trace that it was ever a human's blank.
+        # Suspect `done` labels are still flagged below — flagging asks, back-filling
+        # answers, and only the first is safe on work someone has already confirmed.
+        if args.backfill and r["status"] != "done":
             merged, changed = backfill_from_source(label, r["block_text"] or "")
             if changed:
                 to_backfill.append((r["id"], json.dumps(merged, ensure_ascii=False),

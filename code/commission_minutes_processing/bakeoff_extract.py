@@ -96,8 +96,20 @@ def _words(t):
     return {w for w in re.findall(r"[a-z]{4,}", (t or "").lower())}
 
 
-def few_shot_block(block: str, pool: list, k: int, era: str | None = None) -> str:
-    """The k most similar labelled examples from the pool, as worked examples."""
+def few_shot_block(block: str, pool: list, k: int, era: str | None = None,
+                   exclude_id=None) -> str:
+    """The k most similar labelled examples from the pool, as worked examples.
+
+    `exclude_id` drops the item being extracted from its own example set. Retrieval is by
+    content overlap, so an item present in the pool scores 1.0 against itself and is ALWAYS
+    example #1 — the model is handed the gold record it is about to be asked for. This bit
+    every run made over the train half or over `--on all`: raw_haiku-4.5-g3.json covers all
+    294 gold items with a train-half pool, so its 155 train records were self-answered
+    (train 97.7% / 76.8% exact against test 96.6% / 64.0%). Test-only runs were never
+    affected, and neither was the corpus run except on the 155 gold-train items inside it.
+    """
+    if exclude_id is not None:
+        pool = [e for e in pool if e["id"] != exclude_id]
     if era:
         same = [e for e in pool if era_of(e["year"]) == era]
         if len(same) >= k:
@@ -225,7 +237,8 @@ def _assemble(it, prompt_base, pool, shots, cache_order=False):
     the 10,100 input tokens per item. In the default ordering the examples come first and
     nothing is cacheable at all.
     """
-    ex = few_shot_block(it["block"], pool, shots, era_of(it["year"])) if shots else ""
+    ex = (few_shot_block(it["block"], pool, shots, era_of(it["year"]), it["id"])
+          if shots else "")
     prefix = (prompt_base + ex) if cache_order else (ex + prompt_base)
     return prefix, prefix + item_suffix(it["block"])
 
@@ -343,9 +356,19 @@ def collect(items):
               + (f", {len(fails)} evidence failures {by_reason}" if fails else ""))
 
 
+def regex_preds(items) -> dict:
+    """The heuristic extractor's predictions, THROUGH THE SAME STORAGE LAYER as everything
+    else. `collect()` normalises every model reply and the app normalises every hand label,
+    so scoring the regex arm on un-normalised output compared it against gold across a
+    formatting difference neither side chose — which is the exact failure normalize.py was
+    written to prevent. Under exact `field_match` it cost the regex arm 3.2 points overall,
+    and `lot_number` 11.9% against 69.4%."""
+    return {it["id"]: normalize_record(coerce_record(extract(it["block"]))) for it in items}
+
+
 def score(items):
     methods = ["regex"] + list(MODELS)
-    preds = {"regex": {it["id"]: coerce_record(extract(it["block"])) for it in items}}
+    preds = {"regex": regex_preds(items)}
     for name in MODELS:
         p = OUT / f"raw_{name}.json"
         preds[name] = {int(k): v for k, v in json.loads(p.read_text()).items()} if p.exists() else {}
@@ -354,9 +377,12 @@ def score(items):
         scored = [it for it in items if not is_empty(it["gold"].get(fld))]
         row = {"field": fld, "n_gold": len(scored)}
         for m in methods:
-            hit = sum(1 for it in scored
-                      if it["id"] in preds[m] and field_match(preds[m][it["id"]], it["gold"], fld))
-            row[m] = round(100 * hit / len(scored), 1) if scored else None
+            # Denominator is the items this method PREDICTED, not every gold item. An older
+            # run covers fewer items than the gold set now holds (gold grew 232 → 294), and
+            # dividing by the full set scored it as inaccurate when it was merely absent.
+            got = [it for it in scored if it["id"] in preds[m]]
+            hit = sum(1 for it in got if field_match(preds[m][it["id"]], it["gold"], fld))
+            row[m] = round(100 * hit / len(got), 1) if got else None
         rows.append(row)
     OUT.mkdir(exist_ok=True)
     with (OUT / "scores.csv").open("w", newline="") as fh:

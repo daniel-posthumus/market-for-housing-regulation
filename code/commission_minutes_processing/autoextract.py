@@ -11,7 +11,7 @@ import re, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from extraction_common import coerce_record, empty_record
+from extraction_common import coerce_record, empty_record, derive_speaker_counts
 
 # Suffix allows lowercase: some items print the type suffix lowercase ("2004.1234d"),
 # which an uppercase-only suffix would truncate to "2004.1234" (dropping the type).
@@ -178,12 +178,33 @@ def _action_enum(txt: str) -> str:
         return "continued"
     if "withdrawn" in t:
         return "withdrawn"
+    # A motion that carried nothing is neither an approval nor a denial: the request is not
+    # disposed of and usually returns. Tested before disapprov/approv because the line reads
+    # "Motion to Approve with Conditions FAILED".
+    if "fail" in t:
+        return "motion_failed"
     if "disapprov" in t or "denied" in t:
         return "disapproved"
     if "approv" in t:
         return "approved"
+    # The four dispositions added to ACTIONS on 2026-09-07 had no branch here, so 966 blocks
+    # whose ACTION line names one of them fell through to `other`: 662 "Adopted", 127
+    # "Certified", 113 "Upheld", 64 "Initiated". `initiated` in particular is NOT an
+    # approval — the Commission is starting an amendment and setting a hearing date, and
+    # folding it into `approved` would count one amendment twice and date it wrongly.
+    if "adopt" in t:
+        return "adopted"
+    if "certif" in t:
+        return "certified"
+    if "uph" in t:
+        return "upheld"
+    if "initiat" in t:
+        return "initiated"
     if "filed" in t:
         return "filed"
+    # "None - Informational" / "No action" — a briefing decides nothing. 820 blocks.
+    if "no action" in t or "informational" in t or re.match(r"\s*none\b", t):
+        return "no_action"
     return "other"
 
 
@@ -208,6 +229,14 @@ def _prelim_cat(txt: str) -> str:
         return "disapprove"
     if "approv" in t:
         return "approve"
+    # `adopt` and `initiate` are in PRELIM_REC_CATS but had no branch, so a staff
+    # recommendation to "Adopt CEQA findings" or to initiate an amendment scored `other` and
+    # could never be compared with the matching `adopted` / `initiated` action — which is
+    # the entire reason the two vocabularies mirror each other.
+    if "initiat" in t:
+        return "initiate"
+    if "adopt" in t:
+        return "adopt"
     if "no action" in t or "informational" in t:
         return "no_action"
     return "other"
@@ -301,22 +330,42 @@ def extract(block: str, meeting_date: str = "") -> dict:
                        block, re.S | re.I)
     sptext = sp_sec.group(1) if sp_sec else ""
     if sptext.strip() and sptext.strip().lower() != "none":
-        names = []
+        # The stance goes ON THE SPEAKER, not into a separate count. Emitting bare names
+        # plus three marker-derived tallies produced a record that contradicted itself —
+        # support_count=3 beside three stance-less speakers — and `normalize_record`, which
+        # derives the counts from `speakers`, then correctly reset all three to 0. The
+        # marker is read per line, which is where it is printed, so the two agree by
+        # construction. Only a marker sets a stance here; this extractor never infers one,
+        # so `stance_basis` is 'marker' or blank and never 'inferred'.
+        rows = []
         for line in sptext.splitlines():
-            line = line.strip().lstrip("+-=").strip()
-            line = re.split(r"\s[–-]\s", line)[0].strip()   # drop "– topic"
-            names += _names(line)
-        rec["speakers"] = names
-    rec["support_count"] = len(re.findall(r"(?m)^\s*\+\s*\S", sptext))
-    rec["oppose_count"]  = len(re.findall(r"(?m)^\s*-\s*\S", sptext))
-    rec["neutral_count"] = len(re.findall(r"(?m)^\s*=\s*\S", sptext))
+            raw = line.strip()
+            m = re.match(r"^[(\[]?\s*([+\-=])\s*/?\s*([+\-])?\s*[)\]]?\s+", raw)
+            stance = ""
+            if m:
+                tok = m.group(1) + (m.group(2) or "")
+                stance = {"+": "support", "-": "oppose", "=": "neutral",
+                          "+-": "neutral", "-+": "neutral"}.get(tok, "")
+            body = raw[m.end():] if m else raw
+            body = re.split(r"\s[–-]\s", body)[0].strip()   # drop "– topic"
+            for nm in _names(body):
+                rows.append({"name": nm, "stance": stance,
+                             "stance_basis": "marker" if stance else ""})
+        rec["speakers"] = rows
+    # counts are derived from `speakers`, never parsed separately (see normalize.py)
+    rec.update(derive_speaker_counts(rec["speakers"]))
     for fld, lab in [("ayes", "AYES"), ("noes", "NOES"), ("absent", "ABSENT"),
                      ("recused", "RECUSED"), ("excused", "EXCUSED")]:
         v = _after(lab, block)
         if v and v.lower() != "none":
             rec[fld] = _names(v)
-    nm = re.search(r"((?:Motion|Resolution)\s+No\.?\s*[:#]?\s*\d+)", block, re.I)
+    # Schema v2 split `resolution_or_motion_no` into the INSTRUMENT and its NUMBER. This
+    # still wrote the v1 key, which `coerce_record` drops as unknown — so the heuristic
+    # silently pre-filled neither field on any item. `DRA#: 0013` is the third instrument
+    # (a Discretionary Review Action) and is neither a motion nor a resolution.
+    nm = re.search(r"\b(Motion|Resolution|DRA)\s*(?:No\.?|#)?\s*[:#]?\s*(\d+)", block, re.I)
     if nm:
-        rec["resolution_or_motion_no"] = nm.group(1).strip()
+        rec["action_instrument"] = nm.group(1).lower()
+        rec["action_instrument_no"] = int(nm.group(2))
 
     return coerce_record(rec)

@@ -25,9 +25,9 @@ run one.
 
 \medskip\noindent
 On a \textbf{frozen test half of 139 hand-labelled items that no prompt was tuned against},
-the deterministic extractor scores \textbf{70.7\%} and Claude Haiku~4.5 with six retrieved
-worked examples scores \textbf{96.8\%}. The gold set now spans both document eras: the model
-scores \textbf{97.4\%} on the 1998--2014 HTML minutes and \textbf{94.0\%} on the 2015--2026
+the deterministic extractor scores \textbf{75.2\%} and Claude Haiku~4.5 with six retrieved
+worked examples scores \textbf{96.6\%}. The gold set now spans both document eras: the model
+scores \textbf{97.2\%} on the 1998--2014 HTML minutes and \textbf{94.0\%} on the 2015--2026
 PDF minutes, which is the first measurement of the modern era and the one this project was
 waiting on. A full corpus pass costs \textbf{\$70}.
 
@@ -267,14 +267,14 @@ empty --- at the top of the table for the worst possible reason.
 \subsection{The headline}
 
 Table~\ref{tab:headline} is the result. On the frozen test half, few-shot Haiku~4.5 scores
-\textbf{96.8\%} against \textbf{70.7\%} for the deterministic extractor --- a gap of twenty-six
+\textbf{96.6\%} against \textbf{75.2\%} for the deterministic extractor --- a gap of twenty-one
 points that no amount of regex maintenance is going to close.
 
 Four findings, in order of how much they should change what you do:
 
 \begin{enumerate}
 \item \textbf{The modern era works.} This is the first measurement of it. The model scores
-97.4\% on the HTML era and \textbf{94.0\%} on the PDF era. A 3.4-point gap on a document
+97.2\% on the HTML era and \textbf{94.0\%} on the PDF era. A 3.2-point gap on a document
 format with different headers, different speaker notation and different case-number
 conventions is a good outcome, and it is the number that decides whether a corpus pass is
 worth running. It is also, notably, the regex's \emph{best} stratum (72.1\%) --- the modern
@@ -282,7 +282,7 @@ minutes are more regular, which flatters rules and understates how much the mode
 
 \item \textbf{Prompt ordering is worth \$38 and costs nothing.} Placing the constant
 instructions ahead of the per-item examples makes the leading 3{,}600 tokens cacheable. The
-two orderings score \emph{identically} on the test half (96.8\% both) and within 0.2 points on
+two orderings score \emph{identically} on the test half (96.6\% both) and within 0.2 points on
 every stratum, while measured input tokens fall from 10{,}541 to 4{,}980 per item
 (Table~\ref{tab:cost}).
 
@@ -291,7 +291,7 @@ points while the gap to the regex was 21.2. Nothing since has changed that: the 
 moved the number was the prompt, the schema and the gold set, not the model.
 
 \item \textbf{Over-extraction is the cost of the gain.} The model invents a value where the
-gold is blank on 4.3\% of blank fields; the regex does so on 1.6\%. This is the honest
+gold is blank on 4.2\% of blank fields; the regex does so on 1.7\%. This is the honest
 trade and it is why the two rates are reported separately and never averaged
 (\S\ref{sec:tworates}). Evidence spans (Table~\ref{tab:evidence}) exist to make it
 detectable at extraction time rather than discoverable at analysis time.
@@ -319,59 +319,32 @@ sixteen.
 
 \subsection{Where the regex is still the right tool}
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lrrl}
-\toprule
-Field & \texttt{regex} & best model & Verdict \\
-\midrule
-\texttt{case\_number}                & \textbf{99.1\%} & 98.2\% & regex \emph{beats} every model \\
-\texttt{assessor\_block}             & 99.0\% & 100\%  & regex adequate \\
-\texttt{continued\_to}               & 94.9\% & 94.9\% & tied \\
-\texttt{height\_and\_bulk\_district} & 89.7\% & 97.4\% & regex adequate \\
-\texttt{conditions\_imposed}         & 90.9\% & 100\%  & regex adequate \\
-\texttt{preliminary\_recommendation} & 86.7\% & 97.3\% & borderline \\
-\texttt{action}                      & 86.0\% & 93.0\% & borderline \\
-\bottomrule
-\end{tabular}
-\caption{Test half. \texttt{case\_number} is the only field where a regular expression wins
-outright --- a fixed pattern in a fixed position.}
-\end{table}
+Table~\ref{tab:regexwins} lists every field where the deterministic rules already reach 85\%
+on the held-out half. Ten of the twenty-four scored fields clear that bar, and they are the
+ones with a fixed pattern in a fixed position: the case number, the parcel keys, the
+numbered instrument, the dates. On none of them does a model buy more than a few points, and
+on \texttt{case\_number} the rules are within a point of the best model on 139 values.
 
 \texttt{continued\_to} is a cautionary tale. It scored \textbf{0\%} in the first run --- not
 because the extractor failed to find the date, but because it returned ``April 21, 2005''
 where the schema stores ISO. Every value was right and every one counted as a miss. A date
 normalisation (and extending the pattern to the \texttt{3/12/98} form the archive also uses)
-took it to 94.9\%, where it now ties the best model.
+took it to 95.9\%, two points behind the best model on a field that had read as a total
+failure. The same lesson applied twice more since: \texttt{lot\_number} and
+\texttt{assessor\_block} were being scored before the storage layer ran on them, and
+\texttt{action\_instrument} read 0\% because the extractor was still writing the schema-v1
+key that replaced it. None of the three was an extraction failure; all three were formatting
+compared across a difference neither side chose.
 
 \subsection{Where a model is not optional}
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lrrr}
-\toprule
-Field & \texttt{regex} & \texttt{haiku-4.5} & Gap \\
-\midrule
-\texttt{special\_use\_district}     &  0.0\% &  91.7\% & --- \\
-\texttt{modifications}              &  0.0\% &  68.4\% & --- \\
-\texttt{noes}                       &  5.9\% &  94.1\% & $+88$ \\
-\texttt{oppose\_count}              &  9.1\% &  72.7\% & $+64$ \\
-\texttt{support\_count}             &  9.5\% &  76.2\% & $+67$ \\
-\texttt{resolution\_or\_motion\_no} & 23.1\% &  79.5\% & $+56$ \\
-\texttt{speakers}                   & 27.6\% &  82.8\% & $+55$ \\
-\texttt{project\_descr}             & 38.6\% &  75.4\% & $+37$ \\
-\texttt{project\_modified}          & 40.0\% &  93.3\% & $+53$ \\
-\texttt{type\_district\_descr}      & 47.8\% &  90.0\% & $+42$ \\
-\texttt{type\_district}             & 51.7\% &  93.1\% & $+41$ \\
-\texttt{absent}                     & 69.0\% &  97.6\% & $+29$ \\
-\texttt{staff\_planner}             & 71.4\% &  85.7\% & $+14$ \\
-\texttt{lot\_number}                & 77.8\% &  97.0\% & $+19$ \\
-\texttt{ayes}                       & 80.2\% & \textbf{100\%} & $+20$ \\
-\bottomrule
-\end{tabular}
-\caption{Test half. The roll-call fields matter disproportionately --- they are the
-Commission's voting record, and \texttt{ayes} goes from four-fifths to complete.}
-\end{table}
+Table~\ref{tab:modelneeded} is the other half of the same cut. The pattern in it is the
+argument of this memo: the rules fail wherever the value is not in a fixed place. A special
+use district, a modification, a zoning district written out in words, the description
+itself --- these are stated in prose that varies, and a regular expression written for one
+phrasing misses the next. The roll-call fields matter disproportionately, because they are
+the ones the politics of the dataset runs on.
+
 
 \section{Part III --- How each method fails}
 
@@ -474,7 +447,7 @@ not a model failure. The help text said the answer was ``initial plus surname'' 
 \texttt{(D. WINSLOW: (415) 558-6335)} as an example, so on the 1998--2001 minutes, which
 print a bare \texttt{(WASHINGTON)}, the model found no initial and returned blank. Twenty-seven
 of the thirty-three were exactly this. The help text now spells out both forms; the field
-scores 100\% on the test half in this round.
+scores 99.3\% on the test half in this round.
 \item \texttt{type\_district\_descr} went 4--20 to the model, \texttt{project\_address} 0--9,
 \texttt{request\_type} 2--8. These are fields where the label was a paraphrase and the model
 copied the block.
@@ -635,7 +608,7 @@ means the reliable half can never be isolated again. Of the stances in the curre
 
 \textbf{Run Haiku~4.5 with six retrieved, era-matched few-shot examples, with the
 instructions placed ahead of the examples so the prefix is cacheable.} On the frozen test
-half it scores 96.8\% overall, 97.4\% on the HTML era and 94.0\% on the PDF era, and one full
+half it scores 96.6\% overall, 97.2\% on the HTML era and 94.0\% on the PDF era, and one full
 pass over the 16{,}203 items carrying a case number costs \textbf{\$70}
 (Table~\ref{tab:cost}).
 
@@ -648,7 +621,7 @@ tenth the price --- \$38 across the corpus --- and the two orderings score ident
 
 \begin{enumerate}
 \item \textbf{A materially larger modern gold set.} 61 items across twelve years is five per
-year against a stratum of 4{,}855. The PDF-era figure of 94.0\% rests on 384 scored
+year against a stratum of 4{,}855. The PDF-era figure of 94.0\% rests on 403 scored
 field-values. It is enough to justify a corpus pass; it is not enough to publish as a
 stratum-level accuracy without a confidence interval, and a second draw of 60 is the cheapest
 thing on this list.
@@ -680,7 +653,7 @@ changed after this round was scored. It is also the least load-bearing field in 
 
 \begin{enumerate}
 \item \textbf{The modern stratum is thin.} 61 items, five per year, standing in for 4{,}855.
-The PDF-era figure of 94.0\% rests on 384 scored field-values and carries a confidence
+The PDF-era figure of 94.0\% rests on 403 scored field-values and carries a confidence
 interval this memo does not compute. It is enough to decide whether to run the corpus; it is
 not a publishable stratum accuracy.
 \item \textbf{The gold set still contains errors.} 187 disagreements were adjudicated and 52\%

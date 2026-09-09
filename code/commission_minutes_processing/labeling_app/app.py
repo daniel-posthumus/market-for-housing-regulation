@@ -344,7 +344,7 @@ def _anthropic_prefill(block: str, meeting_date: str, year: int = 0,
     import bakeoff_extract as BX
     cl = BX.client()
     era = era_of(year) if year else None
-    examples = BX.few_shot_block(block, _prefill_pool(), PREFILL_SHOTS, era) \
+    examples = BX.few_shot_block(block, _prefill_pool(), PREFILL_SHOTS, era, item_id) \
         if PREFILL_SHOTS else ""
     prefix = examples + build_prompt(era)
     msg = cl.messages.create(

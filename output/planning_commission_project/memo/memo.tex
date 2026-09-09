@@ -131,10 +131,12 @@ string wrangling.
 \toprule
 Quantity & Count \\
 \midrule
-Parsed items, 1998--2026 & 23{,}043 \\
-\quad HTML era (1998--2014) & 16{,}024 across 724 pages \\
-\quad Modern era (2015--2026) & 7{,}019 \\
+Parsed items, 1998--2026 & 25{,}927 \\
+\quad HTML era (1998--2014) & 17{,}080 across 724 pages \\
+\quad Modern era (2015--2026) & 8{,}847 \\
+\quad of which carry a case number & 16{,}269 \\
 Meetings identified, HTML era & 818 \\
+Meetings identified, whole corpus & 1{,}219 across 1{,}125 documents \\
 Pages holding more than one meeting & 41 (max 5) \\
 \bottomrule
 \end{tabular}
@@ -142,22 +144,26 @@ Pages holding more than one meeting & 41 (max 5) \\
 
 \subsection{Dating}
 
-The dating stage corrected \textbf{1{,}937 of 16{,}024} HTML-era item dates. Distinct
-hearing dates per year moved from 12--17 to 35--47 for 1998--2000, in line with the
-Commission's roughly weekly sitting; later years were already close to correct. Against a
-hand-marked gold standard of 97 documents and 101 meeting boundaries, boundary precision
-and recall are both 1.000 and item date accuracy is 1.000 on 1{,}322 scored items --- and
-on the 21 documents marked after the rules were frozen it is 1.000 on 334 items, so the
-result is genuinely out-of-sample. All 280 modern PDFs agree with their file names. Details
-and caveats are in the companion memo.
+The dating stage re-dates every HTML-era item from its position in the source page.
+Distinct hearing dates per year moved from 12--17 to 35--47 for 1998--2000, in line with the
+Commission's roughly weekly sitting; later years were already close to correct. Against the
+hand-marked gold standard --- now 116 documents, scored on HAND marks only, since a later
+validation round pre-marked its documents by machine and those must not be scored as gold
+--- boundary recall is \textbf{1.000} and precision \textbf{0.992}, positional recall
+\textbf{1.000} and precision \textbf{0.984}, and \textbf{item date accuracy is 1.000 on
+1{,}752 scored items}. All modern PDFs agree with their file names. Re-derive with
+\texttt{python date\_boundary\_app/app.py --score}; details and caveats are in the companion
+memo.
 
 \subsection{Meetings}
 
-All \textbf{102 meetings} of the gold sample are hand-confirmed --- the 101 marked
-boundaries plus one the dating stage found that the marking missed. Against those labels
-the ten meeting-level fields agree on \textbf{94.6\%} of values, and on the 21 meetings
-labelled after the rules were frozen they agreed on \textbf{92.1\%} before correction, so
-the extraction generalises. The sample is already informative about the panel's
+\textbf{134 meetings} are hand-confirmed, and the extraction now runs over the whole
+corpus rather than the sample: \textbf{1{,}219 meetings, 1998--2026}, written to
+\texttt{meetings\_all.csv}. Against the hand-confirmed set the ten meeting-level fields
+agree on \textbf{93.9\%} of 938 values (\texttt{extract\_all\_meetings.py --score}); the
+out-of-sample generalisation estimate from the last frozen round is \textbf{96.0\%}. The two
+differ because the first covers every round under a stricter comparison and is
+unadjudicated; the meeting-level memo keeps them apart. The sample is already informative about the panel's
 composition: 90 regular sittings, 7 special, and 5 joint --- with the Redevelopment Agency
 Commission (1998), Building Inspection (2007, 2018), Public Health (2011) and Historic
 Preservation (2023). Two joint sittings are headed simply ``Special Meeting'' and are
@@ -171,10 +177,10 @@ identifiable as joint only from the two bodies named above the date.
 \toprule
 Status & Items & Meaning \\
 \midrule
-\texttt{done} & 119 & confirmed gold \\
-\texttt{review} & 80 & existing labels with a specific QA issue to recheck \\
-\texttt{flagged} & 179 & 145 representativeness-sample draws + 34 recovered labels \\
-\texttt{todo} & 22{,}665 & unlabeled \\
+\texttt{done} & 289 & confirmed gold \\
+\texttt{flagged} & 89 & a specific issue to recheck \\
+\texttt{not\_an\_item} & 9{,}658 & agenda scaffolding, not a land-use decision \\
+\texttt{todo} & 15{,}891 & unlabeled \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -187,20 +193,25 @@ representative of the whole period rather than of whichever years were labeled e
 \section{Status and open questions}
 
 \begin{itemize}
-\item \textbf{Settled.} The schema; the parser's block boundaries; the dating stage and its
-validation; the labeling workflow and coding manual.
-\item \textbf{In progress.} Item-level hand-labeling. The immediate queue is the 80
-\texttt{review} items, then the 145 representativeness draws. The meeting-level gold set
-(97 documents, 102 meetings) is complete.
-\item \textbf{Open.} Forty-two labels carry a hand-typed date that disagreed with the
-dating pipeline (preserved in \texttt{date\_field\_disagreements.csv}); several look like
-labels attached to the wrong block by the earlier content-matching recovery and need a
-separate pass. The learning curve has not yet been run at full size, so the number of
-labels required for the extraction model is still an estimate rather than a measurement.
-\item \textbf{Decision pending.} Whether to extend meeting-level labelling beyond the
-81-meeting pilot to all 818 detected meetings. The pre-fill is good enough that the cost is
-confirmation rather than transcription, but the analytic payoff of the meeting-level fields
-is not yet established.
+\item \textbf{Settled.} The schema (v2); the parser's block boundaries; the dating stage
+and its validation; the labeling workflow and coding manual; the extraction configuration
+(Haiku 4.5, six era-matched examples, structured outputs with evidence spans) and its
+corpus-wide run.
+\item \textbf{In progress.} Item-level hand-labeling; 289 items are confirmed gold and the
+frozen split is 155 train / 139 test. The unified review queue holds the remaining work.
+The meeting-level extraction is complete over the whole corpus (1{,}219 meetings) with 134
+hand-confirmed.
+\item \textbf{Open.} The adjudication queue still holds 143 unjudged gold-vs-model
+disagreements, and they are built against a superseded zero-shot run rather than the live
+configuration --- so the share of measured ``model error'' that is really gold error is
+known only for the batch already judged (54\% model, 43\% gold, 3\% both). The learning
+curve has not been run at full size, so the number of labels required for a local model is
+still an estimate. Six commissioners' roll-call entries still merge two surnames where the
+minutes omit a separator (`Melgar Moore', `Moore Sugaya'); splitting them needs a roster
+the project does not yet hold.
+\item \textbf{Decision pending.} Whether to extend meeting-level hand-confirmation beyond
+the 134 already done. The pre-fill is good enough that the cost is confirmation rather than
+transcription, but the analytic payoff of the meeting-level fields is not yet established.
 \item \textbf{Known non-transfer.} The heuristic extractor is tuned to SF minutes and does
 not transfer to other jurisdictions; extending the pipeline requires re-testing extraction
 on real documents with human review, not unattended.

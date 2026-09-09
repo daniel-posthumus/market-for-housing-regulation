@@ -27,9 +27,9 @@ activity is, and which parts of the Planning Code are actually invoked.
 \medskip\noindent
 Four findings organise the rest. \textbf{Outright denial is close to non-existent} --- 1.4\%
 of items across twenty-eight years, and effectively zero since 2020 --- while
-\textbf{conditioning has more than tripled}, from 13.8\% of items in 1998 to 45.7\% in 2023.
+\textbf{conditioning has more than tripled}, from 13.4\% of items in 1998 to 45.5\% in 2023.
 The Commission has not become more permissive; it has moved from a denial technology to a
-conditioning technology. \textbf{Delay is the second margin}: 45\% of all items are a repeat
+conditioning technology. \textbf{Delay is the second margin}: 44\% of all items are a repeat
 appearance of a case already heard, and the 90th-percentile case now takes a year from first
 hearing to last, up from five months in the late 1990s. \textbf{Discretionary review has
 collapsed} as a share of the docket, from 28.6\% to 8.6\%, following the 2013 reforms.
@@ -60,7 +60,7 @@ scaffolding and are excluded by rule.
 
 Extraction is Claude Haiku~4.5 with six retrieved, era-matched worked examples, run over the
 Batch API against a schema of 29 fields. On a frozen 139-item test half that no prompt was
-tuned against, the configuration scores \textbf{96.8\%} at the field level: 97.4\% on the
+tuned against, the configuration scores \textbf{96.6\%} at the field level: 97.2\% on the
 1998--2014 HTML minutes and 94.0\% on the 2015--2026 PDF minutes. The companion memo,
 \emph{Item-Level Field Extraction}, documents the method, the metric and the failure modes;
 this memo takes the output as given and asks what it says.
@@ -125,8 +125,8 @@ country, which is not a conclusion anybody believes.
 
 \subsection{Conditioning is}
 
-Over the same period the share of items carrying conditions rose from \textbf{13.8\%} to
-\textbf{45.7\%}. The Commission has substituted along a margin that a denial-rate measure
+Over the same period the share of items carrying conditions rose from \textbf{13.4\%} to
+\textbf{45.5\%}. The Commission has substituted along a margin that a denial-rate measure
 cannot see: it says yes, and attaches terms. Approval with conditions is the modal outcome of
 a modern conditional-use hearing.
 
@@ -139,16 +139,16 @@ which is where uncertainty enters.
 
 39\% of all items end in a continuance, though the rate has fallen from 46\% to 25\%.
 Table~\ref{tab:outcomes} understates how much of the docket this represents, because a
-continued item returns: \textbf{45\% of all 16{,}199 items are a repeat appearance of a case
-already heard}. Nearly half the Commission's agenda is re-hearing.
+continued item returns: \textbf{43.6\% of all 16{,}199 items are a repeat appearance of a
+case already heard}. Nearly half the Commission's agenda is re-hearing.
 
 \subsection{The disposition depends on what is asked}
 
 Pooling all request types hides that these are different proceedings. Conditional use is
-approved 54.9\% of the time and continued 35.9\%. Discretionary review is approved 1.3\% of
+approved 55.3\% of the time and continued 38.6\%. Discretionary review is approved 1.3\% of
 the time --- because ``approval'' is not its vocabulary: 26.8\% end in \emph{did not take DR}
 and 15.4\% in \emph{took DR and approved}, so the modal DR outcome is the permit proceeding
-essentially untouched. Variances are continued 44.6\% of the time and approved 15.4\%, which
+essentially untouched. Variances are continued 47.4\% of the time and approved 15.4\%, which
 reflects that the Zoning Administrator, not the Commission, is the usual variance authority.
 
 \section{Delay}
@@ -442,7 +442,7 @@ was a \emph{normalisation} defect --- one silently emptied a field on 122 of 232
 \begin{enumerate}
 \item \textbf{Coverage is uneven at both ends.} 1998--2000 and 2025--2026 hold roughly a fifth
 of the meeting documents of the intervening years. Rates are usable; counts are not.
-\item \textbf{Field accuracy is 96.8\%, not 100\%.} At the item level the errors compound: an
+\item \textbf{Field accuracy is 96.6\%, not 100\%.} At the item level the errors compound: an
 analysis conditioning on five fields at once is working with materially fewer clean rows than
 the field-level rate suggests, and whole-record accuracy should be reported wherever that is
 the operative unit.

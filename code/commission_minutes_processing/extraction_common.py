@@ -505,9 +505,17 @@ def _field_line(f: dict) -> str:
     elif t == "list":
         hint += " — list of strings"
     elif t == "list_of_objects":
-        stances = ", ".join((f.get("item_choices") or {}).get("stance", []))
-        hint += (' — list of objects, each {"name": string, "stance": string}; '
-                 f'stance is one of: {stances}, or ""')
+        # Built from `item_schema`/`item_choices`, not hard-coded: the shape the prompt
+        # advertises has to be the shape `json_schema()` requires, and a key added to one
+        # and not the other is a contract the model cannot satisfy. `stance_basis` was
+        # missing here while being required there.
+        ch = f.get("item_choices") or {}
+        keys = list(f.get("item_schema") or {"name": "str"})
+        shape = ", ".join(f'"{k}": string' for k in keys)
+        hint += f" — list of objects, each {{{shape}}}"
+        for k in keys:
+            if k in ch:
+                hint += f'; {k} is one of: {", ".join(ch[k])}, or ""'
     elif t == "int":
         hint += " — integer"
     return f"- {f['name']}: {hint}"
@@ -899,9 +907,10 @@ def compare_field(pred: dict, ref: dict, key: str) -> bool:
     if key in DATE_FIELDS:
         dp, dr = _as_date(p), _as_date(r)
         return (dp == dr) if (dp and dr) else (_alnum(p) == _alnum(r))
-    if key == "resolution_or_motion_no":
-        ip, ir = _instrument(p), _instrument(r)
-        return bool(ir[1]) and ip == ir
+    # `resolution_or_motion_no` had a branch here until 2026-09-09. Schema v2 split it into
+    # `action_instrument` (an enum, compared exactly) and `action_instrument_no` (an int,
+    # likewise), so the branch was unreachable from any caller that iterates FIELDS.
+    # `_instrument` is kept: it still parses the printed form for the migration.
     if key == "project_address":
         return bool(_address_core(r)) and _address_core(p) == _address_core(r)
     if key in ("lot_number", "assessor_block"):

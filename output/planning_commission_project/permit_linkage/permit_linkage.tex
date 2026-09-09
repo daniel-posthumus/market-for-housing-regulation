@@ -33,7 +33,7 @@ permit on 95--100\% of items throughout. Reading the new form recovers 711 items
 permits, and restores the join for 2017--2026. Third, \textbf{the permit route reaches one
 part of the docket and not the rest}: 85.5\% of discretionary reviews carry a parsable permit
 number against 0.3\% of conditional uses. For the rest, a validated block-and-lot fallback
-narrows a median-ten parcel history to a median-two candidate set at 0.70 precision and 0.92
+narrows a median-ten parcel history to a median-one candidate set at 0.72 precision and 0.92
 recall.
 
 \medskip\noindent
@@ -50,7 +50,7 @@ not this dataset.
 
 The item table is the extraction described in the corpus memo: 16{,}199 items heard by the
 San Francisco Planning Commission between 1998 and mid-2026 that carry a case number, in 29
-structured fields, at 96.8\% field-level accuracy on a frozen test half. Nothing here
+structured fields, at 96.6\% field-level accuracy on a frozen test half. Nothing here
 re-estimates that; this memo asks only what the table can be joined to.
 
 The other side is DataSF's \textbf{Building Permits} dataset (\texttt{i98e-djp9}), the
@@ -62,7 +62,7 @@ stop sampling.
 
 Two facts about that table shape everything that follows.
 
-\textbf{\texttt{permit\_number} is not a key.} The 1{,}295{,}048 rows carry 1{,}149{,}253
+\textbf{\texttt{permit\_number} is not a key.} The 1{,}295{,}048 rows carry 1{,}149{,}247
 distinct permit numbers: 145{,}795 rows are a repeat of a number already in the table,
 usually one row per lot the permit touches. The table is therefore collapsed to the
 earliest-filed row per number before joining. A join that ignores this double-counts multi-lot projects, which are exactly
@@ -213,7 +213,7 @@ attaches the wrong outcome to the hearing.
 
 The permit-number subset is the ground truth for testing a rule, because on those items we
 know which permit the hearing was about. Table~\ref{tab:parcelrule} scores seven rules on the
-2{,}909 such items whose cited permit is present at the parcel DBI records for it. Coverage
+3{,}274 such items whose cited permit is present at the parcel DBI records for it. Coverage
 (does the rule return anything?), precision (of what it returns) and recall (of what it should
 have found) are reported separately, because a rule that returns nothing has undefined
 precision and reporting it as zero flatters the wide rules.
@@ -221,28 +221,28 @@ precision and reporting it as zero flatters the wide rules.
 The shape of the trade-off is clear. Taking every permit at the parcel has perfect recall and
 0.14 precision --- six wrong permits for each right one. Restricting to new construction,
 wood-frame new construction, alterations and demolitions --- dropping over-the-counter work
-and signs --- raises precision to 0.43 at almost no cost in recall, and is the single most
+and signs --- raises precision to 0.44 at almost no cost in recall, and is the single most
 valuable filter. Adding a date window trades recall for coverage: \textbf{filings from three
-years before to one year after the hearing return a candidate set for 94.1\% of items, at
-0.70 precision and 0.92 recall, with a median set size of two}. Tightening to one year before
+years before to one year after the hearing return a candidate set for 94.0\% of items, at
+0.72 precision and 0.92 recall, with a median set size of one}. Tightening to one year before
 and six months after raises precision only to 0.75 while dropping coverage to 56\% --- the
 permit is often filed long before the hearing that reviews it, which is the whole reason a
 discretionary review exists.
 
-Taking only the nearest filing gives point identification at 0.73 precision and 0.66 recall.
+Taking only the nearest filing gives point identification at 0.74 precision and 0.67 recall.
 That is the right rule if the analysis needs one permit per item and can tolerate a third of
-them being wrong; the three-year window with a median-two candidate set is the right rule if
+them being wrong; the three-year window, whose candidate set has a median size of one, is the right rule if
 the analysis can carry a set, for instance by taking the maximum project size or the earliest
 issuance across candidates.
 
 Table~\ref{tab:parcelreach} gives the reach. Of the 12{,}611 items with no printed permit
-number, 10{,}076 have a block and lot, 8{,}985 have a parcel DBI knows, and \textbf{6{,}323
---- 39.0\% of the whole docket --- get at least one candidate permit} under the preferred
+number, 10{,}076 have a block and lot, 9{,}455 have a parcel DBI knows, and \textbf{6{,}664
+--- 41.1\% of the whole docket --- get at least one candidate permit} under the preferred
 rule. Combined with the 3{,}515 items matched on a printed number, some construction-side
-observation is available for \textbf{9{,}838 items, 60.7\% of the docket}, of which a little
+observation is available for \textbf{10{,}179 items, 62.8\% of the docket}, of which a little
 over a third is exact and the rest is a small candidate set with a known error rate.
 
-This is a positive result but it should not be oversold. The 0.70 precision is measured on
+This is a positive result but it should not be oversold. The 0.72 precision is measured on
 discretionary reviews, because that is where the ground truth is, and discretionary reviews
 concern parcels with a specific pending permit. On a conditional-use item --- a restaurant
 seeking a use authorisation on a busy commercial block --- the parcel's permit history is
@@ -279,8 +279,8 @@ artefact, now fixed and regression-visible in Figure~\ref{fig:coverage}.
 2\% of everything else.
 \item For matched items, issuance, construction start, abandonment, cost, units and
 supervisor district are all observable, with issuance a median 245 days after the hearing.
-\item A parcel-plus-window-plus-type rule extends partial coverage to a further 39\% of the
-docket at 0.70 precision and 0.92 recall, validated against the permit-number subset.
+\item A parcel-plus-window-plus-type rule extends partial coverage to a further 41\% of the
+docket at 0.72 precision and 0.92 recall, validated against the permit-number subset.
 \item Conditions of approval are absent from DBI.
 \end{enumerate}
 

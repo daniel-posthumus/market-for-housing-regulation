@@ -195,12 +195,24 @@ def main(argv=None):
         PROC.mkdir(parents=True, exist_ok=True)
         cols = ["year", "meeting_date", "source_file", "n_blocks", "n_case_blocks",
                 "present", "absent", "staff"]
-        new = not csv_path.exists()
-        with csv_path.open("a", newline="", encoding="utf-8") as fh:
+        # One row per source document, keyed on the file name. This used to append blindly,
+        # so `--overwrite` (or any second pass over a year) added a duplicate row for every
+        # meeting it re-parsed. Existing rows are read back, replaced by name where this run
+        # re-parsed them, and the whole file rewritten — which keeps rows for documents this
+        # run did not touch while making a re-run idempotent.
+        rows: dict[str, dict] = {}
+        if csv_path.exists():
+            with csv_path.open(newline="", encoding="utf-8") as fh:
+                for r in csv.DictReader(fh):
+                    if r.get("source_file"):
+                        rows[r["source_file"]] = r
+        for r in meta_rows:
+            rows[r["source_file"]] = {k: r.get(k, "") for k in cols}
+        with csv_path.open("w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=cols)
-            if new:
-                w.writeheader()
-            for r in meta_rows:
+            w.writeheader()
+            for r in sorted(rows.values(), key=lambda x: (str(x.get("meeting_date") or ""),
+                                                          str(x.get("source_file") or ""))):
                 w.writerow({k: r.get(k, "") for k in cols})
         tot = sum(r["n_blocks"] for r in meta_rows)
         cas = sum(r["n_case_blocks"] for r in meta_rows)

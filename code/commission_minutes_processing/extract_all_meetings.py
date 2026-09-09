@@ -101,9 +101,76 @@ def meetings_in(path: Path) -> list[dict]:
     return out
 
 
+# ── scoring the extracted fields against the hand-confirmed meetings ─────────
+# There was no code for this. The round-by-round accuracy figures lived only in a session
+# log and in the hand-typed constants of `plot_extraction_accuracy.py`, so the number could
+# not be recomputed after a rule changed — and the three modules HAVE changed since
+# FROZEN_ROUND4 was written, which left the published 96.0%/98.4% describing code that no
+# longer exists. `--score` recomputes it from the current code against the meetings a human
+# confirmed, so the figure can never again quote a state of the world nobody can reproduce.
+#
+# Scored per FIELD VALUE, not per meeting, which is the unit the rounds reported: a meeting
+# contributes as many comparisons as it has confirmed fields. Lists are compared as sets of
+# names (order is typography) and scalars after case/space folding.
+SCORE_FIELDS = ["meeting_type", "meeting_time", "presiding", "location",
+                "present", "absent", "staff"]
+
+
+def _same(a, b) -> bool:
+    if isinstance(a, list) or isinstance(b, list):
+        norm = lambda v: {str(x).strip().lower() for x in (v or []) if str(x).strip()}  # noqa: E731
+        return norm(a) == norm(b)
+    return " ".join(str(a or "").split()).lower() == " ".join(str(b or "").split()).lower()
+
+
+def score(rows: list[dict]) -> dict:
+    """Machine fields vs the hand-confirmed record, on the meetings a human has signed off."""
+    con = sqlite3.connect(M.DB)
+    gold = {}
+    for src, ln, data in con.execute("SELECT source_file, line_no, data FROM meetings "
+                                     "WHERE status='done' AND data IS NOT NULL"):
+        stem = src.rsplit(".", 1)[0] if src.endswith(('.html', '.htm')) else src
+        gold[(stem, ln)] = json.loads(data)
+    con.close()
+    by_field, by_era, matched = Counter(), Counter(), 0
+    hit_field, hit_era = Counter(), Counter()
+    misses = []
+    for r in rows:
+        stem = r["source_file"].rsplit(".", 1)[0] \
+            if r["source_file"].endswith((".html", ".htm")) else r["source_file"]
+        g = next((v for (s, ln), v in gold.items()
+                  if s == stem and abs(ln - r["line_no"]) < 40), None)
+        if g is None:
+            continue
+        matched += 1
+        for f in SCORE_FIELDS:
+            if f not in g:
+                continue
+            by_field[f] += 1
+            by_era[r["era"]] += 1
+            if _same(r.get(f), g.get(f)):
+                hit_field[f] += 1
+                hit_era[r["era"]] += 1
+            else:
+                misses.append({"meeting_date": r["meeting_date"], "era": r["era"],
+                               "field": f, "machine": r.get(f), "hand": g.get(f)})
+    tot, hit = sum(by_field.values()), sum(hit_field.values())
+    return {"meetings_scored": matched, "values": tot,
+            "accuracy_pct": round(100 * hit / tot, 2) if tot else None,
+            "by_field": {f: {"n": by_field[f],
+                             "pct": round(100 * hit_field[f] / by_field[f], 2)}
+                         for f in SCORE_FIELDS if by_field[f]},
+            "by_era": {e: {"n": by_era[e], "pct": round(100 * hit_era[e] / by_era[e], 2)}
+                       for e in sorted(by_era)},
+            "misses": misses}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", help="e.g. 1998-2001 or 2003,2004")
+    ap.add_argument("--score", action="store_true",
+                    help="score the extracted fields against the hand-confirmed meetings "
+                         "and write meeting_field_score.json")
     a = ap.parse_args()
     years = None
     if a.years:
@@ -174,6 +241,18 @@ def main():
     print(f"\nextracted {len(rows)} meetings from {len(docs)} documents")
     print("by era:", dict(Counter(r["era"] for r in rows)))
     print("hand-verified:", sum(r["hand_verified"] for r in rows))
+
+    if a.score:
+        sc = score(rows)
+        out = HERE / "meeting_field_score.json"
+        out.write_text(json.dumps(sc, indent=1, ensure_ascii=False) + "\n")
+        print(f"\nfield accuracy vs {sc['meetings_scored']} hand-confirmed meetings: "
+              f"{sc['accuracy_pct']}% of {sc['values']:,} values")
+        print("  by field: " + ", ".join(f"{f} {v['pct']}% (n={v['n']})"
+                                         for f, v in sc["by_field"].items()))
+        print("  by era:   " + ", ".join(f"{e} {v['pct']}% (n={v['n']})"
+                                         for e, v in sc["by_era"].items()))
+        print("→", out)
     if errors:
         print(f"read errors: {len(errors)}")
         for e in errors[:5]:

@@ -46,6 +46,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from paths import DATA_ROOT                                          # noqa: E402
+from normalize import pad_key, parcel_keys                           # noqa: E402
 from analyze_corpus import load, chains                              # noqa: E402
 import analyze_permits as ap                                         # noqa: E402
 
@@ -98,16 +99,18 @@ def supervisor_districts(items: pd.DataFrame) -> pd.Series:
     block = (x.assign(b=x.block.fillna("").str.strip().str.upper())
               .groupby("b").supervisor_district.agg(lambda s: s.mode().iat[0]))
 
+    # Both lookups go through `normalize.pad_key`, which pads the DIGITS and keeps the
+    # letter. `zfill` on the token is a no-op once a letter makes it long enough, so the
+    # earlier version missed every lettered parcel AND every lettered block — and the block
+    # fallback silently missed them too, which is the failure that is hardest to notice.
     def one(r):
-        b = str(r.assessor_block or "").strip().upper()
+        b = str(r.assessor_block or "").strip()
         if not b:
             return None
-        lots = r.lot_number if isinstance(r.lot_number, list) else []
-        for l in lots:
-            k = f"{b.zfill(4)}:{str(l).strip().zfill(3)}"
+        for k in parcel_keys(b, r.lot_number, ":"):
             if k in parcel.index:
                 return parcel[k]
-        return block.get(b.zfill(4))
+        return block.get(pad_key(b, 4))
 
     return items.apply(one, axis=1)
 
@@ -141,8 +144,14 @@ def build() -> pd.DataFrame:
     d = it.copy()
     d["cn"] = d.case_number.astype(str).str.upper().str.replace(r"\s+", "", regex=True)
     d = d[d.cn.ne("")]
-    g = d.sort_values("meeting_date").groupby("cn")
-    first = g.first()
+    # THE FIRST HEARING'S ROW, not the first non-missing value of each column. `groupby.first`
+    # skips nulls per column, so a covariate missing at the first hearing was silently filled
+    # from a LATER one — look-ahead in a panel whose whole framing is "what was observable at
+    # the first hearing", and which is then tested out of sample. `sd` was the column it
+    # actually reached (it returns None on a miss, where the extracted string fields carry ""),
+    # and it is parcel-level and time-invariant so nothing moved; the mechanism is the problem.
+    first = (d.sort_values("meeting_date")
+              .drop_duplicates("cn", keep="first").set_index("cn"))
     X = chains(it).join(first[["preliminary_recommendation_category", "type_district",
                                "speakers", "sd", "cont_in"]])
     X["nsp"] = X.speakers.map(lambda x: len(x) if isinstance(x, list) else 0)

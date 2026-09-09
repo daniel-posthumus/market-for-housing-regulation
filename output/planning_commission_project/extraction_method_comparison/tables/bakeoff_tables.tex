@@ -4,10 +4,10 @@
 \label{tab:headline}
 \begin{tabular}{lrrrr}\toprule
 Method & Test & Test, HTML & Test, PDF & Over-extraction\\
- & \small(n=2031) & \small(n=1647) & \small(n=384) & \small(n=1583)\\\midrule
-Deterministic rules & 70.7\% & 70.4\% & 72.1\% & 1.6\%\\
-Haiku 4.5, few-shot & 96.8\% & 97.5\% & 93.8\% & 4.5\%\\
-Haiku 4.5, few-shot, cached prefix & 96.8\% & 97.4\% & 94.0\% & 4.3\%\\
+ & \small(n=2100) & \small(n=1697) & \small(n=403) & \small(n=1931)\\\midrule
+Deterministic rules & 75.2\% & 74.0\% & 80.4\% & 1.7\%\\
+Haiku 4.5, few-shot & 96.6\% & 97.2\% & 93.8\% & 4.5\%\\
+Haiku 4.5, few-shot, cached prefix & 96.6\% & 97.2\% & 94.0\% & 4.2\%\\
 \bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
@@ -30,12 +30,12 @@ Section & Field & $n$ & Rules & Haiku 4.5\\\midrule
 \multicolumn{5}{l}{\itshape Identity}\\
  & \texttt{case\_number} & 139 & 97.8\% & 98.6\%\\
  & \texttt{request\_type} & 136 & 82.4\% & 97.1\%\\
- & \texttt{action\_instrument} & 50 & 0.0\% & 100.0\%\\
- & \texttt{action\_instrument\_no} & 50 & 0.0\% & 100.0\%\\
+ & \texttt{action\_instrument} & 50 & 94.0\% & 100.0\%\\
+ & \texttt{action\_instrument\_no} & 50 & 86.0\% & 100.0\%\\
 \multicolumn{5}{l}{\itshape Location}\\
- & \texttt{project\_address} & 119 & 87.4\% & 97.5\%\\
+ & \texttt{project\_address} & 119 & 89.1\% & 97.5\%\\
  & \texttt{assessor\_block} & 120 & 99.2\% & 100.0\%\\
- & \texttt{lot\_number} & 119 & 79.8\% & 100.0\%\\
+ & \texttt{lot\_number} & 119 & 80.7\% & 100.0\%\\
 \multicolumn{5}{l}{\itshape Zoning \& scale}\\
  & \texttt{type\_district} & 113 & 39.8\% & 96.5\%\\
  & \texttt{type\_district\_descr} & 101 & 44.6\% & 92.1\%\\
@@ -43,13 +43,13 @@ Section & Field & $n$ & Rules & Haiku 4.5\\\midrule
  & \texttt{special\_use\_district} & 19 & 0.0\% & 84.2\%\\
  & \texttt{project\_descr} & 139 & 55.4\% & 99.3\%\\
 \multicolumn{5}{l}{\itshape Process}\\
- & \texttt{staff\_planner} & 137 & 75.9\% & 99.3\%\\
+ & \texttt{staff\_planner} & 137 & 76.6\% & 99.3\%\\
  & \texttt{preliminary\_recommendation} & 95 & 91.6\% & 100.0\%\\
- & \texttt{preliminary\_recommendation\_category} & 95 & 81.1\% & 97.9\%\\
+ & \texttt{preliminary\_recommendation\_category} & 95 & 83.2\% & 97.9\%\\
  & \texttt{continued\_to} & 49 & 95.9\% & 98.0\%\\
- & \texttt{action} & 139 & 85.6\% & 95.0\%\\
+ & \texttt{action} & 139 & 87.8\% & 95.0\%\\
 \multicolumn{5}{l}{\itshape Politics}\\
- & \texttt{speakers} & 69 & 24.6\% & 69.6\%\\
+ & \texttt{speakers} & 69 & 33.3\% & 69.6\%\\
  & \texttt{ayes} & 122 & 83.6\% & 100.0\%\\
  & \texttt{noes} & 17 & 5.9\% & 100.0\%\\
  & \texttt{absent} & 52 & 76.9\% & 100.0\%\\
@@ -59,6 +59,44 @@ Section & Field & $n$ & Rules & Haiku 4.5\\\midrule
  & \texttt{project\_modified} & 16 & 37.5\% & 75.0\%\\
  & \texttt{modifications} & 17 & 0.0\% & 88.2\%\\
 \bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{Where the deterministic rules are already enough: every field with at least 10 scored values on the held-out half where they reach 85\%. `Verdict' compares them with the best model — \emph{rules win} where they score higher, \emph{tied} within half a point, \emph{adequate} otherwise.}
+\label{tab:regexwins}
+\begin{tabular}{lrrrl}\toprule
+Field & $n$ & Rules & Best model & Verdict\\\midrule
+\texttt{assessor\_block} & 120 & 99.2\% & 100.0\% & rules adequate\\
+\texttt{case\_number} & 139 & 97.8\% & 98.6\% & rules adequate\\
+\texttt{continued\_to} & 49 & 95.9\% & 98.0\% & rules adequate\\
+\texttt{conditions\_imposed} & 19 & 94.7\% & 100.0\% & rules adequate\\
+\texttt{action\_instrument} & 50 & 94.0\% & 100.0\% & rules adequate\\
+\texttt{preliminary\_recommendation} & 95 & 91.6\% & 100.0\% & rules adequate\\
+\texttt{project\_address} & 119 & 89.1\% & 97.5\% & rules adequate\\
+\texttt{action} & 139 & 87.8\% & 95.0\% & rules adequate\\
+\texttt{action\_instrument\_no} & 50 & 86.0\% & 100.0\% & rules adequate\\
+\texttt{height\_and\_bulk\_district} & 98 & 85.7\% & 98.0\% & rules adequate\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{Where a model is not optional: the same fields, below 85\% on the rules. `Gap' is the model's lead in points.}
+\label{tab:modelneeded}
+\begin{tabular}{lrrrr}\toprule
+Field & $n$ & Rules & Best model & Gap\\\midrule
+\texttt{special\_use\_district} & 19 & 0.0\% & 84.2\% & $+84$\\
+\texttt{modifications} & 17 & 0.0\% & 88.2\% & $+88$\\
+\texttt{noes} & 17 & 5.9\% & 100.0\% & $+94$\\
+\texttt{speakers} & 69 & 33.3\% & 69.6\% & $+36$\\
+\texttt{project\_modified} & 16 & 37.5\% & 75.0\% & $+38$\\
+\texttt{type\_district} & 113 & 39.8\% & 96.5\% & $+57$\\
+\texttt{type\_district\_descr} & 101 & 44.6\% & 92.1\% & $+47$\\
+\texttt{project\_descr} & 139 & 55.4\% & 99.3\% & $+44$\\
+\texttt{staff\_planner} & 137 & 76.6\% & 99.3\% & $+23$\\
+\texttt{absent} & 52 & 76.9\% & 100.0\% & $+23$\\
+\texttt{lot\_number} & 119 & 80.7\% & 100.0\% & $+19$\\
+\texttt{request\_type} & 136 & 82.4\% & 97.1\% & $+15$\\
+\texttt{preliminary\_recommendation\_category} & 95 & 83.2\% & 97.9\% & $+15$\\
+\texttt{ayes} & 122 & 83.6\% & 100.0\% & $+16$\\
+\bottomrule\end{tabular}\end{table}
 
 \begin{table}[htbp]\centering
 \caption{Adjudicated disagreements. Every case where the model's value differed from the hand label was judged against the source block. `Gold' means the label stood; `model' means the label was wrong and was corrected. The model column is the share of apparent model error that was never model error.}

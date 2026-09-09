@@ -63,7 +63,17 @@ MIN_TERM = 6               # runs shorter than this are absorbed into their neig
 # Residual name inconsistencies in `presiding` that the corpus-wide reconciliation misses,
 # plus the parse artefacts ("Vice" with no name, an OCR "At1"). Listed rather than silently
 # dropped so the reader can see exactly what was folded.
-PRESIDING_ALIAS = {"Anita Theoharis": "Theoharis", "Theohars": "Theoharis"}
+#
+# "Anita Theoharis" left this list on 2026-09-09: it was here because a mojibake token was
+# registering as a second claimant of the surname and blocking the reduction, which is now
+# fixed in `meeting_headers.name_reducer` — the right place for it. An alias here is a patch
+# on the OUTPUT of the reconciliation and should stay rare; if one appears in numbers, fix
+# the reducer instead. "Theohars" is a genuine one-off typo in the source.
+PRESIDING_ALIAS = {"Theohars": "Theoharis"}
+# One-meeting values that are not a presidency. "Vice"/"At1" are parse debris; the three
+# surnames each appear exactly once, against 5-137 for every real chair, so they are a
+# mis-read of the called-to-order line rather than a term. Named individually so the reader
+# can check them; the count is the reason each is here.
 PRESIDING_JUNK = {"Vice", "At1", "Chiang", "Getty", "Scott"}
 
 

@@ -360,14 +360,33 @@ def _people(v: str, join_roles: bool = False) -> list[str]:
         # President" arrives as one. Neither form should put a title in the list.
         p = re.sub(r"\s*[-–]\s*(?:acting\s+)?(?:president|vice[- ]president|"
                    r"chair(?:person)?|secretary)\s*$", "", p, flags=re.I).strip()
-        # "President Olague", "VP Miguel" — the title is not part of the name
-        p = re.sub(r"(?i)^(?:commissioner|comm\.?|president|vice[\s-]?president|vp|chair"
+        # "President Olague", "VP Miguel" — the title is not part of the name. The PLURAL
+        # form matters too: the 1998-era label is "COMMISSIONERS PRESENT:" wrapped so that
+        # the word lands inside the first entry, which produced the roster entry
+        # "Commissioners Dennis Antenore" — a fourth spelling of a commissioner who already
+        # had three.
+        p = re.sub(r"(?i)^(?:commissioners?|comm\.?|president|vice[\s-]?president|vp|chair"
                    r"(?:person)?|acting\s+president)\s+", "", p).strip()
+        # A roll-call LABEL inside a token means the capture ran past the end of the list
+        # and swallowed the next label plus the first name under it. The 1998-1999 pages
+        # print the two lists close enough together that the split misses the boundary:
+        # 'Mills ABSENT" Antenore' is Mills, then the ABSENT heading, then Antenore. Keeping
+        # the whole thing invented a person AND made "Antenore" look like a shared surname,
+        # which stopped "Dennis Antenore" reducing to "Antenore" on every other meeting.
+        # Case-SENSITIVE: the label is printed in capitals, and "absent" in a name is not.
+        p = re.split(r"\b(?:PRESENT|ABSENT|EXCUSED|RECUSED|STAFF)\b", p)[0].strip(" .,;:\"'")
+        if not p:
+            continue
         # "Tierney, Ed.D" / "Melara, M.S.W." split into a name and a degree; drop the degree
         if re.fullmatch(r"(?:[A-Za-z]\.){1,4}[A-Za-z]?\.?|(?i:Ed\.?D|Ph\.?D|M\.?D|J\.?D|"
                         r"M\.?S\.?W|M\.?P\.?H|R\.?N|AICP|Esq)\.?", p):
             continue
         if p.lower() in ("present", "absent", "none"):
+            continue
+        # A token with no letter in it is not a name. The mojibake-heavy 2000-2001 pages
+        # yield a bare "??????" where a surname should be, and it was being stored as a
+        # person in the roll call.
+        if not re.search(r"[A-Za-z]", p):
             continue
         # normalise the SPACING around a name/role dash ("Badiner -Zoning Administrator")
         # while keeping the character the source used — the corpus mixes hyphen and en dash,
@@ -470,12 +489,22 @@ def prefill(window: str, date_line: str, extended: str = "") -> dict:
     """Heuristic meeting-level pre-fill from the header window. Every value is meant to be
     confirmed by a human — this exists so confirming is a glance, not a retype.
 
-    The window straddles two meetings, so which HALF a field is read from matters. The lines
-    above the date line are the previous meeting's tail, and they carry roll-call-shaped text
-    of their own: the last item's vote reads "AYES: ... ABSENT: Martin", which a scan from
-    the top of the window would happily take as this meeting's absences. Everything about
-    THIS meeting is therefore read from the date line down; only the adjournment time is read
-    from above it, because that is the previous meeting's ending by construction.
+    Which HALF of the window a field is read from matters, but the answer is not the same
+    for every field, and the split is deliberate:
+
+    ROLL CALL, TIME, STAFF — read from the date line DOWN (`body`). On a compilation page
+    the lines above the date line are the previous meeting's tail and carry roll-call-shaped
+    text of their own: that meeting's last vote reads "AYES: ... ABSENT: Martin", which a
+    scan from the top of the window would take as this meeting's absences.
+
+    MEETING TYPE and PRESIDING — read from the WHOLE window, because on the per-meeting
+    pages the text above the date line is not another meeting at all, it is THIS page's own
+    masthead, and that is where the type is printed: "SAN FRANCISCO / PLANNING COMMISSION /
+    SPECIAL MEETING" sits above "Thursday, February 17, 2005". Narrowing to `body` loses
+    the type entirely on the 1998 layout (11 of 136 gold windows) and mistakes an agenda
+    item's "will meet in closed session pursuant to..." for the meeting's own type on the
+    two Planning-Director-search sessions. `presiding` is identical either way on all 136
+    gold windows; it stays on the window for the same masthead reason.
     """
     rec = {f: ("" if s["type"] != "list" else []) for f, s in zip(MEETING_FIELDS, MEETING_SCHEMA)}
     if date_line and date_line in window:
@@ -729,13 +758,20 @@ def name_reducer(records) -> "callable":
     # Hughes" made "Hughes" look ambiguous, which stopped "Kevin Hughes" reducing to
     # "Hughes" in twenty-one other meetings. Ambiguity has to be evidenced, not inferred
     # from one occurrence.
+    # A claimant's initial must be an actual LETTER. The 2000-2001 pages are mojibake-heavy
+    # and print a name as "????????????????? Theoharis"; that token recurs (7 times), so it
+    # cleared the "seen more than once" bar and registered as a SECOND claimant of the
+    # surname. "theoharis" then looked shared, which stopped "Anita Theoharis" reducing to
+    # "Theoharis" and split one commissioner into two people corpus-wide. The same thing
+    # happened to Antenore, Joe, Martin, Mills and Sugaya. Ambiguity has to be evidenced by
+    # a real name, not by a run of question marks.
     seen: dict[tuple[str, str], int] = collections.Counter()
     full_forms: dict[tuple[str, str], collections.Counter] = {}
     for rec in records:
         for f in ("present", "absent"):
             for nm in rec.get(f) or []:
                 toks = strip_honorific(nm.split())
-                if len(toks) > 1:
+                if len(toks) > 1 and toks[0][:1].isalpha():
                     sur, ini = toks[-1].lower(), toks[0][:1].upper()
                     seen[(sur, ini)] += 1
                     if len(toks[0].rstrip(".")) > 1:
@@ -765,6 +801,11 @@ def name_reducer(records) -> "callable":
 
     def reduce(nm: str) -> str:
         toks = strip_honorific(nm.split())
+        # A trailing token with no letter in it is mojibake, not a surname. "Salinas ?" is
+        # Commissioner Salinas with a corrupted character after her name, and reducing to
+        # the last token turned her into "?" — a punctuation mark stored as a person.
+        while len(toks) > 1 and not re.search(r"[A-Za-z]", toks[-1]):
+            toks = toks[:-1]
         if not toks:
             return nm
         # A hyphenated commissioner surname is one person under either spelling:
@@ -778,6 +819,11 @@ def name_reducer(records) -> "callable":
             return toks[-1]
         sur = toks[-1].lower()
         if sur not in shared:
+            return toks[-1]
+        # A leading token that is not a name (the mojibake run) cannot disambiguate a shared
+        # surname, and keeping it would carry the mojibake into the output. Fall back to the
+        # bare surname, which is the same answer the minutes give when they print one.
+        if not toks[0][:1].isalpha():
             return toks[-1]
         cands = full_forms.get((sur, toks[0][:1].upper()))
         return cands.most_common(1)[0][0] if cands else " ".join(toks)
@@ -826,8 +872,13 @@ def _resolve_bare_lee(rec: dict) -> None:
 
 
 def apply_names(rec: dict, reduce) -> dict:
+    # A name that comes out of reduction with no letter at all is not a person and must not
+    # sit in a roll call: it would count toward the seated total and so move the absence
+    # rate. `_people` already refuses letterless tokens on the way in; this catches the ones
+    # that only become letterless when a mojibake surname is reduced away.
     for f in ("present", "absent"):
-        rec[f] = [reduce(x) for x in rec.get(f) or []]
+        rec[f] = [n for n in (reduce(x) for x in rec.get(f) or [])
+                  if re.search(r"[A-Za-z]", n or "")]
     rec["presiding"] = reduce(rec.get("presiding", ""))
     _resolve_bare_lee(rec)
     return rec

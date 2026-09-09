@@ -26,10 +26,10 @@ year, the turnout at the hearing.
 
 \medskip\noindent
 The answer is: the level, somewhat; the tail, barely. Everything observable together explains
-\textbf{16.9\% of the variance} of $\log(\text{days}+1)$ in sample and \textbf{9.6\% out of
+\textbf{17.0\% of the variance} of $\log(\text{days}+1)$ in sample and \textbf{9.6\% out of
 sample}, forecasting cases first heard from 2016 with a model fitted only on cases through
 2015. For the events that actually hurt --- more than a year from first hearing to last ---
-the same covariates reach \textbf{$R^2=0.054$ in sample and $0.032$ out of sample}. Sorting
+the same covariates reach \textbf{$R^2=0.055$ in sample and $0.032$ out of sample}. Sorting
 every case into deciles of predicted delay, the worst decile still finishes within a year
 \textbf{95\% of the time}, and the best decile fails to \textbf{1.2\%} of the time. The model
 separates expected delay across deciles by a factor of a hundred and separates tail risk by a
@@ -125,13 +125,13 @@ takes it on its own.
 
 \textbf{Geography adds almost nothing.} The zoning district takes $R^2$ from 0.121 to 0.124,
 and the supervisor district --- recovered by joining the item's parcel to DBI's permit table,
-which carries a district on 99.8\% of its rows --- takes it to 0.128. Where a project is
+which carries a district on 99.8\% of its rows --- takes it to 0.129. Where a project is
 matters far less to how long it takes than what it is asking for and what staff thinks of it.
 This is a mild surprise and it is worth stating, because the natural prior is that some
 neighbourhoods are simply harder.
 
 \textbf{Turnout adds 2.7 points, and must not be over-read.} Adding the log speaker count
-takes $R^2$ from 0.142 to 0.169, with a coefficient of $-0.355$ ($t=-16.4$): \emph{more}
+takes $R^2$ from 0.143 to 0.170, with a coefficient of $-0.356$ ($t=-16.4$): \emph{more}
 speakers, \emph{less} delay. That is not a finding about mobilisation. Half of all cases have
 no speakers recorded at the first hearing, and 50\% of those were continued at that hearing,
 against 14\% of cases that did have speakers. A hearing with no speakers is usually a hearing
@@ -156,8 +156,8 @@ wide, and the absolute level of tail risk stays low everywhere.}
 \end{figure}
 
 Table~\ref{tab:tails} runs the full specification on three outcomes. On the level it reaches
-$R^2 = 0.169$. On $\mathbb{1}[\text{days}>180]$ it reaches 0.088, and on
-$\mathbb{1}[\text{days}>365]$, 0.054. \textbf{Between 83\% and 95\% of the variance is
+$R^2 = 0.170$. On $\mathbb{1}[\text{days}>180]$ it reaches 0.090, and on
+$\mathbb{1}[\text{days}>365]$, 0.055. \textbf{Between 83\% and 95\% of the variance is
 unexplained}, and the share unexplained rises as the outcome moves into the tail.
 
 Table~\ref{tab:calibration} and Figure~\ref{fig:predictability} are the interpretable version.
@@ -194,8 +194,8 @@ actually have forecast. Table~\ref{tab:oos} therefore fits on cases first heard 
 and forecasts cases first heard from 2016 on, dropping year fixed effects because a model
 containing them cannot say anything about a year it has not seen.
 
-\textbf{The level: 0.174 in sample, 0.096 out.} Roughly half the apparent fit does not
-survive. \textbf{More than 180 days: 0.078 in, 0.054 out. More than 365 days: 0.045 in, 0.032
+\textbf{The level: 0.176 in sample, 0.096 out.} Roughly half the apparent fit does not
+survive. \textbf{More than 180 days: 0.080 in, 0.054 out. More than 365 days: 0.047 in, 0.032
 out.} All three out-of-sample numbers are positive, so the model does beat forecasting every
 case at the historical mean --- but a developer applying the historical relationship to a new
 project would have accounted for about one tenth of the variation in how long it took, and
@@ -247,11 +247,11 @@ outcome, not a predictor.
 The fitted value is expected delay conditional on observables. The residual is the part no one
 could have forecast, and it is the object the paper is ultimately about.
 
-Over all cases, the residual standard deviation is \textbf{1.815 log points}
+Over all cases, the residual standard deviation is \textbf{1.814 log points}
 (Table~\ref{tab:ladder}) against a dependent-variable standard deviation of 1.981. That figure
 is inflated by the mass point at zero, so the cleaner statement conditions on the case
-returning at all. Table~\ref{tab:returning} reports it: there $R^2 = 0.189$ and the
-\textbf{residual standard deviation is 1.064 log points}, meaning a one-standard-deviation
+returning at all. Table~\ref{tab:returning} reports it: there $R^2 = 0.191$ and the
+\textbf{residual standard deviation is 1.063 log points}, meaning a one-standard-deviation
 surprise multiplies realised delay by about \textbf{2.9}.
 
 The sharpest version is inside the top decile. Among the 2{,}862 cases that returned, the 287

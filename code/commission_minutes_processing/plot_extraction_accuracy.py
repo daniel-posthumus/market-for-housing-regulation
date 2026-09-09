@@ -22,18 +22,34 @@ made after round 2 generalised rather than being fitted to it.
 The corrected series is not a generalisation claim. It shows how much of each round's error
 was addressable once seen — the gap between the two lines on a given round is the share of
 errors that turned out to be a named, fixable cause rather than irreducible noise.
+
+WHAT IS TRANSCRIBED AND WHAT IS COMPUTED. The four rounds are HISTORY: each was measured
+against a frozen code state (date_boundary_app/FROZEN_ROUND*.json) and those states no
+longer exist — all three modules have changed since round 4 — so the round series cannot be
+recomputed and stays a recorded constant, sourced below. Everything about the CURRENT state
+is now READ from `meeting_field_score.json`, written by `extract_all_meetings.py --score`,
+which scores today's rules against the hand-confirmed meetings. The right-hand panel and the
+footnote used to be transcribed too, so they described a code state nobody could reproduce
+— exactly what CLAUDE.md's "never hand-place a number a script could compute" is about.
+Re-run the scorer, then this script.
 """
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt                                   # noqa: E402
 
-OUT = (Path(__file__).resolve().parents[2] / "output" / "planning_commission_project"
+HERE = Path(__file__).resolve().parent
+OUT = (HERE.parents[1] / "output" / "planning_commission_project"
        / "meeting_level_info" / "figures")
+SCORE = HERE / "meeting_field_score.json"
 
+# HISTORICAL, from each round's session log; the code state each was measured against is
+# recorded in date_boundary_app/FROZEN_ROUND{2,3,4}.json.
 # (round label, meetings, frozen out-of-sample %, % after that round's fixes)
 ROUNDS = [
     ("Round 1\n81 meetings",  81, None, 94.0),
@@ -44,18 +60,31 @@ ROUNDS = [
 # corpus-wide agreement after each round's fixes were applied
 CORPUS = [94.0, 94.6, 95.3, 95.8]
 
-# Error rate by era, on the whole gold set at the current state. The eras are split at 2002
-# because that is where the archive changes format: 1998-2001 pages wrap their header
-# labels mid-phrase ("STAFF" / "IN ATTENDANCE:", "THE" / "MEETING WAS CALLED TO ORDER"),
-# which is what truncated the captures.
-CUTS = [
-    ("2002 onwards",            3.83, 116, 1044),
-    ("1999\u20132001",              11.11,  11,   99),
-    ("1999\u20132001\nexcluding staff", 5.68, 11, 88),
-]
+# Error rate by era at the CURRENT state, computed from meeting_field_score.json. The eras
+# are split at 2002 because that is where the archive changes format: 1998-2001 pages wrap
+# their header labels mid-phrase ("STAFF" / "IN ATTENDANCE:", "THE" / "MEETING WAS CALLED TO
+# ORDER"), which is what truncated the captures.
+ERA_LABEL = {"2002-2014": "2002\u20132014", "2015+": "2015 onwards",
+             "1998-2001": "1998\u20132001"}
+ERA_ORDER = ["2015+", "2002-2014", "1998-2001"]
+
+
+def load_score() -> dict:
+    if not SCORE.exists():
+        sys.exit(f"no {SCORE.name} \u2014 run `python extract_all_meetings.py --score` first")
+    return json.loads(SCORE.read_text())
+
+
+def cuts_from(sc: dict) -> list[tuple]:
+    """(label, error %, meetings scored, values scored) per era, worst last."""
+    n = sc["meetings_scored"]
+    return [(ERA_LABEL[e], round(100 - sc["by_era"][e]["pct"], 2), n, sc["by_era"][e]["n"])
+            for e in ERA_ORDER if e in sc.get("by_era", {})]
 
 
 def main():
+    sc = load_score()
+    CUTS = cuts_from(sc)
     fig, (ax, bx) = plt.subplots(1, 2, figsize=(12.4, 4.8),
                                  gridspec_kw={"width_ratios": [1.45, 1]})
 
@@ -89,7 +118,7 @@ def main():
     # ── right: where the error actually is ──
     labels = [c[0] for c in CUTS]
     vals = [c[1] for c in CUTS]
-    colors = ["#16a34a", "#dc2626", "#f59e0b"]
+    colors = ["#16a34a", "#f59e0b", "#dc2626"][:len(CUTS)]
     bars = bx.bar(range(len(CUTS)), vals, color=colors, width=.62)
     for i, (b, c) in enumerate(zip(bars, CUTS)):
         bx.annotate(f"{c[1]:.1f}%", (b.get_x() + b.get_width() / 2, c[1]),
@@ -102,14 +131,18 @@ def main():
     bx.set_xticklabels(labels, fontsize=9)
     bx.set_ylabel("Field values disagreeing (%)", fontsize=10)
     bx.set_title("Where the remaining error is", fontsize=11.5, pad=10)
-    bx.set_ylim(0, 13)
+    bx.set_ylim(0, max(vals) * 1.35 if vals else 1)
     bx.grid(axis="y", alpha=.25)
     bx.spines[["top", "right"]].set_visible(False)
 
+    worst = min(sc["by_field"].items(), key=lambda kv: kv[1]["pct"])
     fig.text(0.5, -0.04,
-             "Left: dates are not shown \u2014 100% correct in every round (1,621 of 1,621 items), "
-             "never re-tuned.   "
-             "Right: the early era's error is almost entirely one field.",
+             "Left: rounds 1\u20134 as measured at the time, each against a frozen code "
+             "state.   "
+             f"Right: today\u2019s rules scored against {sc['meetings_scored']} "
+             f"hand-confirmed meetings ({sc['values']:,} field values, "
+             f"{sc['accuracy_pct']:.1f}% overall); weakest field is "
+             f"{worst[0]} at {worst[1]['pct']:.1f}%.",
              ha="center", fontsize=8.5, color="#64748b")
     fig.tight_layout()
     for ext in ("pdf", "png"):

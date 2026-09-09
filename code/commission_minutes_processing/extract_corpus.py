@@ -124,7 +124,9 @@ def submit(run: str, limit_chunks: int | None = None):
             break
         reqs = []
         for it in chunk:
-            ex = BX.few_shot_block(it["block"], pool, SHOTS, era_of(it["year"]))
+            # exclude_id: 155 of these items are themselves in the train pool, and an
+            # item retrieved as its own example is handed its own gold record.
+            ex = BX.few_shot_block(it["block"], pool, SHOTS, era_of(it["year"]), it["id"])
             tail = ex + item_suffix(it["block"])
             reqs.append(Request(
                 custom_id=f"item-{it['id']}",
@@ -155,7 +157,11 @@ def collect(run: str, wait: bool = True):
     man = json.loads((d / "manifest.json").read_text())
     items = {it["id"]: it for it in items_to_extract()}
     cl = BX.client()
-    fails, usage = [], Counter()
+    # Seed from what the manifest already holds. Collection is resumable — a chunk still
+    # running is picked up on a later invocation — and starting the counter at zero each
+    # time meant the final `usage`/`cost_usd` recorded only the LAST invocation's tokens
+    # and understated the run's real cost by everything collected before it.
+    fails, usage = [], Counter(man.get("usage") or {})
     for key, meta in sorted(man["chunks"].items()):
         out_raw = d / "raw" / f"{key}.jsonl"
         if out_raw.exists() and meta.get("collected"):

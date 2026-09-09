@@ -44,8 +44,12 @@ def main():
                         (f"%{NOTE}%",)).fetchone()[0]
         print(f"reset: {n} unlabeled sample items → todo")
         if a.apply:
-            con.execute("UPDATE labels SET status='todo', flagged=0, notes='' "
-                        "WHERE status='flagged' AND notes LIKE ?", (f"%{NOTE}%",))
+            # Strip only OUR tag. `notes=''` wiped whatever else the note carried — a
+            # label_qa "[QA] ..." finding, a placement note from the rebuild — none of
+            # which this script put there and none of which it should remove.
+            con.execute("UPDATE labels SET status='todo', flagged=0, "
+                        "notes=TRIM(REPLACE(notes, ?, '')) "
+                        "WHERE status='flagged' AND notes LIKE ?", (NOTE, f"%{NOTE}%"))
             con.commit()
 
     years = [y for (y,) in con.execute("SELECT DISTINCT year FROM items ORDER BY year")]

@@ -49,6 +49,13 @@ import bakeoff_extract as BX                                    # noqa: E402
 import review_queue                                             # noqa: E402
 
 DB = HERE / "labeling_app" / "labels.db"
+# WHICH RUN the queue adjudicates. The default is the run the existing 143 unjudged rows
+# were built from — a schema-v1, zero-shot pass — so re-running this script does not
+# silently re-point settled work at a different model. It is NOT the current configuration:
+# `haiku-4.5-g3` is few-shot, schema-v2 and scores 96.6% on the frozen test half against
+# this run's 87.9%, so most of what is queued here is a disagreement the live extractor no
+# longer has. Pass `--pred bakeoff/raw_haiku-4.5-g3.json --model haiku-4.5-g3` to build the
+# queue against the live run; the verdicts already given are keyed by model and are kept.
 PRED = HERE / "bakeoff" / "raw_haiku-4.5.json"
 MODEL = "haiku-4.5"
 
@@ -65,9 +72,11 @@ CREATE TABLE IF NOT EXISTS adjudications(
 """
 
 
-def build(con):
-    preds = {int(k): v for k, v in json.loads(PRED.read_text()).items()}
+def build(con, pred_path: Path = PRED, model: str = MODEL):
+    preds = {int(k): v for k, v in json.loads(pred_path.read_text()).items()}
     items = BX.gold()
+    print(f"adjudicating {model} ({pred_path.name}, {len(preds)} predictions) "
+          f"against {len(items)} gold items")
     con.executescript(SCHEMA)
     rows, seen = [], 0
     for it in items:
@@ -80,7 +89,7 @@ def build(con):
             seen += 1
             if compare_field(p, it["gold"], f):
                 continue
-            rows.append((it["id"], f, MODEL,
+            rows.append((it["id"], f, model,
                          json.dumps(it["gold"].get(f), ensure_ascii=False),
                          json.dumps(p.get(f), ensure_ascii=False)))
     # never clobber a verdict already given
@@ -99,11 +108,11 @@ def build(con):
     print("  worst fields: " + ", ".join(f"{f} ({n})" for f, n in top))
 
 
-def mirror(con):
+def mirror(con, model: str = MODEL):
     """Mirror the adjudication rows into the unified review queue, carrying the model's
     evidence span where the run recorded one — highlighting that span inside the block is
     what makes these fast to judge (§7.2)."""
-    evf = HERE / "bakeoff" / f"evidence_{MODEL}.json"
+    evf = HERE / "bakeoff" / f"evidence_{model}.json"
     ev = json.loads(evf.read_text()) if evf.exists() else {}
     rows = con.execute("SELECT item_id, field, model, gold, pred, verdict "
                        "FROM adjudications").fetchall()
@@ -164,16 +173,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tally", action="store_true")
     ap.add_argument("--mirror", action="store_true")
+    ap.add_argument("--pred", type=Path, default=PRED,
+                    help="predictions to adjudicate (default: the run the existing queue "
+                         "was built from, NOT the current configuration — see the note "
+                         "beside PRED)")
+    ap.add_argument("--model", default=None,
+                    help="model tag for these predictions; defaults to the --pred stem")
     a = ap.parse_args()
+    model = a.model or (a.pred.stem[4:] if a.pred.stem.startswith("raw_") else a.pred.stem)
     con = sqlite3.connect(DB)
     con.executescript(SCHEMA)
     if a.tally:
         tally(con)
     elif a.mirror:
-        mirror(con)
+        mirror(con, model)
     else:
-        build(con)
-        mirror(con)
+        build(con, a.pred, model)
+        mirror(con, model)
     con.close()
 
 

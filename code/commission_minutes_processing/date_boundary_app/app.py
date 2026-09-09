@@ -179,9 +179,19 @@ def init_db(con):
         source_file TEXT, line_no INTEGER, meeting_date TEXT,
         PRIMARY KEY(source_file, line_no));
     """)
-    cols = {r[1] for r in con.execute("PRAGMA table_info(boundaries)")}
-    if "span" not in cols:                 # how many lines the marked header covers
+    # Columns added after the first DB was created. They are ALTERed in rather than added to
+    # the CREATE above so an existing store migrates in place — but they must be here, not
+    # only in the live file: `pick_sample()` below and `draw_validation_sample.py` both query
+    # `sample_round`, and `score()` queries `boundaries.source`, so a store built from
+    # scratch on another machine failed with "no such column" the first time it was opened.
+    bcols = {r[1] for r in con.execute("PRAGMA table_info(boundaries)")}
+    if "span" not in bcols:                # how many lines the marked header covers
         con.execute("ALTER TABLE boundaries ADD COLUMN span INTEGER DEFAULT 1")
+    if "source" not in bcols:              # hand | machine (see draw_validation_sample.py)
+        con.execute("ALTER TABLE boundaries ADD COLUMN source TEXT DEFAULT 'hand'")
+    dcols = {r[1] for r in con.execute("PRAGMA table_info(docs)")}
+    if "sample_round" not in dcols:        # which validation round drew this document
+        con.execute("ALTER TABLE docs ADD COLUMN sample_round INTEGER DEFAULT 0")
     con.commit()
 
 
@@ -433,8 +443,18 @@ def api_meetings_export():
 
 # ── scoring: gold marks vs what the pipeline inferred ─────────────────────────
 def gold_by_doc(con) -> dict[str, list[tuple[int, str]]]:
+    """HAND-marked boundaries only.
+
+    `draw_validation_sample.py` pre-marks a round's documents with boundaries the DETECTOR
+    found, tagged `source='machine'`, so the labeller only has to confirm the fields. Those
+    rows are in the same table, and scoring the detector against them is scoring it against
+    its own output — guaranteed-perfect on every one. 14 of the 134 boundaries (10 of 126
+    documents) are machine marks, and they were inflating boundary and positional precision
+    and recall. Rows predating the `source` column are hand marks.
+    """
     out = defaultdict(list)
     for r in con.execute("SELECT source_file, line_no, meeting_date FROM boundaries "
+                         "WHERE COALESCE(source,'hand') = 'hand' "
                          "ORDER BY source_file, line_no"):
         out[r[0]].append((r[1], r[2]))
     return out

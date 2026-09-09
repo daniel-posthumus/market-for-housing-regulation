@@ -35,6 +35,7 @@ import requests
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from extraction_common import coerce_record  # noqa: E402
+from normalize import pad_key                 # noqa: E402
 
 DBI = "https://data.sfgov.org/resource/i98e-djp9.json"      # DBI building permits
 PLAN = "https://data.sfgov.org/resource/y673-d69b.json"     # Planning Records (non-projects)
@@ -88,8 +89,11 @@ def _days(a, b):
 
 
 def parcel_history(s, block, lot, hearing_date):
-    """All DBI permits at a parcel (block+lot) → counts + downstream (post-hearing) sample."""
-    lz = str(lot).zfill(3) if str(lot).isdigit() else str(lot or "")
+    """All DBI permits at a parcel (block+lot) → counts + downstream (post-hearing) sample.
+
+    `pad_key` pads the digits and keeps the letter — DBI writes lot 17A as `017A`, and
+    `zfill` on the whole token leaves it `17A`, which matches nothing."""
+    lz = pad_key(lot, 3) if str(lot or "").strip() else ""
     params = {"block": block, "$select": "permit_number,filed_date,status,description",
               "$order": "filed_date", "$limit": 1000}
     if lz:
@@ -146,7 +150,7 @@ def main():
     a.out.mkdir(parents=True, exist_ok=True)
 
     def z4(x):
-        x = str(x or "").strip(); return x.zfill(4) if x.isdigit() else x
+        return pad_key(x, 4) if str(x or "").strip() else ""
 
     link_rows, ref_rows, plan_rows = [], [], []
     n_items = n_with_permit = n_linked = n_plan = 0
@@ -205,13 +209,26 @@ def main():
                                   "pr_close": (pr.get("close_date") or "")[:10],
                                   "pr_applicant": pr.get("applicant_org")})
 
-    with (a.out / "permit_links.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(link_rows[0].keys())); w.writeheader(); w.writerows(link_rows)
-    with (a.out / "reference_index.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["case_number", "meeting_date", "request_type",
-                                          "ref_type", "ref_value"]); w.writeheader(); w.writerows(ref_rows)
-    with (a.out / "planning_record_links.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(plan_rows[0].keys())); w.writeheader(); w.writerows(plan_rows)
+    # Header from a fixed column list, not from rows[0]: an empty result set is a real
+    # outcome (a --status with no labels behind it) and should write an empty CSV, not
+    # raise IndexError after the whole network pass has already been paid for.
+    LINK_COLS = ["case_number", "meeting_date", "request_type", "action", "cited_permit",
+                 "dbi_permit_number", "dbi_status", "dbi_type", "dbi_filed", "dbi_issued",
+                 "dbi_completed", "days_filed_to_issued", "dbi_description",
+                 "parcel_permits_total", "parcel_permits_after_hearing",
+                 "downstream_permits_sample"]
+    PLAN_COLS = ["case_number", "meeting_date", "ref", "joined_case", "pr_record_id",
+                 "pr_record_type", "pr_status", "pr_address", "pr_open", "pr_close",
+                 "pr_applicant"]
+    for name, cols, rows in (("permit_links.csv", LINK_COLS, link_rows),
+                             ("reference_index.csv", ["case_number", "meeting_date",
+                                                      "request_type", "ref_type",
+                                                      "ref_value"], ref_rows),
+                             ("planning_record_links.csv", PLAN_COLS, plan_rows)):
+        with (a.out / name).open("w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=cols)
+            w.writeheader()
+            w.writerows(rows)
 
     from collections import Counter
     refc = Counter(r["ref_type"] for r in ref_rows)

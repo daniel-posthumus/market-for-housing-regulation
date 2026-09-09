@@ -34,10 +34,16 @@ hand-marked ones --- the configuration that would run unattended over all 818 me
 and it scored 96.0\% frozen, 98.4\% corrected.
 
 \medskip\noindent
-The remaining error is not spread evenly. From 2002 onward the error rate is
-\textbf{3.8\%}; for 1999--2001 it is \textbf{11.1\%}, and \textbf{5.7\%} once the
-\texttt{staff} field is set aside. The early archive wraps its header labels mid-phrase,
-and that single formatting habit accounts for most of what is left.
+The remaining error is not spread evenly. Scoring \emph{today's} rules against all
+134 hand-confirmed meetings gives \textbf{93.9\%} of 938 field values, and the spread
+by era is wide: \textbf{98.3\%} from 2015, \textbf{92.2\%} for 2002--2014 and
+\textbf{91.0\%} for 1998--2001. The early archive wraps its header labels mid-phrase, and
+that single formatting habit accounts for most of what is left; \texttt{staff}
+(\textbf{86.6\%}) and \texttt{presiding} (\textbf{88.1\%}) are the two weakest fields.
+That figure is produced by \texttt{extract\_all\_meetings.py --score} and regenerates with
+the data, unlike the round figures above, which are historical measurements against code
+states that no longer exist. It is also \emph{unadjudicated}: spot-checking the
+disagreements turns up hand labels that are themselves wrong, so it is a lower bound.
 
 \medskip\noindent
 The validated extraction has now been run over the whole corpus --- 1{,}125 documents
@@ -267,11 +273,18 @@ Field & +R3 & \textbf{frozen} & \textbf{corrected} & 2002+ & 1999--2001 \\
 any correction. The last two columns split the whole gold set by era.}
 \end{table}
 
-\paragraph{The number that answers ``how accurate is this?''} \textbf{96.0\%} --- the share
+\paragraph{The number that answers ``how accurate is this?''} There are two, and they
+answer different questions. \textbf{96.0\%} is the \emph{generalisation} estimate: the share
 of field values matching the hand labels on 14 meetings the rules had never seen, whose
-\emph{boundaries the machine placed itself}. Out-of-sample accuracy has risen at every
-round: 92.1\%, then 95.3\%, then 96.0\%, each measured before the rules saw the round in
-question.
+\emph{boundaries the machine placed itself}. Out-of-sample accuracy rose at every round ---
+92.1\%, then 95.3\%, then 96.0\% --- each measured before the rules saw the round in
+question. \textbf{93.9\%} is the \emph{current} figure: today's rules scored against all
+134 hand-confirmed meetings, 938 field values, by \texttt{extract\_all\_meetings.py
+--score}. It is the lower of the two for three reasons worth keeping apart --- it covers
+every round rather than the best one, it uses a stricter set-exact comparison on the list
+fields, and its labels have not been adjudicated. Prefer 96.0\% when the question is ``will
+this generalise?'' and 93.9\% when it is ``what is in \texttt{meetings\_all.csv} right
+now?''
 
 \paragraph{Round 4 tested something the first three could not.} Rounds 1--3 all used windows
 a human had anchored by marking the meeting's header. That hid a structural gap between the
@@ -429,9 +442,9 @@ no longer correspond one-to-one with the raw documents, fall back to the date, a
 archive's own filename token (\texttt{cal\_min} vs \texttt{jnthrgcpc\_min}) on the thirteen
 days that hold two meetings.
 
-\textbf{23{,}021 of 23{,}043 items (99.9\%) resolve to a meeting.} Only 22 do not: one
-scraped page that returned a JavaScript stub instead of minutes (2016-04-21, 1 item) and one
-2020 \emph{corrected} minutes file with no raw counterpart (21 items). Those items keep
+\textbf{25{,}898 of 25{,}927 items (99.9\%) resolve to a meeting.} Only 29 do not: one
+scraped page that returned a JavaScript stub instead of minutes (2016-04-21) and one
+2020 \emph{corrected} minutes file with no raw counterpart. Those items keep
 their dates, which come from their filenames; only the hearing-level attributes are missing,
 and they are left blank rather than inferred.
 
@@ -447,16 +460,16 @@ their headers would be read from did not. Recovering the PDFs took item coverage
 \toprule
 Meeting type of the item's hearing & Items & \% \\
 \midrule
-\texttt{regular}        & 22{,}026 & 95.6 \\
-\texttt{special}        &     451 &  2.0 \\
-\texttt{joint}          &     336 &  1.5 \\
-\texttt{closed\_session} &      57 &  0.2 \\
-(type not read)         &     151 &  0.7 \\
+\texttt{regular}        & 24{,}783 & 95.6 \\
+\texttt{special}        &     512 &  2.0 \\
+\texttt{joint}          &     377 &  1.5 \\
+\texttt{closed\_session} &      63 &  0.2 \\
+(type not read)         &     163 &  0.6 \\
 \midrule
-No meeting record       &      22 &  0.1 \\
+No meeting record       &      29 &  0.1 \\
 \bottomrule
 \end{tabular}
-\caption{All 23{,}043 items, by the character of the hearing they were decided at.}
+\caption{All 25{,}927 items, by the character of the hearing they were decided at.}
 \end{table}
 
 \paragraph{Where this shows up.} The item-level labeling app reads the join and shows the
@@ -551,9 +564,11 @@ should either drop those 169 meetings or resolve them by hand.
 
 \subsection{Who presides, where, and when}
 
-Fong presided over 137 meetings, Olague 125, Miguel 101, Bell 88, Koppel 82, a Lee 73,
-Theoharis 64, Tanner 63, Chinchilla 62, Hillis 57 --- a genuine rotation rather than a
-dominant chair.
+Fong presided over 137 meetings, Olague 125, Miguel 101, Theoharis 95, Bell 88,
+Koppel 82, a Lee 73, Tanner 63, Chinchilla 62, Hillis 57 --- a genuine rotation rather than
+a dominant chair. (Theoharis moved from 64 to 95 on 2026-09-09: a mojibake token in the
+2000--2001 roll calls was registering as a second claimant of the surname, which stopped
+``Anita Theoharis'' reducing to ``Theoharis'' and split one commissioner into two.)
 
 \textbf{1{,}065 meetings sat at City Hall}, 51 at the War Memorial Building (the pre-2001
 home), and \textbf{80 were remote hearings} --- the pandemic-era teleconference period, now

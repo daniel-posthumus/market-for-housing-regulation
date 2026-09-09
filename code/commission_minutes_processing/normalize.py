@@ -25,8 +25,8 @@ regex with confidence, it belongs in this file and not in the prompt.
 STORAGE vs QUERY form for the parcel keys. `lot_number` is stored as a list of ints
 ([9, 10]) and `assessor_block` as unpadded digits, because that is the only form in which
 "009" and "9" are the same lot. The DataSF parcel query needs zero-padding (block to 4, lot
-to 3) and `link_permits.py` already applies it at query time via `z4()`/`zfill(3)`. Do not
-pad at storage time: padding is a property of that one API, not of the datum.
+to 3), which `pad_key()`/`blklot()`/`parcel_keys()` below apply at query time. Do not pad at
+storage time: padding is a property of that one API, not of the datum.
 """
 from __future__ import annotations
 
@@ -83,14 +83,30 @@ def iso_date(v) -> str:
 def lot_list(v) -> list:
     """'009, 010' and '9,10' and [9, 10] all become [9, 10]. Non-numeric lots (e.g. '020A')
     keep their letter and stay strings, because dropping it would merge two parcels."""
+    # Two separator sets, and the difference is deliberate.
+    #
+    # A LIST element already went through `coerce_record`, which splits on [;,] only — so an
+    # element can still hold "012 and 013", which matched no lot pattern and was dropped
+    # without trace ("Lots 011, 012 and 013" stored as [11]). The archive writes the last
+    # separator as a word about as often as it writes a comma, so `and` has to split here.
+    # `/` does NOT: inside one element it is ambiguous in a way a comma is not — "88/90" is
+    # two lots, but "4606/100" is a block/lot pair the model filed in the wrong field, and
+    # splitting that yields a list alternating blocks with lots, a confident wrong value
+    # where a blank is the honest answer. Both shapes occur in the corpus.
+    #
+    # A STRING is what a human typed, where "9/10" means two lots and there is no competing
+    # reading, so the string path keeps the slash.
+    _LIST_SEP = r"[,;&]|\band\b"
+    _STR_SEP = r"[,;/&]|\band\b"
     if isinstance(v, list):
-        parts = [str(x) for x in v]
+        parts, sep = [str(x) for x in v], _LIST_SEP
     else:
         # A list that has been through str() somewhere upstream — "[8]", "['7C']" — must
         # still parse. It reached here once, via a scalar coercion, and 122 gold records
         # silently lost their lot numbers because "[8]" matches no lot pattern at all.
         t = re.sub(r"^\s*\[|\]\s*$", "", str(v or "")).replace("'", "").replace('"', "")
-        parts = re.split(r"[,;/&]| and ", t, flags=re.I)
+        parts, sep = [t], _STR_SEP
+    parts = [q for p in parts for q in re.split(sep, str(p), flags=re.I)]
     out = []
     for p in parts:
         # strip the debris a stringified list leaves on the individual parts too
@@ -124,6 +140,52 @@ def block_key(v) -> str:
 def instrument_no(v) -> int:
     m = re.search(r"\d+", str(v or ""))
     return int(m.group(0)) if m else 0
+
+
+# ── parcel keys in QUERY form (DataSF / DBI) ─────────────────────────────────
+# The single implementation of the padding rule. It lived in `acquire_external_data.py`
+# and nowhere else, so the four other scripts that build a DataSF parcel key each carried
+# their own `zfill` version of it — which is a no-op the moment a letter makes the token
+# long enough, and therefore silently dropped every lettered parcel from every join those
+# scripts performed. Keep it here, import it there.
+_ALNUM = re.compile(r"^(\d*)([A-Za-z]*)$")
+
+
+def pad_key(tok: str, width: int) -> str:
+    """Zero-pad the *digits* and keep the letter. DataSF writes lot 17A as `017A` and block
+    452T as `0452T`: the padding goes on the numeric part, not the whole token.
+
+    `zfill` on the token as a whole is the bug this exists to prevent — `'17A'.zfill(3)`
+    is `'17A'`, not `'017A'` — and 27,822 of San Francisco's parcels carry a lettered lot.
+    """
+    m = _ALNUM.match(str(tok or "").strip().upper())
+    if not m:
+        return str(tok or "").strip().upper()
+    d, a = m.group(1), m.group(2)
+    return (d.zfill(width) if d else "") + a
+
+
+def blklot(block, lot) -> str:
+    """DataSF's parcel key: block padded to 4 and lot padded to 3, concatenated
+    (`3605052`, `4001017A`, `0452T044H`). The minutes print neither padded."""
+    b, l = str(block or "").strip(), str(lot or "").strip()
+    if not b or not l:
+        return ""
+    return pad_key(b, 4) + pad_key(l, 3)
+
+
+def parcel_keys(block, lots, sep: str = "") -> set:
+    """Every DataSF parcel key an item's (assessor_block, lot_number) names.
+
+    `sep` is the separator the caller's own parcel index uses — DBI's Building Permits are
+    keyed `block:lot` as two columns, the parcel layer as one concatenated `blklot`. The
+    padding is the same either way, which is the point of having one function.
+    """
+    b = str(block or "").strip()
+    rows = lots if isinstance(lots, list) else ([lots] if lots else [])
+    if not b or not rows:
+        return set()
+    return {pad_key(b, 4) + sep + pad_key(l, 3) for l in rows if str(l).strip()}
 
 
 # ── people ───────────────────────────────────────────────────────────────────
@@ -398,12 +460,37 @@ def _test():
     ok("lot letter", lot_list("020A"), ["20A"])
     ok("lot 'and'", lot_list("5 and 6"), [5, 6])
     ok("lot already list", lot_list([9, 10]), [9, 10])
+    # `coerce_record` splits on [;,] only, so an "and" survives INSIDE a list element and
+    # the whole element used to be dropped. These are the shapes that actually reached here.
+    ok("lot 'and' inside a list element", lot_list(["011", "012 and 013"]), [11, 12, 13])
+    ok("lot list, one 'and' element", lot_list(["3 and 95"]), [3, 95])
+    ok("lot 'and' with a letter", lot_list(["011 and 011D"]), [11, "11D"])
+    ok("lot 'and' three ways", lot_list("1, 2 and 3"), [1, 2, 3])
+    ok("lot 'Grand' not split", lot_list(["7"]), [7])
+    # a slash inside ONE list element is ambiguous (two lots, or a block/lot pair the model
+    # misfiled), so it is left alone there and the element is dropped rather than guessed
+    ok("lot slash in element left alone", lot_list(["4606/100"]), [])
+    ok("lot slash typed by a human still splits", lot_list("9/10"), [9, 10])
 
     ok("block strip", block_key("0814"), "814")
     ok("block letter", block_key("2888A"), "2888A")
 
     ok("instrument no", instrument_no("Motion No. 14638"), 14638)
     ok("instrument none", instrument_no(""), 0)
+
+    # the padding rule: digits padded, letter kept. `zfill` on the token fails every one
+    # of the lettered cases, which is why these are here.
+    ok("pad plain lot", pad_key("17", 3), "017")
+    ok("pad lettered lot", pad_key("17A", 3), "017A")
+    ok("pad lettered block", pad_key("452T", 4), "0452T")
+    ok("pad already wide", pad_key("3605", 4), "3605")
+    ok("pad lowercase", pad_key("17a", 3), "017A")
+    ok("blklot plain", blklot("3605", "052"), "3605052")
+    ok("blklot lettered lot", blklot("4001", "17A"), "4001017A")
+    ok("blklot lettered both", blklot("452T", "44H"), "0452T044H")
+    ok("blklot empty", blklot("", "9"), "")
+    ok("parcel keys colon", parcel_keys("814", [9, "20A"], ":"), {"0814:009", "0814:020A"})
+    ok("parcel keys none", parcel_keys("814", []), set())
 
     ok("name honorific", clean_name("Commissioner Moore"), "Moore")
     ok("name parens", clean_name("Sue Hestor (SF Tomorrow)"), "Sue Hestor")
