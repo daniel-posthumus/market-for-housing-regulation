@@ -1,0 +1,274 @@
+id,name,flag,reason
+2y4g-3ig2,Map of Curb Ramps,not relevant,A map view; the dataset it draws carries the data.
+33jz-gqck,Map of Privately Owned Public Open Spaces,not relevant,A map view; the dataset it draws carries the data.
+3had-h899,Child Abuse Prevention Services in San Francisco,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+3i4a-hu95,Zoning Map - Zoning Districts,possibly useful,A newer publication of the current zoning layer (updated at retrieval; the cached xzez-p3nc was last updated 2024-02-23) --- the panel's carried-forward snapshot should be checked against it.
+3keh-kpm9,San Francisco Aerial Photos (1938-2022),not relevant,"Aerial photographs; imagery, not data."
+3tsw-4idn,Historic Resource Status by Parcel,possibly useful,Historic status by parcel or district: a regulatory constraint that triggers review.
+3vv2-nvev,Map of slopes of 20% or greater,not relevant,A map view; the dataset it draws carries the data.
+3yi7-eyfd,Historic Zoning Districts - 2002,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+42ay-783m,View of Medical and Dental Enrollment by Union for City & County of SF Employees(CCSF),not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+43um-8u7u,Historic Context Statements,possibly useful,Parcels covered by adopted historic context statements: a review trigger by parcel.
+4g86-grxu,Sidewalk Widths (2014),not relevant,A transportation dataset; the word 'planning' appears in its text.
+4hx7-bwhg,Zoning Map - Special Sign Districts - Scenic Streets,not relevant,A map view; the dataset it draws carries the data.
+4jpb-z4kk,"Building Permits before January 1, 2013",not relevant,"A date-filtered view of DBI's permits, which are cached whole."
+4n3c-huha,Zoning Map - Special Sign Districts - Scenic Streets,not relevant,"Sign districts: they govern signs, which the development universe excludes."
+4ua7-5sfx,Existing Buildings - Benchmark Reports,not relevant,An energy or emissions dataset for existing buildings.
+4x4u-9ser,Neighborhood-Specific Impact Fee Areas,not relevant,A map view; the dataset it draws carries the data.
+4yr8-u35c,National Register Historic Districts,possibly useful,A historic designation that brings a project before a commission; overlaps the parcel-keyed historic status already listed.
+4yy5-v29h,Map of Issued and Reinstated Building Permits,not relevant,A map view; the dataset it draws carries the data.
+55pv-5zcc,Map of SF Urban Tree Canopy,not relevant,A map view; the dataset it draws carries the data.
+5bat-azvb,Building Permit Application Review Metrics,possibly useful,DBI's own filing-to-issuance and review-step metrics by permit; a check on the permit clock.
+5kya-mfst,Tall Building Inventory,not relevant,An inventory of 180 tall buildings for seismic performance.
+5uzm-v8n8,Historic Zoning Districts - March 2005,not relevant,Same row count as a cached vintage of the same year; appears to be a duplicate publication.
+5wa2-2y3e,Map of Mid-Block Traffic Calming Areas,not relevant,A map view; the dataset it draws carries the data.
+5wbp-dwzt,Utility Excavation Moratorium Streets,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+5xmc-5bjj,Cultural Districts,possibly useful,Cultural districts: a geography used in land-use controls since 2018.
+5yf5-ms5f,Zoning Map - Special Use Districts,possibly useful,A newer publication of the special-use district layer than the cached rxfc-8aap.
+63x5-g3m4,Historic Districts,possibly useful,Historic status by parcel or district: a regulatory constraint that triggers review.
+65ik-7wqd,Privately Owned Public Open Spaces,possibly useful,"An obligation commonly imposed as a condition (open space, public art): a cross-check on condition content."
+667d-aah6,Invest in Neighborhood Areas,not relevant,A 2016 list of commercial-corridor investment areas.
+6a3d-758c,Historic Special Use Districts - 2010,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+6ann-usi8,100-year storm + 66 inches Sea Level Rise,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+6dn4-si7z,NeighborhoodQuadrants,possibly useful,"A Planning Department administrative geography (district, area, team boundary), useful only as a grouping."
+6dpt-7w23,San Francisco Citywide Performance Metrics,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+6h9b-eksg,Historic Height & Bulk Districts - 2014,not relevant,A map view; the dataset it draws carries the data.
+6jb9-g73z,Historic Zoning Districts - 2013,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+6jgi-cpb4,San Francisco Development Pipeline,core,"Project scale for built or pipeline projects, reached through the case stem."
+6m3x-8fu4,Article 11 Ratings,possibly useful,Historic status by parcel or district: a regulatory constraint that triggers review.
+6ru7-zq4y,Historic Zoning Districts - 2003,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+7br7-cj6v,City Employment Classification Definitions,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+7crf-46s6,Dam or Reservoir Failure Hazard Zone,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+7d7s-7cc6,Downtown Plan Monitoring Report 2012,possibly useful,Downtown Plan monitoring: office-space totals behind the office-allocation docket.
+7p2k-c3z6,Tsunami Inundation Hazard Zone (2021 Update),possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+7way-43xh,Housing Sustainability Districts,possibly useful,"Housing Sustainability Districts: by-right approval geography, the ministerial counterfactual."
+84zg-myyk,Retiree Pensions Annual Benefit Received,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+87xy-gk8d,Building Permit Addenda with Routing,core,"Station-by-station permit routing with dates, including Planning's review stations: the permit clock decomposed."
+88g8-5mnd,Employee Compensation,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+8iri-b2sz,Housing Balance March 2016,possibly useful,"The 2016 housing balance snapshot by parcel: units added and lost, once."
+8je3-gv3q,SFEC Form 3500 - Disclosure Report for Developers of Major City Projects Filings,possibly useful,"Disclosures by developers of major projects, keyed on the planning case number: the political economy of large entitlements."
+8jwb-2stv,Parcels - Active and Retired (no geometry),not relevant,The cached parcel layer without its geometry.
+8m6w-8yuk,Historic Zoning Districts - 2001,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+8vnp-htwm,Historic Special Use Districts - 2011,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+92e4-7ptg,"108"" Inundation Vulnerability Zone Line (Sea Level Rise + 100YR Flood Event)",possibly useful,A sea-level-rise or climate overlay: a long-run cost shifter; check against demand_estimation first.
+96ck-qcfe,Existing Buildings Energy Performance Ordinance Report,not relevant,An energy or emissions dataset for existing buildings.
+97yj-54sx,Landmarks Listed in Article 10 of the San Francisco Planning Code,possibly useful,Historic status by parcel or district: a regulatory constraint that triggers review.
+9d9m-eyy3,Historic Special Use Districts - 2012,not relevant,A map view; the dataset it draws carries the data.
+9grn-xjpx,Parcels with overlay attributes,possibly useful,Every parcel with its current overlays pre-joined; a cross-check on the spatial join.
+9itm-3rmi,Building Permits with Permit Contacts,possibly useful,"Permits with their architects, engineers and expediters: the repeat players in the permit market."
+9mmf-fv7s,Historic Height & Bulk Districts - 2013,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+9xqx-n98b,Historic Zoning Districts - 2012,not relevant,A map view; the dataset it draws carries the data.
+a4wu-zqx3,Historic Height & Bulk Districts - 2009,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+a5e9-skih,Cultural Districts Map,not relevant,A map view; the dataset it draws carries the data.
+aa26-h926,Existing Commercial Wireless Telecommunication Services Facilities in San Francisco,possibly useful,Wireless facilities: wireless conditional uses are a large share of the CU docket.
+aaxw-2cb8,Mayor's Office of Housing and Community Development Affordable Housing Pipeline,possibly useful,Affordable pipeline with planning case numbers; small but the right source for the affordability channel.
+abh5-gwaq,Building Permit Completeness Check Review Metrics,possibly useful,DBI's own filing-to-issuance and review-step metrics by permit; a check on the permit clock.
+abhw-ffzx,Mid-Block Traffic Calming Areas,not relevant,A transportation dataset; the word 'planning' appears in its text.
+acdm-wktn,Parcels – Active and Retired,core,The parcel frame the risk set is built on; cached and joined on blklot.
+ada2-cu6t,Historic Zoning Districts - Jan 2015,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+aeam-6mb5,[DEPRECATED] Coastal Zone Area,not relevant,Deprecated; replaced by a newer asset.
+afkh-hfhr,Historic Zoning Districts - 2006,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+ahwu-55yv,Map of Historic Zoning Districts - 2008,not relevant,A map view; the dataset it draws carries the data.
+akmp-ztcg,San Andreas M7.8 Earthquake Scenario,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+aksh-67x3,Historic Zoning Districts - 2000,not relevant,A map view; the dataset it draws carries the data.
+aypm-4d84,Historic Zoning Districts - 1998,not relevant,A map view; the dataset it draws carries the data.
+b52k-gy2v,Historic Zoning Districts - 2005,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+b6kc-439r,Historic Special Use Districts - 2014,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+b6tj-gt35,Street-Use Permits,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+b7eg-vqw2,Travel Decision Survey 2021,not relevant,A transportation dataset; the word 'planning' appears in its text.
+bk74-rima,SFEC Form 3500 - Disclosure Report for Developers,possibly useful,"Disclosures by developers of major projects, keyed on the planning case number: the political economy of large entitlements."
+bkzf-eahq,Planning Areas,possibly useful,"A Planning Department administrative geography (district, area, team boundary), useful only as a grouping."
+bmjt-kdwv,Green Benefit Districts,not relevant,A map view; the dataset it draws carries the data.
+bna4-itif,Landslide Susceptibility Hazard Zones,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+bnc6-9btz,Historic Height & Bulk Districts - 2013,not relevant,A map view; the dataset it draws carries the data.
+btm4-e4ak,San Francisco Communitywide Greenhouse Gas Inventory,not relevant,An energy or emissions dataset for existing buildings.
+bwbp-wk3r,Analysis Neighborhoods - 2010 census tracts assigned to neighborhoods - Map,not relevant,A map view; the dataset it draws carries the data.
+by3b-5pje,Map of Historic Zoning Districts - 2011,not relevant,A map view; the dataset it draws carries the data.
+c5ge-t6pj,San Francisco Land Use,possibly useful,Current land use by parcel; a cross-check on assessor use codes.
+cez4-442n,Commerce & Industry Inventory 2011 Data,not relevant,"Annual commerce and industry reports as documents, 2011--2012."
+cf6e-9e4j,Public Art (from 1% Art Program),possibly useful,"An obligation commonly imposed as a condition (open space, public art): a cross-check on condition content."
+cfhj-8c6b,Historical Zoning Districts - April 2000,not relevant,Same row count as a cached vintage of the same year; appears to be a duplicate publication.
+ch9w-7kih,Curb Ramps,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+cne3-h93g,San Francisco Flood Health Vulnerability,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+cw8k-gwb7,"Building Permits with Contractor, Subcontractor, Architect, Designer, or Engineer",possibly useful,"Permits with their architects, engineers and expediters: the repeat players in the permit market."
+d3dc-v5yr,General Obligation (GO) Bond Projects,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+d4jk-jw33,Planning Department Project Application Review metrics,core,"Record-level Planning review-time metrics keyed on the Accela record number: the delay the paper measures, from the department's own clock."
+d6pi-gknj,Hayward M7.0 Earthquake Scenario,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+d7vm-pqzv,Historic Zoning Districts - March 2005,not relevant,A map view; the dataset it draws carries the data.
+dni7-qpv3,SFMTA General Transit Feed Specification (GTFS) Production,not relevant,A transportation dataset; the word 'planning' appears in its text.
+dyxq-hen7,2015 Project Appendix Map,not relevant,A map view; the dataset it draws carries the data.
+dztp-vt7z,Dataset Inventory Explorer,not relevant,"A story presenting the dataset inventory, which is listed separately."
+ee6v-jtbt,Article 11 Rating,not relevant,A map view; the dataset it draws carries the data.
+eh2b-k988,Downtown Plan Monitoring Report 2012,possibly useful,Downtown Plan monitoring: office-space totals behind the office-allocation docket.
+ejht-vp5d,Article 11 Rating,possibly useful,A historic designation that brings a project before a commission; overlaps the parcel-keyed historic status already listed.
+ekvb-kch8,Historic Zoning Maps,possibly useful,"Scanned zoning maps from 1921 onward: the only pre-1998 zoning on the portal, as images."
+esku-ejgv,"100-Year Storm + 24"" Sea Level Rise",possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+et47-hd49,Historic Special Use Districts - 2015,not relevant,A map view; the dataset it draws carries the data.
+ewnu-9y3h,Proposed Commercial Wireless Telecommunication Services Facilities in San Francisco,possibly useful,Wireless facilities: wireless conditional uses are a large share of the CU docket.
+f2jc-ivnc,Building Permits Deduplicated on Primary Address,possibly useful,DBI's own deduplication on primary address; a check on the earliest-filed collapse rule.
+f883-k722,Historic Zoning Districts - 2004,not relevant,A map view; the dataset it draws carries the data.
+f8bh-m8ez,Equity Strategy Neighborhoods,not relevant,A transportation dataset; the word 'planning' appears in its text.
+fdfd-xptc,[ARCHIVED] San Francisco Land Use - 2023,possibly useful,An archived land-use vintage; with the current layer it makes a land-use panel.
+ff3a-iqhv,Areas Damaged by Fire Following 1906 Earthquake,not relevant,A historical fire boundary from 1906.
+ff5j-uv3a,Historic Special Use Districts - 2012,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+ff7h-99em,"Map of 108"" Inundation Vulnerability Zone Line (Sea Level Rise + 100YR Flood Event)",not relevant,A map view; the dataset it draws carries the data.
+fhn6-zx2j,Downtown Plan Monitoring Report 2013,possibly useful,Downtown Plan monitoring: office-space totals behind the office-allocation docket.
+fi63-bg5f,Tenderloin COVID-19 Response: Sanitation Map,not relevant,A map view; the dataset it draws carries the data.
+fizh-zaxt,AHBP_eligible_parcels,possibly useful,Parcels eligible for the Affordable Housing Bonus Program: a dated policy treatment by parcel.
+ftvx-vtyc,Historic Zoning Districts - 2002,not relevant,A map view; the dataset it draws carries the data.
+g2t6-cyw6,On-street Carshare Parking,not relevant,A transportation dataset; the word 'planning' appears in its text.
+g4ye-s75w,Vehicle Miles Traveled Estimates from SF-CHAMP – 2012,not relevant,"A 2012 travel-model output; transport, not entitlement."
+g6kh-9pnv,Mayor's Office of Housing and Community Development Non-Unit Inclusionary Housing Alternatives,possibly useful,"How projects met the inclusionary requirement, and the affordable portfolio, with case or permit numbers."
+g9f8-pkcz,Zoning Map - Special Sign Districts,not relevant,"Sign districts: they govern signs, which the development universe excludes."
+gfpk-269f,SF Find Neighborhoods,possibly useful,"A Planning Department administrative geography (district, area, team boundary), useful only as a grouping."
+gtnh-hgvs,City Lands,possibly useful,City-owned land: a cross-check on the risk set's public-land restriction.
+gu4h-44qp,Historic Height & Bulk Districts - 2014,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+gzxm-jz5j,Building Permit Application Issuance Metrics,possibly useful,DBI's own filing-to-issuance and review-step metrics by permit; a check on the permit clock.
+h3jp-c25d,City Employment Compensation Plan,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+h5j5-ymyb,Map of natural gas-fueled equipment in municipally owned buildings,not relevant,A map view; the dataset it draws carries the data.
+h5q5-vfti,SFMTA - Mobility Data Specification,not relevant,A transportation dataset; the word 'planning' appears in its text.
+h5vv-2u24,Land Use with Active Parcel Information,possibly useful,The 2023 land use pre-joined to active parcels.
+h9wh-cg3m,Zoning Map - Height and Bulk Districts,core,A current zoning-map layer carried forward in the panel from 2016.
+hbc8-ncn7,Historic Special Use Districts -2013,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+hg44-eza7,Historic Zoning Districts - 2014,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+hkz3-itiu,Slow Streets,not relevant,A transportation dataset; the word 'planning' appears in its text.
+hmft-3hxr,SF County Line 2020 Reestablishment,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+hqsk-4xmh,Maher,not relevant,A map view; the dataset it draws carries the data.
+hxy5-cgnc,Affordable Housing Bonus Program Zoning Districts and Eligible Parcels,not relevant,A map view; the dataset it draws carries the data.
+hycf-nc3x,Map of Landmarks Listed in Article 10 of the San Francisco Planning Code,not relevant,A map view; the dataset it draws carries the data.
+hyj5-mm3b,Green Benefit Districts,not relevant,Greening and landscape layers with no bearing on entitlement.
+i4t7-35u3,Soil Liquefaction Hazard Zone,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+i8ew-h6z7,San Francisco Property Information Map,possibly useful,"A link to the Property Information Map, the per-parcel case and permit history; not a dataset."
+i926-ujnc,Large Utility Excavation Permits,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+i98e-djp9,Building Permits,core,"DBI's permit record, the construction-outcome side of every linkage tier."
+iacs-ws63,Planning Neighborhood Groups Map,not relevant,A map view; the dataset it draws carries the data.
+ibu8-4ccn,Zoning Map - Zoning Districts,not relevant,A map view; the dataset it draws carries the data.
+iqtk-etij,"Maternal, Child, and Adolescent Health Needs Assessment, 2023-2024",not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+itx2-wzp5,Historic Zoning Districts - 2000,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+j2bu-swwd,Analysis Neighborhoods,possibly useful,Analysis neighbourhoods and their tract crosswalk: the geography the permit comparison uses.
+j67f-aayr,Dwelling Unit Completion Counts by Building Permit,possibly useful,Units certified by building permit; reachable through the permit bridge.
+j6i5-prai,Travel Decision Survey Data 2013,not relevant,A transportation dataset; the word 'planning' appears in its text.
+jfw5-qwcg,[DEPRECATED] Historic Resources,not relevant,Deprecated; replaced by a newer asset.
+jgws-wax9,Map of Building Permits,not relevant,A map view; the dataset it draws carries the data.
+jn35-yfmd,Historic Zoning Districts - 2014,not relevant,A map view; the dataset it draws carries the data.
+jud5-ja46,Historic Zoning Districts - 2009,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+jxv4-h25i,Map of SF County Line 2020,not relevant,A map view; the dataset it draws carries the data.
+jyce-e25k,FEMA FIRM Flood Hazards (Coastal) - 2021 Update,possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+jzu3-4yxp,100-Year Storm Flood Risk Zone (July 2022),possibly useful,A physical-hazard zone: a construction-cost shifter; check against demand_estimation's hazard layers first.
+k2rm-926a,SFEC Form 3410B - Quarterly Report for Permit Consultants Filings,possibly useful,Registered permit consultants and their filings: who is paid to move permits.
+k55i-dnjd,San Francisco Development Pipeline,not relevant,A map view; the dataset it draws carries the data.
+k5ee-yrip,Priority Development Areas,possibly useful,Priority Development Areas: a regional policy geography.
+k8na-jk8h,Map of Mayor's Office of Housing and Community Development Affordable Housing Portfolio,not relevant,A map view; the dataset it draws carries the data.
+k8rg-ihdq,Map of San Francisco Land Use - 2023,not relevant,A map view; the dataset it draws carries the data.
+kmx9-ph84,Historic Special Use Districts - 2010,not relevant,A map view; the dataset it draws carries the data.
+kncr-c6jw,SF Planning Permitting Data [Deprecated],not relevant,Deprecated and empty (zero rows); replaced by the records tables already cached.
+knm6-5ej6,Landmark Districts,possibly useful,A historic designation that brings a project before a commission; overlaps the parcel-keyed historic status already listed.
+kspe-fmej,Historic Zoning Districts - 2003,not relevant,A map view; the dataset it draws carries the data.
+kvek-u79k,"Building Permits Lookup by Contractor, Subcontractor, Architect, Designer, or Engineer",not relevant,"A chart or story built on DBI's permits, which are cached whole."
+kxax-c386,Zoning Map - Height and Bulk Districts,not relevant,A map view; the dataset it draws carries the data.
+kyw5-5shs,Planning Districts,possibly useful,"A Planning Department administrative geography (district, area, team boundary), useful only as a grouping."
+m26n-jhf2,Inventory of web domains managed by City and County departments,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+m46u-xzix,Analysis Neighborhoods - 2010 census tracts assigned to neighborhoods,possibly useful,Analysis neighbourhoods and their tract crosswalk: the geography the permit comparison uses.
+manb-7mxp,Historic Zoning Districts - 2013,not relevant,A map view; the dataset it draws carries the data.
+mr6h-cr3u,Covid-19 Pit Stops,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+mw29-m2za,Planning Neighborhood Groups Map,possibly useful,Neighbourhood-group notification boundaries: the geography of who is noticed.
+mx8n-vbe2,Management Classification and  Compensation Plan Pay Ranges,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+n644-pp3v,Permits Issued (Jan 2013 - Current),not relevant,"A chart or story built on DBI's permits, which are cached whole."
+nfxf-sv4m,City Facilities - Planning Jurisdiction or Leased,not relevant,"City capital projects and facilities; public works, not private development."
+nh4m-jbyj,Historic Height & Bulk Districts - 2012,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+ni2e-vpbg,Urban Tree Canopy,not relevant,Greening and landscape layers with no bearing on entitlement.
+njrt-gtwr,[DEPRECATED] Historic Resources,not relevant,Deprecated; replaced by a newer asset.
+nn26-kuy2,HAQR Priority Green Infrastructure Zones,possibly useful,A sea-level-rise or climate overlay: a long-run cost shifter; check against demand_estimation first.
+nrnx-fegt,Commerce & Industry Inventory 2012,not relevant,"Annual commerce and industry reports as documents, 2011--2012."
+ntc3-dd64,Neighborhood-Specific Impact Fee Areas,core,The geographic side of the impact-fee schedule; joined to parcels.
+p4e4-a5a7,"Building Permits filed on or after January 1, 2013",not relevant,"A date-filtered view of DBI's permits, which are cached whole."
+p5b7-5n3h,Analysis Neighborhoods,not relevant,A map view; the dataset it draws carries the data.
+pdvd-w2q4,Historic Zoning Districts - 2001,not relevant,A map view; the dataset it draws carries the data.
+pe87-v8tx,Historic Zoning Districts - 2007,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+phns-r8sy,HSS-View-Enrollment_all_Lives_5y,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+piqy-pimd,Historic Zoning Districts - 1998,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+prs8-k8k3,Historical Zoning Districts - April 2000,not relevant,A map view; the dataset it draws carries the data.
+pty2-tcw4,SF Find Neighborhoods,not relevant,A map view; the dataset it draws carries the data.
+pyxv-n29e,Mayor's Office of Housing and Community Development Affordable Housing Portfolio,possibly useful,"How projects met the inclusionary requirement, and the affordable portfolio, with case or permit numbers."
+q6gg-sa2p,SF Crime Heat Map,not relevant,A map view; the dataset it draws carries the data.
+q7uq-hghg,"Tsunami Inundation Hazard Zone (Outdated, 2015)",not relevant,Superseded by the 2021 tsunami layer listed above.
+q8g4-wqta,Green Connections Network,not relevant,A map view; the dataset it draws carries the data.
+qbf8-heuf,San Francisco Land Use 2023 (No Geom),possibly useful,An archived land-use vintage; with the current layer it makes a land-use panel.
+qcxd-tp4u,Historic Height & Bulk Districts - 2011,not relevant,A map view; the dataset it draws carries the data.
+qf4b-pv4d,Capital Budget for General Fund Departments (2005-06 to present),not relevant,"City capital projects and facilities; public works, not private development."
+qfj2-m7ux,Permanent Civil Service (PCS) Appointments,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+qqn9-j3rz,MTA.equitystrategy_nhoods_data,not relevant,A transportation dataset; the word 'planning' appears in its text.
+qqnk-bwbc,MTA.paintedsafetyzones,not relevant,A map view; the dataset it draws carries the data.
+qrwx-q4gg,Street Tree Removal Notifications,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+qvu5-m3a2,Planning Department Records - Projects,core,"The Planning Department's own records: filing dates, the building_permits bridge, unit counts."
+r6jz-e8rw,Map of Historic Special Use Districts -2013,not relevant,A map view; the dataset it draws carries the data.
+r6rs-2mxu,Civic Center Cultural Landscape Inventory,not relevant,A cultural landscape inventory of one civic district.
+rqw6-h7c5,Map of 2020 Census Tracts Assigned to Analysis Neighborhoods,not relevant,A map view; the dataset it draws carries the data.
+rt4q-mf68,Historic Zoning Districts - 2011,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+rwdp-2k4t,Historic Height & Bulk Districts - 2011,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+rxfc-8aap,Zoning Map - Special Use Districts,core,A current zoning-map layer carried forward in the panel from 2016.
+rxim-5dpc,Historic Zoning Districts - 2007,not relevant,A map view; the dataset it draws carries the data.
+ry69-hnut,Zoning Map - Special Use Districts,not relevant,A map view; the dataset it draws carries the data.
+rzic-39gi,Landmarks,possibly useful,A historic designation that brings a project before a commission; overlaps the parcel-keyed historic status already listed.
+s3eh-jdwb,Historic Zoning Districts - 2004,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+s66h-h4vp,Slopes 20 Percent Or Greater,possibly useful,"An overlay that triggers extra review (air-quality exposure, steep slope)."
+sevw-6tgi,Analysis Neighborhoods - 2020 census tracts assigned to neighborhoods,possibly useful,Analysis neighbourhoods and their tract crosswalk: the geography the permit comparison uses.
+sfnk-6tdn,Green_Roofs,not relevant,Greening and landscape layers with no bearing on entitlement.
+smdf-6c45,Utility Excavation Permits,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.
+srq6-hmpi,San Francisco ZIP Codes,not relevant,A map view; the dataset it draws carries the data.
+st6c-ij8w,Historic Special Use Districts - 2011,not relevant,A map view; the dataset it draws carries the data.
+t65d-x6p8,Air Pollutant Exposure Zone,possibly useful,"An overlay that triggers extra review (air-quality exposure, steep slope)."
+ta46-stby,Green Connections Network,not relevant,Greening and landscape layers with no bearing on entitlement.
+thsi-uh4u,Historic Height & Bulk Districts - 2009,not relevant,A map view; the dataset it draws carries the data.
+ti28-5szz,Historic Height & Bulk Districts - 2010,not relevant,A map view; the dataset it draws carries the data.
+tmnf-yvry,Police Department Incident Reports: Historical 2003 to May 2018,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+tsdh-z53a,HistoricZoningDistricts2008,core,A parcel-keyed zoning vintage; one year of the zoning panel.
+ttns-6zj3,Planning Districts,not relevant,A map view; the dataset it draws carries the data.
+tyz3-vt28,PermitSF Permitting Data,possibly useful,PermitSF submission-to-issuance times with record numbers and parcels; recent and small.
+u3m4-4qjy,Historic Height & Bulk Districts - 2012,not relevant,A map view; the dataset it draws carries the data.
+u4br-5hb8,Historic Zoning Districts - 2009,not relevant,A map view; the dataset it draws carries the data.
+u7ag-wi48,Equity Strategy Neighborhoods,not relevant,A map view; the dataset it draws carries the data.
+u8bf-s4hg,Historic Zoning Districts - 2005,not relevant,A map view; the dataset it draws carries the data.
+ubjr-y9qw,ARCHIVED: Tenderloin Tent Count,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+uihu-8bih,Map of Historic Special Use Districts - 2014,not relevant,A map view; the dataset it draws carries the data.
+ujhp-tya6,Planning Department's Current Planning Team Boundaries,possibly useful,"A Planning Department administrative geography (district, area, team boundary), useful only as a grouping."
+umwe-sn9p,SFEC Form 3410A - Registration Report for Permit Consultants,possibly useful,Registered permit consultants and their filings: who is paid to move permits.
+uq3t-6t53,San Francisco ZIP Codes,possibly useful,ZIP code areas: the parcel-to-ZIP step the Zillow indices need.
+us3s-fp9q,[ARCHIVED] Map of Land Use - 2020,not relevant,A map view; the dataset it draws carries the data.
+utj8-tgqr,Historic Zoning Districts - Jan 2015,not relevant,A map view; the dataset it draws carries the data.
+uuiu-f3qh,Commerce & Industry Inventory 2012 Data,not relevant,"Annual commerce and industry reports as documents, 2011--2012."
+v25p-yprq,San Francisco Environmental Justice Communities Map,not relevant,A map view; the dataset it draws carries the data.
+v5ic-hjgw,Maher,possibly useful,Sites subject to the Maher ordinance (contamination): a construction-cost shifter by site.
+v8fd-x8ui,HSS View-Medical Enrollment by Employees,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+v9w2-c8v7,Map of Historic Zoning Districts - 2006,not relevant,A map view; the dataset it draws carries the data.
+vc6r-v7av,San Francisco Municipal Natural Gas Equipment Inventory,not relevant,An energy or emissions dataset for existing buildings.
+vfz8-awmy,Historic Zoning Districts - 2012,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+vgqy-2ca4,Existing Buildings - Basic Info and Audit Compliance Status,not relevant,An energy or emissions dataset for existing buildings.
+vmnk-skih,San Francisco Plant Finder Data,not relevant,Greening and landscape layers with no bearing on entitlement.
+vnrd-fpg7,Landmark Districts,not relevant,A map view; the dataset it draws carries the data.
+w3j2-4hed,Historic Zoning Districts - 2010,not relevant,A map view; the dataset it draws carries the data.
+wr3x-ijzr,Map of On-street Carshare Parking,not relevant,A map view; the dataset it draws carries the data.
+x4gj-zjx7,Historic Zoning Districts - 2010,core,"A polygon zoning vintage, joined spatially into the zoning panel."
+x83f-ux29,City Construction Projects to Proceed During Shelter-in-place,not relevant,"City capital projects and facilities; public works, not private development."
+x89n-qawp,Planning Department Neighborhood Quadrants,not relevant,A map view; the dataset it draws carries the data.
+xdgd-c79v,Budget,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+xdht-4php,Housing Production - 2005-present,core,"Project scale for built or pipeline projects, reached through the case stem."
+xidx-bh43,Map of Tsunami Inundation Hazard Zone (2021 Update),not relevant,A map view; the dataset it draws carries the data.
+xk8z-bcqz,San Francisco Open Space for Shadow Study Analysis,possibly useful,Open-space boundaries used in shadow studies: shadow is a recurring ground for discretionary review.
+xpdk-pzjd,2015 Project Appendix,not relevant,"City capital projects and facilities; public works, not private development."
+xu9j-dnfu,Datasets in 'Scoping' or 'In Progress' phase,possibly useful,"The city's inventory of candidate datasets, published or not: where an unpublished Commission-actions table would appear."
+xw26-dnmx,COVID-19 Tenderloin Plan Zones,not relevant,Matches the word 'planning' in its text; nothing to do with land-use regulation.
+xzb6-i4dc,Historic Height & Bulk Districts - 2010,core,"A height-and-bulk vintage, joined spatially into the zoning panel."
+xzez-p3nc,Zoning Map - Zoning Districts,core,A current zoning-map layer carried forward in the panel from 2016.
+y5fw-t3z4,AHBP_zoning_districts,possibly useful,The zoning districts behind the Affordable Housing Bonus Program eligibility.
+y673-d69b,Planning Department Records - Non-Projects,core,"The Planning Department's own records: filing dates, the building_permits bridge, unit counts."
+y6ci-vpnb,San Francisco Environmental Justice Communities Map,possibly useful,Environmental-justice communities: a policy geography used in review.
+y75h-nbt2,Map of Historic Districts,not relevant,A map view; the dataset it draws carries the data.
+y7mn-8sik,Historic Special Use Districts - 2015,possibly useful,A dated special-use district vintage; the zoning panel carries only the current SUD layer.
+y8fp-fbf5,Dataset inventory,possibly useful,"The city's inventory of candidate datasets, published or not: where an unpublished Commission-actions table would appear."
+y8v4-jjwg,Map of Historic Resource Status by Property,not relevant,A map view; the dataset it draws carries the data.
+ybh5-27n2,Traffic Signals,not relevant,A transportation dataset; the word 'planning' appears in its text.
+ygi5-84iq,[ARCHIVED] San Francisco Land Use - 2020,possibly useful,An archived land-use vintage; with the current layer it makes a land-use panel.
+yk2r-b4e8,Areas Damaged by Fire Following 1906 Earthquake,not relevant,A map view; the dataset it draws carries the data.
+ykqf-4jmt,Commerce & Industry Inventory 2011,not relevant,"Annual commerce and industry reports as documents, 2011--2012."
+yrgu-vakm,Right of Way Exception Data,not relevant,A Public Works street or right-of-way dataset; not a land-use decision.

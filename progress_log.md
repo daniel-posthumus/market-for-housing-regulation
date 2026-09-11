@@ -1,5 +1,66 @@
 # Progress Log
 
+## 2026-09-11 — Conditions census, three new memos, and the reconcile-list corrections
+
+**Goal**: Carry out `.claude/instructions/claude_code_brief_conditions_permits_catalogue.md`:
+an overnight census of Commission condition text for every case and motion (Task 1), a memo
+on what the conditions say (Task 2), a memo on DBI's permit record (Task 3), a DataSF
+"planning" catalogue memo (Task 4), and the §0 reconcile list as dated corrections.
+
+**What was done**:
+- Built the census (`collect_conditions.py`): directory listings, 11 Wayback CDX manifests,
+  hearing and archived-agenda pages, every document link in the raw minutes, then a HEAD probe
+  of 127,920 URLs (10,165 documents) at ≤2 req/s/host, per-host pulls keeping only the motion
+  section (OCR only image-only pages inside a motion), and a parse to `conditions_long`
+  (91,720 rows from 8,062 documents), plus draft-vs-adopted diff and `task1_summary.md`.
+- Put the parsing rules in `condition_parser.py` and validated them in two frozen rounds on a
+  20-document gold set (398 labels written blind to the parser, 1 adjudicated) and a
+  30-row out-of-sample hand check of documents pulled after the second freeze.
+- Wrote `conditions_content.tex` (57 pp.), `permits_content.tex` (18 pp.) and
+  `datasf_planning_catalogue.tex` (43 pp.); all compile with 0 undefined, 0 overfull.
+- Dated corrections (2026-09-11) in the conditions, data-acquisition and permit-linkage memos;
+  universe notes in the corpus and delay memos via new `universe` stages; standing memo,
+  READMEs, STRUCTURE.md, environment notes, requirements and `external/README.md` updated.
+- Task 1e: read the Assessor-Recorder's public terms (no searching) → `nsr_feasibility.md`.
+
+**Key decisions / findings**:
+- Condition text exists for 48.2% of conditioned items, but 2.4% (1998–2002) and 7.5%
+  (2003–2009): "nothing before 2010" was about two URL patterns, and the pre-2010 residual is
+  documents not online anywhere (1,587 of 1,601), not parser misses. Earliest conditioned item
+  with text: 1999; oldest motion read: 1984 (embedded in a later packet).
+- Parser: round 1 in-sample 85.1% precision / 76.5% recall exposed systematic errors (nested
+  1998–2010 numbering, numbers set as separate text objects, mid-line compliance lines, rotated
+  pages, OCR headers); round 2 in-sample 97.7 / 98.0; out of sample 29/30 rows correct.
+- Draft vs adopted: first pass counted OCR noise as amendments; with near-identical text
+  separated and a text-matching second pass, 94% of draft conditions carry over, and
+  `modifications` misses many real changes (257 changed pairs with none recorded).
+- The option's term is a 36-month template; extensions are state-contingent (30 of 3,366 state
+  a period). Condition counts are not rising with the conditioning share (ρ = −0.26).
+- Case universe fixed at 8,958 (`case_universe`); CU bridge 46.3% (§5.4); bridge ∩ condition
+  text = 1,424 CU items. Soft 404s (a dead host redirecting to sf.gov) and a "1024" date typo
+  were caught and excluded.
+
+**Next steps**:
+- 26 documents unread: 18 over 250 MB and 8 very large citypln packets whose downloads kept
+  dropping; retry with `pull --host citypln-m-extnl.sfgov.org --max-mb 250` when convenient.
+- `condition_parser.py` is frozen as round 2: any edit needs a round 3 (archive, freeze,
+  re-score, new out-of-sample draw).
+- Records request (Daniel) for pre-2010 motions and on bulk NSR index access; a hand-coded
+  set of conditions to validate the 13-category scheme out of sample.
+
+**Files touched**:
+- `code/commission_minutes_processing/collect_conditions.py` — created (census, validation, Task 2 report)
+- `code/commission_minutes_processing/condition_parser.py` — created (frozen parsing rules)
+- `code/commission_minutes_processing/analyze_permit_content.py` — created (Task 3)
+- `code/commission_minutes_processing/analyze_datasf_catalogue.py` — created (Task 4)
+- `code/commission_minutes_processing/acquire_external_data.py` — modified (`case_universe`, null/dup keys, bridge ∩ text overlap, README)
+- `code/commission_minutes_processing/analyze_conditions.py` — modified (macros for dated corrections, deterministic tie order)
+- `code/commission_minutes_processing/analyze_corpus.py`, `analyze_delay.py` — modified (`universe` stage)
+- `code/commission_minutes_processing/analyze_permits.py` — modified (Figure 2 median = table's)
+- `output/planning_commission_project/{conditions_content,permits_content,datasf_planning_catalogue}/` — created
+- `output/planning_commission_project/{conditions_of_approval,data_acquisition,permit_linkage,discretionary_review_patterns,predicting_delay,memo}/` — modified (dated corrections / notes)
+- `STRUCTURE.md`, `output/README.md`, `output/planning_commission_project/README.md`, `environment-notes.md`, `requirements.txt` — modified
+
 ## 2026-09-10 — Code review of the minutes pipeline: 20 defects fixed, memos reconciled
 
 **Goal**: Review every script in `code/commission_minutes_processing` (52 files, ~19k lines)

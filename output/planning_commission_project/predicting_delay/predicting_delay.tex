@@ -13,6 +13,10 @@
 \author{Dan Post}
 \date{September 2026}
 
+% The dated note of 2026-09-11 on the case universe reads its numbers from here
+% (analyze_delay.py universe).
+\input{tables/delay_macros}
+
 \begin{document}
 \maketitle
 
@@ -59,6 +63,19 @@ date, and take the first and last appearance. \textbf{8{,}987 cases} result from
 show a positive elapsed time} (Table~\ref{tab:returning}). The gap between those two numbers is cases heard twice at the
 same meeting, as sub-items \texttt{1a} and \texttt{1b}, which are one hearing however they are
 numbered.
+
+\paragraph{Note, 2026-09-11: the case universe.} ``Upper-cased, whitespace stripped'' counts a
+case printed with a two-digit year at one hearing and a four-digit year at another as two. The
+universe every memo now uses (\texttt{case\_universe} in \texttt{acquire\_external\_data.py})
+expands the year first and holds \delayCasesUniverse\ cases, not \delayCasesPrinted. Recomputed
+both ways by \texttt{analyze\_delay.py universe}, the construction above reproduces on the
+printed numbers (an estimation sample of \delaySamplePrinted\ cases, \delayMultiPrinted\% heard
+on more than one day, \delayPositivePrinted\% with a positive elapsed time) and on the universe
+gives \delaySampleUniverse, \delayMultiUniverse\% and \delayPositiveUniverse\%. The models
+below were estimated on the printed numbers and have not been re-estimated on the universe; the
+two samples differ only in the cases printed both ways. (The two shares in the paragraph
+above are, as Table~\ref{tab:returning} says, shares of the estimation sample, not of all
+cases.)
 
 Three things this measure is not, stated once so the rest of the memo can be read against
 them.

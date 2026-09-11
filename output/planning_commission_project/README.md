@@ -1,8 +1,10 @@
 # `planning_commission_project/`
 
 The San Francisco Planning Commission minutes line: 1998–2026 meeting minutes turned into an
-**item-level** dataset of discretionary land-use decisions — 16,199 items across 8,987 cases,
-in 29 structured fields. The code is in `code/commission_minutes_processing/`; the corpus
+**item-level** dataset of discretionary land-use decisions — 16,199 items across 8,958 cases
+(the reconciled universe: two-digit years expanded, `case_universe` in
+`acquire_external_data.py`; counting the case numbers as printed gives 8,987), in 29
+structured fields. The code is in `code/commission_minutes_processing/`; the corpus
 itself lives on Dropbox (`MFHR_DATA_ROOT`), never in git.
 
 **One folder per memo.** Each holds `<name>.tex`, its compiled `.pdf`, and its own `figures/`
@@ -21,7 +23,10 @@ names the script that regenerates it.
 | [`permit_linkage/`](permit_linkage/) | How far the entitlement can be followed to a real building permit in DBI's records, and what the match buys. | `analyze_permits.py` |
 | [`conditions_of_approval/`](conditions_of_approval/) | Whether the *content* of the Commission's conditions can be recovered, given that `conditions_imposed` is only a yes/no flag. | `analyze_conditions.py` |
 | [`predicting_delay/`](predicting_delay/) | How much of elapsed hearing time is forecastable from what a developer can observe at the first hearing — in sample and out. | `analyze_delay.py` |
-| [`data_acquisition/`](data_acquisition/) | The external data the real-options frame needs: a **defined** parcel-year risk set (1998–2026 zoning panel via spatial join), filing dates and two clocks, the conditional-use→permit bridge, project scale, parcel-level prices observed and imputed, and a fee schedule keyed by band. Carries the correction that overturns the conditions memo's non-overlap claim, and two corrections to itself. | `acquire_external_data.py` |
+| [`data_acquisition/`](data_acquisition/) | The external data the real-options frame needs: a **defined** parcel-year risk set (1998–2026 zoning panel via spatial join), filing dates and two clocks, the conditional-use→permit bridge, project scale, parcel-level prices observed and imputed, and a fee schedule keyed by band. Carries the correction that overturns the conditions memo's non-overlap claim, and dated corrections to itself (the case universe, the bridge-and-text overlap, the non-unique sources). | `acquire_external_data.py` |
+| [`conditions_content/`](conditions_content/) | A census of condition text for every case and motion number — every URL family, the minutes' own links, the hearing and archived agenda pages, the Wayback Machine — the earliest year with text by source, and then what the conditions actually say: the anatomy of a motion, the standing sections and most frequent headings with verbatim examples, the long tail, counts per motion, draft against adopted, the conditions that set the entitlement's clock, and a data dictionary. Validated on a frozen gold set in two rounds and out of sample. | `collect_conditions.py` (+ `condition_parser.py`) |
+| [`permits_content/`](permits_content/) | What DBI's Building Permits record contains, field by field from the rows; the permit clock; a development-relevant universe; and whether Commission-linked projects differ from observably similar ones (raw, within exact cells, within unit bins), with DR/CU/ministerial comparisons, threshold bunching and the DR developer clock. | `analyze_permit_content.py` |
+| [`datasf_planning_catalogue/`](datasf_planning_catalogue/) | Everything the DataSF catalogue returns for "planning", reconciled by asset type, with join keys, row counts, staleness, and judgement flags for relevance. | `analyze_datasf_catalogue.py` |
 
 ## `notes/`
 

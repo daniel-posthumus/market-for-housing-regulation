@@ -124,6 +124,13 @@ new domain. A catalogue search against the old host returns zero hits and looks 
 ``the dataset does not exist.'' Every dataset in this memo was resolved against the live
 catalogue on \acqRetrieved\ and the identifier reported in Table~\ref{tab:inventory} is the
 one actually used.
+
+\emph{Note, 2026-09-11.} The DataSF catalogue memo could not reproduce the zero-hits finding:
+passed as \texttt{search\_context}, the old host returned the same assets as the new one, and
+passed as \texttt{domains} alone, both hosts returned almost nothing. Whether the catalogue
+changed between the two runs or this memo's probe passed the host the second way is not known.
+The practical rule stands --- resolve identifiers against \texttt{data.sf.gov} --- but ``returns
+zero hits'' should be read as ``returned zero hits the way it was asked on \acqRetrieved''.
 \item \textbf{\texttt{wv5m-vpq2} is the right assessor identifier} --- the brief's proposed
 ID, verified --- \textbf{but the roll starts at \acqAsrFirst}. That is not a gap in a scrape; no
 earlier vintage is published. It is reported as a negative in
@@ -143,8 +150,16 @@ Table~\ref{tab:inventory} is the inventory: resolved identifier, host, row count
 count on the key we join on, whether that key is actually unique, and the date range. Key
 uniqueness is tested rather than assumed, because the last time it was assumed --- DBI's
 \texttt{permit\_number} --- 145{,}795 rows turned out to repeat one, once per lot the permit
-touched. Three of the sources here are also not unique on their intended key and are marked
-as such.
+touched. \acqNonUniqueSources\ of the \acqSourcesCached\ sources here are also not unique on
+their intended key and are marked as such; \acqNullKeySources\ have rows with a blank key,
+which the table counts apart from a repeat.
+
+\paragraph{Correction, 2026-09-11.} This paragraph previously read: ``Three of the sources here
+are also not unique on their intended key and are marked as such.'' The count was typed rather
+than computed, and it was wrong: the table beneath it marked 14 of its 19 sources as not
+unique. That table was also counting a blank key as a repeat --- rows minus distinct values
+--- which called the Development Pipeline's blank case numbers repeats. The two are now counted
+apart (the `Null key' column), and the sentence above is computed from the same rows.
 
 \section{The parcel risk set}
 \label{sec:riskset}
@@ -364,8 +379,16 @@ The two Planning Department Records tables --- \texttt{y673-d69b} (Non-Projects,
 \acqNonProjRows\ rows) and \texttt{qvu5-m3a2} (Projects, \acqProjRows\ rows) --- are the
 department's own
 application record. Both identifiers were verified and both are unique on
-\texttt{record\_id}. Table~\ref{tab:casejoin} tests the join three ways against all
+\texttt{record\_id}. Table~\ref{tab:casejoin} tests the join four ways against all
 \acqCases\ distinct cases in the item table.
+
+\paragraph{The case universe, stated once (2026-09-11).} A case is a distinct case number
+after upper-casing, stripping white space and expanding a two-digit year against the hearing
+year. \texttt{case\_universe} in \texttt{acquire\_external\_data.py} is that definition, and
+every memo that counts cases now imports it. It gives \acqCases. The corpus and conditions
+memos give \acqCasesPrinted, because they counted the case numbers as printed, and
+\acqCaseMerges\ cases were printed both ways --- \texttt{99.530C} at one hearing and
+\texttt{1999.530C} at another --- and are one case each. The \acqCases\ is the number to use.
 
 \begin{itemize}
 \item \textbf{Raw string equality: \acqCaseRaw\%.}
@@ -374,8 +397,15 @@ buys almost nothing here, which is a small vindication of the extraction --- the
 come out clean.
 \item \textbf{Suffix-stripped stem: \acqCaseStem\%.} Stripping the letter suffix
 (\texttt{2014.0400CUA} $\to$ \texttt{2014.0400}) is what does the work, because it is how a
-suffixed case reaches its umbrella project record. \acqCaseAnyN\ of \acqCases\ cases join.
+suffixed case reaches its umbrella project record.
+\item \textbf{Two-digit year expanded against the hearing year: \acqCaseExp\%.} The
+correction below explains this row. \acqCaseAnyN\ of \acqCases\ cases join by one of the four.
 \end{itemize}
+
+\paragraph{Correction, 2026-09-11.} The sentence introducing this list previously read
+``Table~\ref{tab:casejoin} tests the join three ways'', and the list stopped at the stem. The
+table has had four rows since the two-digit-year expansion was added on 2026-09-08; the
+sentence and the list were not updated with it. Both now name the fourth.
 
 \paragraph{Correction, 2026-09-08: the records do go back that far.} This section previously
 concluded that ``the residual is a format, not a coverage rate, and no amount of fuzzy matching
@@ -525,12 +555,22 @@ have them from these two sources.''
 \end{quote}
 
 \noindent
-\textbf{That conclusion no longer holds.} \acqBridgeCUN\ conditional-use items --- the exact
-population the packet route reaches --- now also reach a building permit in DBI. The
-non-overlap was a property of the route, not of the docket: the minutes do not print a permit
-number on a conditional use, but the Planning Department records one anyway. Construction
-outcomes and condition content \emph{can} be had on the same project, for
-\acqBridgeCU\% of conditional uses. \textbf{The conditions memo has been amended
+\textbf{That conclusion no longer holds.} \acqBridgeCUN\ conditional-use items now also
+reach a building permit in DBI. The non-overlap was a property of the route, not of the
+docket: the minutes do not print a permit number on a conditional use, but the Planning
+Department records one anyway. How many projects have \emph{both} is a separate measurement,
+because the bridge reaches conditional uses of every year and the condition text survives only
+for some years. Crossed with the conditions census (the conditions-content memo), \acqCondTextCU\
+conditional-use items (\acqCondTextCUPct\%) have condition text, and \textbf{\acqOverlapCU\
+(\acqOverlapCUPct\% of conditional uses) have both a permit through the bridge and condition
+text} --- \acqOverlapOfBridge\% of those the bridge reaches.
+
+\paragraph{Correction, 2026-09-11.} The paragraph above previously read: ``\acqBridgeCUN\
+conditional-use items --- the exact population the packet route reaches --- now also reach a
+building permit in DBI.'' The parenthesis was wrong. The \acqBridgeCUN\ is the bridge's reach
+over conditional uses of every year; the packet route's reach was never measured against it,
+and it covers only the years whose documents survive. The overlap is now measured directly
+and reported in its place. \textbf{The conditions memo has been amended
 accordingly}: \S5.1 now carries a dated correction paragraph quoting the sentence it
 withdraws, and its \S8 item~5 (``the exact complement of the permit route'') has been
 narrowed to a claim about what the minutes print rather than about what is knowable.
@@ -946,7 +986,10 @@ and~\ref{tab:scale}; it is a typo in the source, not the end of the file's cover
 pipeline's dates run to \acqMohcdMaxYear\ because they are estimated construction completions,
 which is
 correct. \acqNonUniqueSources\ of the \acqSourcesCached\ cached sources are not unique on
-their intended key and are marked so in Table~\ref{tab:inventory}. The Planning Department's non-project table has an
+their intended key and are marked so in Table~\ref{tab:inventory}; \acqNullKeySources\ have
+blank keys. Among them is the Development Pipeline: its \acqPipelineNullKeys\ blank case
+numbers, which the table's first version counted as repeats, are blanks, and the number of its
+rows that genuinely repeat a case number is \acqPipelineDupRows. The Planning Department's non-project table has an
 \texttt{open\_date} in \acqNpMinYear, which is real in the sense that the row says so and has
 not been audited.
 

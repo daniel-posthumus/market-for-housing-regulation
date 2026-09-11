@@ -1,0 +1,581 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is defined by collect_conditions.py (`report') in the two
+% generated files below. Nothing is typed by hand. Each table is guarded by its label in the
+% one tables file, and \cctable{<label>} places it where the text needs it.
+\input{tables/conditions_content_macros}
+% A float is placed before the next table begins, so tables keep the order the text cites them in.
+\newcommand{\cctable}[1]{\FloatBarrier\def\cctab{#1}\input{tables/conditions_content_tables}}
+
+\title{What the Commission's Conditions Actually Say:\\
+\large a census of condition text, and the object it describes}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The conditions memo established that the Commission's conditions of approval live in its
+motions, not in its minutes, and probed \ccOldPerYear\ cases a year for them against one URL
+pattern per host. This memo replaces that sample with a census --- every case and every motion number
+the item table records, probed against every place the department has published a motion ---
+and then reads what the conditions say, before any coding scheme is imposed on them.
+
+\medskip\noindent
+\textbf{Condition text reaches back further than the conditions memo said, but not far.} The
+probe answered \ccProbed\ candidate URLs and found \ccProbeHits\ documents. Parsed
+condition text now exists for \ccCondWithText\ of the \ccCondItems\ items the item table flags
+as conditioned (\ccCondWithTextPct\%); the earliest of those items was heard in
+\ccEarliestItemYear, and the oldest motion read dates from \ccEarliestAny. The conditions memo
+put the boundary at 2010; the sources
+that reach before it are the old site's document modules and FTP tree, the pre-2003 city pages
+kept by the Wayback Machine, and adopted motions attached to later packets. They reach \ccReachEarlyHtml\% of conditioned items
+heard in 1998--2002 and \ccReachLateHtml\% in 2003--2009, against \ccReachEarlyPdf\% in
+2011--2014. The pre-2010 residual is overwhelmingly items for which no document was found at
+any address: \ccResPreTenNone\ of \ccResPreTen.
+
+\medskip\noindent
+\textbf{The conditions are a template with a thin project-specific layer.} \ccHeadingsDistinct\
+distinct condition headings occur across the motions read; the \ccTopHeadings\ most frequent
+carry \ccHeadingsTopShare\% of all headed conditions, and \ccHeadingsOnce\ occur in one motion
+only. What varies from project to project is numbers --- hours, feet, periods, unit counts ---
+and a short tail of conditions written for the site.
+
+\medskip\noindent
+\textbf{The entitlement's maturity is written into the template.} The validity condition
+states a period on \ccValidityStatePct\% of the motions that carry one, and on
+\ccValidityModalShare\% of those the period is \ccValidityModal\ months. The extension
+condition states a period on only \ccExtensionWithPeriod\ of the \ccExtensionN\ motions that
+carry one: it extends the clock by the length of a delay caused by an agency, an appeal or a
+lawsuit.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Coverage: a census, replacing the conditions memo's sample}
+\label{sec:coverage}
+
+\paragraph{The universe.} A case is a distinct case number after upper-casing, stripping
+white space and expanding a two-digit year against the hearing year; the function that says so
+(\texttt{case\_universe} in \texttt{acquire\_external\_data.py}) is the one every memo now
+imports. The item table holds \ccUniverse\ such cases. The corpus and conditions memos counted
+\ccCasesPrinted, because they counted printed strings, and \ccCaseMerges\ cases were printed
+both ways --- \texttt{99.530C} at one hearing and \texttt{1999.530C} at another. The census
+probes the \ccUniverse, and every case count below is on that basis.
+
+\subsection{What was searched}
+
+The conditions memo's Table~4 asked whether a packet existed for \ccOldPerYear\ sampled cases
+a year at two constructed addresses (\ccOldProbed\ cases, \ccOldFound\ packets found). Four things found while building the census changed the search,
+and each became a stage of it.
+
+\begin{itemize}
+\item \textbf{No directory lists its contents.} \ccListingsIndex\ of the \ccListingsTried\
+directory and bucket-listing URLs tried returned an index, so every document has to be asked
+for by name.
+\item \textbf{The minutes link their own documents.} The HTML minutes hyperlink motions and
+packets on the old \texttt{sf-planning.org} tree (the links run from \ccHtmlLinksFrom\ to
+\ccHtmlLinksTo), and from \ccVaultLinksFrom\ the PDF minutes link every motion, resolution
+and DRA number to the adopted document in the department's vault. Reading the raw corpus locally gave \ccMinutesLinks\ links from \ccMinutesLinkDocs\
+minutes documents. Many of the archived HTML pages disable their links by renaming the
+attribute to \texttt{data-href}; reading \texttt{href} alone had silently dropped every one.
+\item \textbf{The archived agendas link the packets.} A crawl of \ccOldsitePages\ archived
+agenda pages of the old site found \ccOldsiteLinks\ document links, and the 2015--2026 hearing
+pages (\ccHearingPages\ of them) \ccHearingDocs\ more.
+\item \textbf{The Wayback Machine holds the pre-2003 city site.} The CDX index returned
+\ccCdxOk\ URLs captured with status 200 under the \ccCdxPrefixes\ prefixes searched
+(Table~\ref{tab:cdx}). Almost all are agendas, notices and reports. The ones named by motion
+or case are few: \ccCdxMotionsHtml\ HTML motion pages from the pre-2003 city site,
+\ccCdxMotionsPdf\ motion PDFs and \ccCdxPackets\ packets, the motion captures from
+\ccCdxFirstMotion\ and the packets from \ccCdxFirstPacket. That is the Wayback yield, reported
+by year as the brief asks, and it is small.
+\end{itemize}
+
+Together the four sources gave \ccDiscoveredUrls\ distinct URLs, \ccDiscoveredCensus\ of them
+about a case or a motion. The probe then asked for every case in the universe under every
+case-keyed family --- as printed, as its stem, and as the stem with each suffix the minutes
+attach to it --- and for every motion and resolution number under the motion families,
+in the hearing year and the years either side. Table~\ref{tab:families} lists the families. It
+used \texttt{HEAD}, falling back to a ranged \texttt{GET} where \texttt{HEAD} was refused, at
+no more than \ccRatePerHost\ requests a second per host. It answered \ccProbed\ URLs: \ccProbeHits\
+documents, \ccProbeMissing\ absent, \ccProbeLogin\ behind the vault's sign-in page or its
+``not public'' error page, \ccProbeSoft\ redirected by a dead host to its new home page
+(counted as absent, not as documents), and \ccProbeOther\ other.
+The probe \ccProbeFinished.
+
+\cctable{families}
+\cctable{cdx}
+
+Table~\ref{tab:negatives} records the searches that came back empty or closed, so that
+nobody runs them again.
+
+\cctable{negatives}
+
+\subsection{The census}
+
+Table~\ref{tab:census} is the census, by the first hearing year of the case or motion each
+document belongs to and by URL family; Figure~\ref{fig:coverage} shows what it yielded, year by
+year --- the motions read and the share of the conditioned docket they reach. The census is
+what the conditions memo's Table~4 becomes when every case is asked about, and it replaces it.
+Each family answers for its own span of years: the old site's document modules and FTP tree
+for the last years of the HTML minutes, the motion archive for the first PDF years, the vault
+from the first minutes that link it, the date-keyed packet host for the most recent hearings,
+and the main packet host across most of the PDF era beside them. A case first heard early can
+still have a packet if it came back to the Commission later, which is why the packet columns
+reach back before the host existed. For cases first heard before the old site's span almost
+nothing answers at a live address: the pre-2003 motions survive only as Wayback captures and
+as exhibits to later packets.
+
+\cctable{census}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_census_coverage.pdf}
+\caption{Top: the share of items the item table flags as conditioned for which some condition
+text has now been parsed, by hearing year. Bottom: the motion sections with parsed conditions
+behind it, adopted and draft, by hearing year.}
+\label{fig:coverage}
+\end{figure}
+
+\subsection{What was read, and the earliest year by source}
+
+A document found is not a result; a document read is. Table~\ref{tab:coverage} counts motion
+sections with at least one parsed condition, one copy of each motion whichever address reached
+it --- the same adopted motion arrives as a standalone file, a mirror copy and an exhibit to a
+later packet --- by source and era. \textbf{The answer to the question the census was built for
+is its last column}: the earliest hearing year for which condition text is retrievable, by
+source.
+
+\begin{itemize}
+\item Adopted motions: the old site's FTP tree from \ccEarliestFtp, its document modules from
+\ccEarliestModules, the department's vault from \ccEarliestVault, and the pre-2003 city pages
+(through the Wayback Machine) from \ccEarliestWayback.
+\item Draft motions in packets: from \ccEarliestPackets.
+\item Adopted motions embedded in later packets: from \ccEarliestEmbedded. A motion that
+modifies an earlier approval attaches the original, so an old motion survives inside a new
+packet. The oldest of these predate the corpus: the earliest motion read for a case in the
+universe was heard in \ccEarliestInUniverse, years before the case came back to the Commission,
+and \ccSectionsOutsideUniverse\ motion sections read belong to no case in the universe at all.
+Measured on the item table instead, the earliest conditioned item that now has condition text
+was heard in \ccEarliestItemYear.
+\end{itemize}
+
+\cctable{coverage}
+
+\paragraph{How much of the conditioned docket has text.} Table~\ref{tab:reach} crosses the
+parsed sections with the item table. \ccCondWithText\ of the \ccCondItems\ conditioned items
+(\ccCondWithTextPct\%) now have some condition text, draft or adopted --- \ccReachEarlyHtml\% of
+those heard in 1998--2002, \ccReachLateHtml\% in 2003--2009, \ccReachTwentyTen\% in 2010,
+\ccReachEarlyPdf\% in 2011--2014, \ccReachMidPdf\% in 2015--2017, \ccReachVault\% in 2018--2021
+and \ccReachRecent\% in 2022--2026.
+
+\cctable{reach}
+
+\paragraph{The residual, named.} Table~\ref{tab:residual} sorts the \ccCondNoText\ conditioned
+items without text by why. For \ccResFoundRead\ a document keyed to the item was found and read
+and yielded no conditions --- a staff report, a Discretionary Review Action, a motion that
+attaches none. For \ccResFoundUnread\ a document was found and not read: over the size cap,
+a failed download, or a DRA, which the census counts and does not pull. For \ccResNoneNumber\
+the item records a motion number and no document answered at any address; for
+\ccResNoneNoNumber\ it records none, so only the case-keyed families could find it. Before
+2010 the residual is almost entirely the last two kinds: \ccResPreTenNone\ of the
+\ccResPreTen\ pre-2010 conditioned items without text had no document at any address. More
+work on the parser will not move them; a records request might.
+
+\cctable{residual}
+
+\paragraph{Mention rate beside parse rate.} A change of format looks like missing data unless
+the rate at which the documents \emph{mention} the thing is measured beside the rate at which
+it is \emph{parsed}. Table~\ref{tab:mention} does that over the \ccSecRead\ motion sections
+read. \ccSecMention\ mention an Exhibit A; \ccSecLocated\ have one located and parsed, and
+\ccSecRejected\ have an ``Exhibit A'' that is some other attachment --- a draft ordinance, a
+development agreement, the department's response to a CEQA appeal, a mitigation-monitoring
+table --- which the parser now recognises and declines. The remaining \ccSecMentionNotLocated\
+mention an Exhibit A that was neither located nor rejected. Reading a sample of them finds
+three kinds: sections that mention another document's Exhibit A in running text (the ordinance,
+agreement or mitigation program a resolution adopts), files that end before their Exhibit A,
+and parser misses. The validation below is what measures the last.
+
+\cctable{mention}
+
+\subsection{How well the text is read}
+\label{sec:validation}
+
+The parsing rules live in \texttt{condition\_parser.py}, apart from the orchestration, so they
+could be hashed and frozen. \ccGoldN\ documents spanning the eras and formats were drawn once,
+with a fixed seed, stratified on era and container, and including documents with no conditions,
+so that a detector finding conditions where there are none would show. The rules were frozen
+(\ccValRoneFrozen) \emph{before} any label was written, and the documents were then labelled
+condition by condition from the source layout, by readers who never saw the parser's output:
+\ccValGoldConds\ conditions, after \ccValAdjudicated\ label was changed on checking the source
+(a compliance line the source had numbered as if it were a condition; the decision is kept in
+\texttt{gold\_adjudications.csv}).
+
+\begin{itemize}
+\item \textbf{Round 1, the rules as first frozen:} the parser's rows matched the labelled
+boundaries with a precision of \ccValRoneInPrec\% and a recall of \ccValRoneInRecall\%. The
+misses were systematic, not scattered: numbers printed as separate text objects beside their
+lines, nested numbering in the 1998--2010 motions (lettered parts holding parenthesised
+conditions), numbering that restarts or jumps, compliance lines that begin mid-line, and page
+headers that scanned and HTML copies keep inside the text.
+\item \textbf{Round 2, the rules as used:} each of those was fixed, the rules were frozen again
+(\ccValFrozen), and on the same documents the precision is \ccValInPrec\% and the recall
+\ccValInRecall\%; the heading matches the label on \ccValInHead\% of the \ccValInHeadN\ matched
+rows that carry one, and in the \ccValNoneDocs\ gold documents with no conditions the parser
+found \ccValNoneFalse. \textbf{These are in-sample figures}: the rules were revised against
+these documents, and the numbers say how well they fit them, not how well they generalise.
+\item \textbf{Out of sample:} \ccValOutRows\ canonical rows drawn at random, after the second
+freeze, from \ccValOutDocs\ documents outside the gold set that were pulled after it --- documents
+no rule was written against --- and checked against the source pages. \ccValOutPrec\% start and
+end where the condition does (\ccValOutStart\% start correctly, \ccValOutEnd\% end correctly),
+and the heading is right on \ccValOutHead\% of the \ccValOutHeadN\ that have one. \textbf{These
+are the figures to quote.}
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Anatomy of one motion}
+\label{sec:anatomy}
+
+Table~\ref{tab:anatomy} walks one conditional-use motion end to end:
+Motion~No.~\ccAnatMotion, case \texttt{\ccAnatCase}, adopted \ccAnatAdopted, \ccAnatPages\
+pages (\href{\ccAnatUrl}{source}). It is chosen by rule rather than by taste --- the
+born-digital adopted conditional-use motion in the modern template with the median number of
+conditions --- so it is the typical case, not the interesting one.
+
+The motion has two halves, and only the second is conditions. The first is the Commission's
+reasoning: a title block, a preamble reciting the application and the environmental
+determination, and findings. Two of the findings carry the discretion. Under Planning Code
+\S303 the Commission finds that the use is necessary or desirable and compatible with the
+neighbourhood; under \S101.1 it finds the project consistent with the priority policies.
+The decision paragraph then approves the application subject to the conditions attached as
+Exhibit A and in general conformance with the plans on file stamped Exhibit B, and the
+Commission secretary certifies the vote.
+
+The second half is Exhibit A. It opens with standing blocks that are not conditions of the
+project but terms of the approval itself --- what is authorised, that the conditions are
+recorded against the parcel, printed on the plans, severable, and how they may be changed ---
+and then the numbered or named conditions, grouped under section heads. The plans, Exhibit B,
+are cited and kept on file; they are not bound into the motion. That matters for what
+follows: the building's shape is fixed by the plans, so a condition that changes it has to be
+written out, and most do not.
+
+\cctable{anatomy}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Every standing section, and the most frequent headings}
+\label{sec:template}
+
+Table~\ref{tab:sections} lists the standing blocks and the section heads under which conditions
+are grouped, each with the number of motion sections carrying it, the share of conditional-use
+motions that carry it, the median length of a condition's body under it, and the first and
+last hearing year it was seen. The \ccPreambleBlocks\ preamble blocks and the \emph{Performance} and
+\emph{Monitoring} sections are on the large majority of conditional-use motions,
+\emph{Operation} and \emph{Design} on most, and \emph{Parking and Traffic} and
+\emph{Provisions} on a minority --- selected by project.
+The 1998--2009 motions group their conditions differently --- ``General Conditions'', or
+lettered parts such as ``The Approved Project'' and ``Operation'' with parenthesised
+conditions under each --- and those appear as their own rows.
+
+\cctable{sections}
+
+Table~\ref{tab:headings} gives the \ccTopHeadings\ most frequent condition headings, with the
+same statistics and three more: the share of the heading's bodies that are \emph{identical} to
+its most common body once numbers are masked --- the part of the condition that never varies
+---, the share stating a quantity with a unit, and the commonest quantities stated. Sorted by those
+statistics, the headings fall into three kinds (a heading can fall in none).
+
+\begin{itemize}
+\item \textbf{A fixed text, with at most a number changing} (template share at least
+\ccKindBoilerMin\%; \ccKindBoilerN\ headings): \ccKindBoiler. Once the number is masked,
+most bodies are word for word the template; what a project changes, where it changes anything,
+is the figure.
+\item \textbf{A varying text that states a quantity} (template share below
+\ccKindBoilerMin\%, a quantity in at least \ccKindNumberMin\% of bodies; \ccKindNumberN):
+\ccKindNumber. The figure is the point, and the sentence around it is rewritten to fit.
+\item \textbf{A recurring heading over a project-written body} (template share below
+\ccKindBespokeMax\%; \ccKindBespokeN): \ccKindBespoke. The name recurs; what it asks for is
+written for the site.
+\end{itemize}
+
+What varies across projects, then, is hours, days, distances, counts of spaces and units, the
+period of validity, and the text of a few site-specific conditions; what does not vary is the
+enforcement and revocation apparatus and the clock. Table~\ref{tab:examples} quotes up to three
+bodies for each block and heading --- the earliest, a typical one and the one least like the
+rest --- each cut at \ccQuoteWords\ words, with the page of the source document and a link to
+it. Identical bodies are not repeated, so a block with one example has only one form.
+
+\cctable{headings}
+\cctable{examples}
+
+\paragraph{Wording drift.} Table~\ref{tab:drift} compares, for each frequent heading with enough
+bodies in two or more eras, the most common body in the first era it appears and in the last,
+on number-masked text. Of the \ccDriftN\ headings compared, \ccDriftSame\ kept the same
+most common sentence from the first era to the last (a similarity of at least
+\ccDriftSameMin).
+\ccDriftRewrittenN\ were rewritten --- a similarity below \ccDriftRewriteMax\ --- and they are
+the rows at the top of the table: \ccDriftRewritten. For most of them the lowest similarity
+between adjacent eras is as low as that between the first era and the last: the sentence was
+replaced at one step rather than drifting.
+
+\cctable{drift}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The long tail}
+\label{sec:tail}
+
+\ccHeadingsOnce\ of the \ccHeadingsDistinct\ distinct headings occur in one motion only.
+Table~\ref{tab:tail} quotes \ccTailN\ of those conditions, drawn at random with a fixed seed, with
+the kind of case each belongs to. These are the conditions a coding scheme will not anticipate,
+and they are where the Commission's attention to the particular site shows. A count of them
+per motion would be a cleaner measure of bespoke conditioning than the total. The draw is from
+headings seen once, so a condition whose heading is common but whose body is not is not in it;
+some drawn rows are also parser artefacts (a heading read from the first words of a sentence),
+which is what a random draw of one-offs is expected to surface.
+
+\cctable{tail}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Counts as a variable}
+\label{sec:counts}
+
+A motion's condition count is the simplest measure of stringency the census makes available,
+and nothing in the item table can compute it. Table~\ref{tab:peryear} and
+Figure~\ref{fig:counts} give it by hearing year for adopted motions (numbered or named
+conditions only; the \ccPreambleBlocks\ preamble blocks are excluded because every modern motion
+has them),
+beside the share of items the item table flags as conditioned. The median adopted motion
+carries \ccPerMotionMedian\ conditions (mean \ccPerMotionMean). Across the \ccPerMotionYears\
+years with at least \ccMinMotionsYear\ motions read, the rank correlation between the median
+count and the conditioning share is \ccPerMotionRho: \textbf{the count \ccCountVerdict\ the
+conditioning share.} Read with the corpus memo's substitution --- denial falling, conditioning
+rising --- that says the rise is in how often the Commission conditions, more than in how much
+each approval carries.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_conditions_per_motion.pdf}
+\caption{Conditions per adopted motion (median and interquartile band) by hearing year, beside
+the share of items the item table flags as conditioned.}
+\label{fig:counts}
+\end{figure}
+
+\cctable{peryear}
+
+Table~\ref{tab:perkind} splits the count by the case's request type and by project scale. The
+count rises with scale: the median motion for a project that adds no units carries
+\ccPerUnitsNoneMed\ conditions, against \ccPerUnitsLargeMed\ for the \ccPerUnitsLargeN\
+motions in the largest unit band, and the large-project authorisations carry the most of any
+request type.
+
+\cctable{perkind}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Draft against adopted}
+\label{sec:diff}
+
+The packet carries the draft motion; the Commission adopts a motion that may differ. Where the
+census has both for a case --- the latest draft heard on or before the adoption, and the
+adopted motion --- Table~\ref{tab:diff} matches their conditions: by heading where both carry
+headings, allowing for OCR in the adopted copy, and then what is left by number-masked text
+(in \ccDiffByText\ pairs the drafts carry no headings and text is the only key). The adopted
+copy is often a signed scan read by OCR, so a condition whose text differs by a misread letter
+or a touched-up word is \emph{near-identical}, not changed; only a condition less than
+\ccDiffSame\% similar to the draft's counts as reworded. Of \ccDiffPairs\ pairs,
+\ccDiffAnyChange\ (\ccDiffAnyChangePct\%) differ in some condition. Of the \ccDiffDraftConds\
+conditions in the drafts, \ccDiffIdentical\ are carried word for word and \ccDiffNear\
+near-identical --- \ccDiffCarriedPct\% in all --- \ccDiffChanged\ are reworded and
+\ccDiffRemoved\ dropped, and the adopted motions carry \ccDiffAdded\ conditions the drafts did
+not.
+
+The lower panel crosses any change with the item table's record of the hearing. The item
+table records modifications for \ccDiffMods\ of the pairs, and in \ccDiffModsChange\ of those
+the conditions did change; but it records none for \ccDiffNoModsChange\ pairs whose conditions
+changed nonetheless. \textbf{The draft is a good proxy for most of the adopted text and a poor
+proxy for the part the Commission touches}, and the \texttt{modifications} field under-records
+that part. Table~\ref{tab:added} quotes a random draw of the conditions the adopted motions add ---
+the Commission's own margin, in its own words.
+
+\cctable{diff}
+\cctable{added}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The conditions that set the clock}
+\label{sec:option}
+
+Four conditions define the entitlement's maturity in the real-options frame: \emph{Validity}
+(how long the approval lasts before a permit must issue), \emph{Diligent Pursuit} (that
+construction, once permitted, continue), \emph{Expiration and Renewal} (what happens when the
+permit lapses), and \emph{Extension} (when the clock stops). Table~\ref{tab:option} classes
+each condition by its heading --- or, in the eras that print none, by the first words of its
+body --- reads the first period its body states, and tabulates the periods by hearing year;
+Figure~\ref{fig:validity} shows the validity period year by year.
+
+The result is simple. The validity condition states a period on \ccValidityStatePct\% of the \ccValidityN\
+motions that carry one, and the period is \ccValidityModal\ months on \ccValidityModalShare\%
+of those; the exceptions are shorter or longer periods set for particular projects. Diligent
+pursuit and expiration state the same period (Table~\ref{tab:option}). The extension condition carries no
+period at all on most motions: of \ccExtensionN\ carrying one, \ccExtensionWithPeriod\ state
+a period. The modern text reads ``All time limits in the preceding three paragraphs may be
+extended at the discretion of the Zoning Administrator where implementation of the project is
+delayed by a public agency, an appeal or a legal challenge and only by the length of time for
+which such public agency, appeal or challenge has caused delay.'' \textbf{The option's term is
+fixed by template, and its extension is state-contingent}: it lengthens exactly when the
+approval is litigated or held up by another agency.
+
+\cctable{option}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_validity_period.pdf}
+\caption{The period the validity condition gives the sponsor to obtain a permit, by hearing
+year: the share of motions whose validity condition states fewer than, exactly, or more than
+the modal \ccValidityModal\ months.}
+\label{fig:validity}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The conditions memo's coding scheme on the full set}
+\label{sec:taxonomy}
+
+The conditions memo wrote a \ccTaxCategories-category keyword scheme against the headings of
+the \ccOldFound\ packets its sample found. Table~\ref{tab:taxonomy} runs it unchanged on the census. By distinct heading it reaches
+\ccTaxDistinct\% of the \ccTaxHeadings\ headings; weighted by how often each is imposed,
+\ccTaxWeighted\%. On the eras that print no headings, where the scheme reads the body instead,
+it reaches \ccTaxUnheaded\% of bodies --- a number that flatters it, because a body has more
+words for a keyword to hit. Weighted by imposition, \ccTaxObligation\% of headed conditions
+change the project's obligations and \ccTaxProject\% change the project. Table~\ref{tab:uncovered}
+lists the most frequent headings the scheme misses, the first of them \ccUncoveredTop.
+
+\textbf{The caveat stands.} The keywords were written by reading the conditions memo's packet
+headings and revised once against the headings the first draft missed; the coverage figures
+are in-sample to that extent. They support the claim that a small scheme spans most of what is
+imposed, not that the scheme is a validated classifier.
+
+\cctable{taxonomy}
+\cctable{uncovered}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Recorded Notices of Special Restrictions}
+\label{sec:nsr}
+
+Every modern conditional-use motion carries a Recordation block requiring a Notice of Special
+Restrictions to be recorded against the parcel, stating the conditions; the notices would reach
+the conditions of cases whose motions are not online. Nothing was searched or downloaded to
+check this; the Assessor-Recorder's public pages were read, and the terms below are quoted from
+them (\href{https://www.sf.gov/get-copies-recorded-documents}{SF.gov, ``Get copies of recorded
+documents''}; the official-records site's
+\href{https://recorder.sfgov.org/html/DisclaimerContent.html}{disclaimer}). The index can be
+searched ``by name, document number, document type, or by using the Assessor's Parcel Number''
+and ``does not allow searches by property address''; ``online official record index information
+is available from January 1, 1990 forward'', and ``documents recorded prior to January 1, 1990
+can only be searched in our office''. A search returns an index entry. The image of a document
+is available to registered users, whose registration asks for identity verification, and is
+bought per document --- online at a per-document price plus a card fee, or in person at a
+per-page price --- at the rates the SF.gov page lists. The disclaimer says nothing about
+automated or bulk access, and the list of document types is not served to an anonymous
+session, so whether ``Notice of Special Restrictions'' is a selectable type could not be
+confirmed. \textbf{An index-only census of notices on the risk set's parcels is possible in
+principle from 1990, one parcel at a time; the text costs a purchase per document; the
+pre-1990 notices are in the office only; and whether bulk index access is permitted is a
+question for the Recorder}, which this job did not ask.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Established, and not established}
+
+\textbf{Established.}
+\begin{enumerate}
+\item The case universe is \ccUniverse\ cases, defined once; the \ccCasesPrinted\ in the
+earlier memos is printed strings, \ccCaseMerges\ of them the same case written two ways.
+\item No directory lists the documents. The census found them by name: \ccProbeHits\ documents
+among \ccProbed\ URLs asked for, from exact links in the minutes, the agenda and hearing pages
+and the Wayback index, and from every case and motion number the item table records.
+\item Condition text exists for \ccCondWithTextPct\% of conditioned items. It reaches back to
+items heard in \ccEarliestItemYear, but before 2010 it is thin, and the pre-2010
+residual is documents that were not found anywhere, not documents that were found and misread.
+The conditions memo's ``no amount of work recovers condition content before 2010'' was a claim
+about two URL patterns; the truth is ``little'', not ``none''.
+\item The conditions are a template: a fixed apparatus of enforcement, revocation and clock, a
+selected set of operating and design conditions whose text is fixed and whose numbers are the
+project's, and a thin tail written for the site.
+\item The count of conditions per motion is not rising with the conditioning share.
+\item The option's term is fixed by template at \ccValidityModal\ months, and its extension is
+contingent on delay by others.
+\item The item table's \texttt{modifications} field under-records the Commission's changes to
+the draft conditions.
+\end{enumerate}
+
+\textbf{Not established.}
+\begin{enumerate}
+\item The residual. The motions for most pre-2010 conditioned items are not online; whether the
+department holds them, and in what form, is a question for the department.
+\item The recorded notices, which would reach the same cases from the other side; see
+\S\ref{sec:nsr}.
+\item A validated classifier. The scheme's coverage is in-sample; the next step is a
+hand-coded set of conditions scored the way every other field is.
+\item Whether the long tail predicts outcomes. It is quoted here, not yet coded.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Reproducing this}
+
+\texttt{code/commission\_minutes\_processing/collect\_conditions.py} runs the census in stages,
+each cached and resumable; the parsing rules are in \texttt{condition\_parser.py}.
+
+{\small
+\begin{verbatim}
+python acquire_external_data.py sync     # materialise the Dropbox store
+python collect_conditions.py discover    # listings, CDX, hearing and
+                                         #   agenda pages, minutes' links
+python collect_conditions.py probe       # HEAD every candidate
+python collect_conditions.py pull --host <host> --loop-minutes 15 \
+       --max-mb 60                       # one process per host
+python collect_conditions.py reextract --network
+                                         # pages read before /Rotate fix
+python collect_conditions.py parse       # one row per condition
+python collect_conditions.py diff        # draft against adopted
+python collect_conditions.py gold        # draw the gold set (once)
+python collect_conditions.py freeze --round 1   # hash the rules
+python collect_conditions.py score --round 1    # against gold_labels
+python collect_conditions.py archive --round 1  # keep round 1
+python collect_conditions.py freeze --round 2   # after revising
+python collect_conditions.py score --round 2    # in-sample
+python collect_conditions.py sample --round 2   # rows after the
+                                         #   freeze (once), checked by hand
+python collect_conditions.py score --round 2    # ...and out of sample
+python collect_conditions.py summary     # task1_summary.md
+python collect_conditions.py report      # tables, figures, macros
+\end{verbatim}}
+
+Everything lands in \texttt{\$MFHR\_DATA\_ROOT/external/cpc\_packets/}:
+\texttt{manifests/} (discovery), \texttt{availability\_full.csv} (the census),
+\texttt{docs/} (the motion sections kept, with their extracted lines), \texttt{pull\_log.csv}
+(per-document wall time), \texttt{conditions\_long.parquet} (and \texttt{.csv}) and
+\texttt{motion\_sections.csv} (the parse), \texttt{validation/} (the frozen round) and
+\texttt{task1\_summary.md}. \texttt{report} regenerates
+\texttt{tables/conditions\_content\_tables.tex}, \texttt{tables/conditions\_content\_macros.tex}
+and the three figures. No number in
+this memo is hand-placed.
+
+\appendix
+\section{Data dictionary for \texttt{conditions\_long}}
+\label{sec:dictionary}
+
+One row per condition: per (document, motion section, condition). Rows marked
+\texttt{canonical} are the one copy of each motion section the analysis uses; the rest are the
+same motion read from a mirror or an exhibit, kept so the choice can be audited.
+
+\cctable{dictionary}
+
+\end{document}

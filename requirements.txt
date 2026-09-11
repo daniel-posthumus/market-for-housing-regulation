@@ -65,6 +65,8 @@ peft>=0.10,<0.14       # LoRA variant in scratch_code/train.py
 beautifulsoup4>=4.12   # HTML parsing in all scrapers / parse_sf_meeting_minutes.py
 lxml>=5.1              # fast parser backend for bs4
 pdfplumber>=0.11       # PDF text extraction (2015-2025 minutes)
+pymupdf>=1.24          # collect_conditions.py: fast PDF text + fonts, and OCR through its
+                       # bundled Tesseract (needs traineddata; see environment-notes.md)
 striprtf>=0.0.26       # .rtf training samples (training_sample_create.py)
 
 # --- Labeling app -------------------------------------------------------------

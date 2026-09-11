@@ -12,6 +12,10 @@
 \author{Dan Post}
 \date{September 2026}
 
+% The dated note of 2026-09-11 on the case universe reads its numbers from here
+% (analyze_corpus.py universe).
+\input{tables/corpus_macros}
+
 \begin{document}
 \maketitle
 
@@ -162,6 +166,17 @@ A case heard more than once is a project the Commission saw and did not finish w
 items by case number gives 8{,}987 cases, of which \textbf{37.9\% were heard more than once};
 the record is a case that took 3{,}423 days --- nine years and four months --- across its
 appearances.
+
+\paragraph{Note, 2026-09-11: the case universe.} The 8{,}987 here counts case numbers as
+printed. \corpusCaseMerges\ cases were printed both ways --- \texttt{99.530C} at one hearing,
+\texttt{1999.530C} at another --- and are one case each; the universe every memo now uses
+(\texttt{case\_universe} in \texttt{acquire\_external\_data.py}, which expands the two-digit
+year first) is \textbf{\corpusUniverse\ cases}. Recomputed both ways by
+\texttt{analyze\_corpus.py universe}: on the printed numbers the figures above reproduce
+(\corpusCasesPrinted\ cases, \corpusRepeatPrinted\% heard more than once, a longest chain of
+\corpusMaxDaysPrinted\ days); on the universe, \corpusRepeatUniverse\% are heard more than once
+and the longest chain is \corpusMaxDaysUniverse\ days, because one of the merged cases spans
+both of its printings. Nothing else in this memo counts cases.
 
 Table~\ref{tab:delay} shows the distribution by cohort. The median has been stable at about
 five weeks, which is roughly the Commission's own calendar cycle: a routine continuance moves

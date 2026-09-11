@@ -1,0 +1,236 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+% ragged-right and right-aligned paragraph columns for the generated tables
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+
+% Every number in this document is defined by analyze_datasf_catalogue.py in the two
+% generated files below. The relevance flags are judgement, written by hand in
+% relevance.csv beside this file, and are labelled as judgement wherever they appear.
+\input{tables/datasf_catalogue_macros}
+
+\title{Everything DataSF Returns for ``Planning'':\\
+\large A catalogue of the portal, and what in it the pipeline does not yet use}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The data-acquisition memo went to DataSF with a list of datasets it wanted. This memo goes
+the other way: it asks the portal's catalogue for everything matching ``planning'' and
+records what comes back, so that nothing useful is missed because nobody thought to ask for
+it. Retrieved \catRetrieved.
+
+\medskip\noindent
+\textbf{The catalogue returns \catTotal\ assets, and the site's figure of 155 matches its
+datasets alone.} The Discovery API counts \catDatasets\ datasets, \catMaps\ maps, \catFilters\
+filtered views, \catLinks\ external links, \catStories\ stories, \catFiles\ files and
+\catCharts\ chart; most of the \catNonDatasets\ that are not datasets are map views and
+filtered views of datasets. Two facts about the
+API are worth recording because both produce silently wrong answers: paged in its default
+relevance order it returned \catRelPagingRows\ rows holding only \catRelPagingDistinct\
+distinct assets, and the old host name \texttt{data.sfgov.org} is \emph{not} a dead end ---
+passed as \texttt{search\_context} it returns \catOldHostCount\ results, \catOldHostSameIds\
+assets as the new one.
+
+\medskip\noindent
+\textbf{There is still no dataset of Commission actions}, published or unpublished: not in
+the \catTotal\ results, and not among the Planning Department's \catInvPlanning\ entries in
+the city's own dataset inventory. The conditions memo's negative stands.
+
+\medskip\noindent
+\textbf{What the pipeline is not using.} \catPossibleNotCached\ assets are flagged, by
+judgement, as core or possibly useful and are not cached. The two that matter most are
+delay data nobody has measured against: the Planning Department's record-level review-time
+metrics, keyed on the Accela record number, and DBI's station-by-station permit routing,
+which dates every review step including Planning's. A newer publication of the current
+zoning layer also exists beside the one the zoning panel carries forward.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{The query, and why the count is not 155}
+
+The brief records that the portal's own search reports 155 results for ``planning''. The
+Socrata Discovery API, asked the same question with the domain set to \texttt{data.sf.gov}
+and paged to exhaustion, returns \textbf{\catApiTotal}. Table~\ref{tab:types} reconciles the
+two by asset type: the API's own facet count for datasets is \catDatasets, and when the full
+result set is paged in a stable order the assets typed ``dataset'' are exactly those
+\catDatasets. The site's figure matches that datasets count, and the other
+\catNonDatasets\ results are \catMaps\ maps, \catFilters\ filtered views, \catLinks\
+external links, \catStories\ stories, \catFiles\ files and \catCharts\ chart.
+
+That reading is \emph{consistent with} the number the brief reports and has not been
+verified against the page itself: the portal's search is a JavaScript application whose
+count is filled in after the page loads, and no JavaScript engine was available to render
+it. What is verified is the API's side of the equation, type by type.
+
+\input{tables/datasf_catalogue_tables}
+
+\paragraph{Two ways the catalogue gives a wrong answer without an error.}
+\begin{itemize}
+\item \textbf{Paging the default order drops assets.} Results come back in relevance order,
+and a relevance-ranked list re-ranks between requests: paged to exhaustion that way, the
+query returned \catRelPagingRows\ rows holding \catRelPagingDistinct\ distinct assets ---
+some twice, some never. Ordered by identifier
+(\texttt{order=dataset\_id}) it returns every asset once. Everything in this memo was paged
+that way.
+\item \textbf{Which parameter names the host matters more than which host is named.}
+Table~\ref{tab:hosttest} runs the same query six ways. Passed as \texttt{search\_context},
+the old host \texttt{data.sfgov.org} returns \catOldHostCount\ results --- \catOldHostSameIds\
+assets as the new host. Passed as \texttt{domains} alone, the new host returns \catDomainsOnly\ and the old
+\catDomainsOnlyOld. The data-acquisition memo's finding that ``a catalogue search against the
+old host returns zero hits'' did not reproduce on \catRetrieved; whether the catalogue has
+changed since that memo's run or the earlier test passed the host differently is not known,
+and that memo now carries a dated note saying so.
+\end{itemize}
+
+\section{What each asset carries}
+
+For each of the \catTotal\ assets the catalogue record and the view's own metadata give its
+identifier, name, type, parent dataset where it is a derived view, publishing department,
+category, tags, creation and last-update dates, stated update frequency, column names and
+types, and the first part of its description; \texttt{SELECT count(*)} against the resource
+endpoint gives its row count. \catWithRows\ assets have rows of their own, together
+\catRowsTotal\ of them; the rest are links, stories, files and a chart. \catGeom\ carry a
+geometry column. All of this is in \texttt{catalogue\_planning.csv} (\S\ref{sec:repro}).
+
+\paragraph{Join keys, by name.} A column name is a claim about the rows, not proof of what
+they hold, and the table marks keys ``by name'' for that reason. \catKeyAny\ assets carry at
+least one of the pipeline's keys: \catKeyBlklot\ a \texttt{blklot}-style parcel identifier,
+\catKeyBlockLot\ separate block and lot columns, \catKeyCase\ a planning case or record
+number, \catKeyPermit\ a permit number. The name-matching has one known false friend: DBI's
+\texttt{record\_id} is DBI's own row identifier, not a Planning record, and it makes every
+view of DBI's permits look as though it carries a case number.
+
+\paragraph{Departments and categories.} Table~\ref{tab:depts} gives the \catDepartments\
+publishers. The Planning Department publishes \catPlanningDept\ of the \catTotal; the rest
+matched on the word ``planning'' somewhere in their text --- capital planning, transport
+planning, workforce planning --- and include salary schedules, pension payments and police
+incident reports. Table~\ref{tab:cats} gives the portal's own categories, which are
+unassigned on a large share of assets and are not a useful filter.
+
+\paragraph{Staleness.} \catStale\ assets have not been updated in the \catStaleYears\ years
+before retrieval (Table~\ref{tab:stale}). For most of them that is by design --- a 2009
+zoning vintage is not meant to change --- and staleness is a problem only for the assets
+that claim to be current.
+
+\section{Relevance, and what is already cached}
+
+Each asset carries a flag --- \emph{core}, \emph{possibly useful} or \emph{not relevant} ---
+and a one-sentence reason. \textbf{The flags are judgement, not measurement}: they were
+written by hand, after reading every asset's name, description and columns, into
+\texttt{relevance.csv} beside this memo, and the script only reads them. \catCore\ assets are
+flagged core, \catPossible\ possibly useful and \catNotRelevant\ not relevant. \catCached\ of
+the \catTotal\ are already cached by \texttt{acquire\_external\_data.py} or
+\texttt{analyze\_permits.py}, and are marked with a dagger in Table~\ref{tab:full}; the check
+is against the identifiers those scripts fetch, which include every source in Table~1 of the
+data-acquisition memo that the catalogue returns for this query.
+
+Table~\ref{tab:possible} lists the \catPossibleNotCached\ assets flagged core or possibly
+useful that are not cached. In rough order of what they would add:
+
+\begin{enumerate}
+\item \textbf{The delay the paper measures, from the city's own clocks.} The Planning
+Department's \emph{Project Application Review metrics} (\texttt{d4jk-jw33}) give review-time
+events per application, keyed on \texttt{b1\_alt\_id}, which is the Accela record number and
+joins to the item table's case number the way the records tables do. DBI's \emph{Building
+Permit Addenda with Routing} (\texttt{87xy-gk8d}) dates every review station a permit passes
+through, Planning's included. Neither has been measured against anything in this pipeline,
+and both bear directly on the delay memo and on the permit clock.
+\item \textbf{Newer publications of cached layers.} A \emph{Zoning Map --- Zoning Districts}
+(\texttt{3i4a-hu95}) updated at retrieval sits beside the cached \texttt{xzez-p3nc}, which
+is in the stale list of Table~\ref{tab:stale}; the same is true of the special-use
+districts. The zoning
+panel carries the current layer forward from 2016, so the layer it carries should be checked
+against the newer one before the panel is used for recent years.
+\item \textbf{Vintages the panel lacks.} The dated special-use district layers of 2010--2015,
+archived land-use vintages, and a set of scanned zoning maps from 1921 onward --- the only
+pre-1998 zoning the portal holds, and only as images.
+\item \textbf{Policy geographies and review triggers by parcel}: Affordable Housing Bonus
+eligibility, Housing Sustainability Districts, historic status, the Maher contamination
+sites, steep slopes and the air-quality exposure zone.
+\item \textbf{The political economy of permits}: developer disclosures for major projects
+keyed on the planning case number, registered permit consultants and their filings, and the
+architects and expediters on each permit.
+\end{enumerate}
+
+\paragraph{What the city holds and has not published.} The city's dataset inventory lists
+what departments hold whether or not it is on the portal. The Planning Department has
+\catInvPlanning\ entries in it, \catInvPublished\ published and \catInvUnpublished\ not;
+Table~\ref{tab:inventory} lists the unpublished ones. Worth a records request among them:
+an event-level extract of the department's project review (the inventory's
+\emph{Planning Department Project Review Events}), a record-to-parcel crosswalk, and
+\catInvPipelineInternal\ quarterly snapshots of the Development Pipeline held internally ---
+which is the pipeline \emph{panel} the data-acquisition memo reported as unavailable because
+the published pipeline is a current snapshot.
+
+\section{Negatives}
+
+Table~\ref{tab:negatives} records what looked promising and was not, so the searches are
+not repeated. The first row is the one the project cares about: \textbf{no asset in the
+catalogue and no entry in the Planning Department's inventory is a record of Commission
+actions, motions or conditions}. The table names the inventory entries that use those words
+(\catInvCommission); read in full, none is a record of what the Commission decided.
+
+\section{Established, and not established}
+
+\textbf{Established.}
+\begin{enumerate}
+\item The catalogue returns \catTotal\ assets for ``planning'' on \catRetrieved; the web
+figure of 155 matches the API's \catDatasets\ datasets, and the remainder is reconciled by
+type in Table~\ref{tab:types}.
+\item Relevance-ordered paging is not exhaustive; identifier-ordered paging is.
+\item The old host name works as \texttt{search\_context}; \texttt{domains} alone does not
+work for either host.
+\item No Commission-actions dataset exists on the portal or in Planning's inventory.
+\item \catPossibleNotCached\ uncached assets are judged core or possibly useful, led by two
+review-time datasets and newer copies of two cached zoning layers.
+\end{enumerate}
+
+\textbf{Not established.}
+\begin{enumerate}
+\item Whether the web UI's 155 is a datasets count. It matches, and the page could not be
+rendered here to confirm it.
+\item Whether the old-host result changed since the data-acquisition memo's run.
+\item What any uncached asset actually joins to. The keys are read from column names; no
+join rate is measured here, and by this project's rule nothing in
+Table~\ref{tab:possible} is ``found'' until one is.
+\item Whether the two zoning layers differ in substance. They differ in size and date; the
+polygons have not been compared.
+\item The relevance flags, which are one reader's judgement.
+\end{enumerate}
+
+\section{Reproducing this}
+\label{sec:repro}
+
+\begin{verbatim}
+python analyze_datasf_catalogue.py fetch    # catalogue, host test, inventory,
+                                            # one view + count(*) per asset
+python analyze_datasf_catalogue.py fetch --refresh   # re-query the catalogue
+python analyze_datasf_catalogue.py report            # CSV, tables, macros
+\end{verbatim}
+
+\texttt{fetch} writes the raw catalogue answer, with its retrieval timestamp, the host test,
+the per-type facet counts and a relevance-order paging pass, to
+\texttt{\$MFHR\_DATA\_ROOT/}\allowbreak\texttt{external/datasf\_catalogue/catalogue\_planning\_<date>.json};
+one enrichment file per asset to \texttt{enrich/}; and Planning's rows of the dataset
+inventory to \texttt{inventory\_planning.json}. It pauses between requests to stay under two
+a second on each host. \texttt{report} writes \texttt{catalogue\_planning.csv} (one row per
+asset, every field above plus the flag and the columns the key match found) and the two
+generated files this memo inputs. The relevance flags are the one hand-written input, in
+\texttt{relevance.csv} beside this file; every number in the text is a macro.
+
+\end{document}

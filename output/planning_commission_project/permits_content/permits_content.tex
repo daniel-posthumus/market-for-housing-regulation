@@ -1,0 +1,338 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is defined by analyze_permit_content.py in the two
+% generated files below. Nothing is typed by hand.
+\input{tables/permits_content_macros}
+
+\title{What DBI's Permit Record Contains,\\
+\large and whether the projects that reach the Commission are different}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The permit-linkage memo used DBI's Building Permits table as a lookup: find the permit the
+hearing was about and read off its outcome. This memo reads the table itself. It inventories
+every column from the rows rather than the documentation, describes the permit clock, defines
+a development-relevant universe, and asks the question the real-options frame needs answered
+before any linked outcome is interpreted: \emph{do the projects that appear in the minutes
+look different from observably similar projects that do not?}
+
+\medskip\noindent
+\textbf{The table is mostly not about development.} It holds \pcRows\ rows for \pcPermits\
+permits filed from \pcFiledFirst\ to \pcFiledLast; \pcOTCShare\% of the permits are
+over-the-counter alterations. Under stated rules \pcUniverse\ permits --- \pcUniverseShare\%
+--- are development-relevant: new construction, demolition, site permits, and alterations that
+change the unit count or sit in the top \pcCostQ\% of their year's cost. \pcLinked\ of them
+(\pcLinkedShare\%) are Commission-linked, through a permit number printed in the minutes or the
+Planning records' own permit field.
+
+\medskip\noindent
+\textbf{Linked projects are bigger and slower, and the difference in time survives the
+comparison within cells.} Their median estimated cost is \$\pcLinkedCostMed\ against
+\$\pcUnlinkedCostMed; the standardised difference in log cost is \pcSdLogCostRaw\ raw and
+\pcSdLogCostCell\ within cells of permit type, filing period and neighbourhood. From filing to
+issuance they take a median \pcLinkedDays\ days against \pcUnlinkedDays; that difference is
+\pcSdDaysRaw\ raw and still \pcSdDaysCell\ within cells --- the largest gap in the comparison
+after the filing year itself. Linked permits are less often abandoned (\pcLinkedExit\% expired
+or withdrawn against \pcUnlinkedExit\%), and the difference narrows to \pcSdExitCell\ within
+cells.
+
+\medskip\noindent
+\textbf{The developer's clock on the DR track starts well before the Planning record does.}
+From the filing of the permit a discretionary review is about to the first DR hearing is a
+median \pcDrDbiMed\ days; from the opening of the Planning record the data-acquisition memo
+used, \pcDrRecMed. On the cases with both, the permit clock is a median \pcDrDiffMed\ days
+longer.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{What is in the table}
+\label{sec:fields}
+
+The source is DataSF's \emph{Building Permits} (\texttt{i98e-djp9}), fetched in full --- every
+column the resource endpoint returns --- on \pcRetrieved. The permit-linkage memo's cache
+held twenty-two chosen columns, which suited matching permit numbers and does not suit a
+question about what the record contains. The full fetch has \pcCols\ columns: \pcSystemCols\
+Socrata system fields and \pcDataCols\ data columns. The download paged on the system row
+identifier rather than on an offset, so a daily update landing mid-download cannot shift a
+page; \pcDupIds\ identifiers came back twice.
+
+Table~\ref{tab:fields} gives every column's kind, inferred from the values, its populated share
+overall and by the decade the permit was filed, and its number of distinct values.
+Table~\ref{tab:fieldnotes} gives the three most frequent values of each and, for \pcNoted\
+columns, the measurement showing that the rows do not deliver what the column's name promises.
+The ones that matter for this project:
+
+\begin{itemize}
+\item \texttt{record\_id} is DBI's own identifier. None of its values has the shape of a
+Planning case or record number; the name invites a join that does not exist.
+\item \texttt{first\_construction\_document\_date} --- the permit memo's ``construction
+started'' --- is effectively absent before the late 1990s, and Table~\ref{tab:clock} shows the
+consequence: the share of permits with a construction start reads as zero for the 1980s
+because the field is empty, not because nothing was built.
+\item \texttt{estimated\_cost} carries placeholder values: its note gives the share at \$1 or
+less.
+\item The one-valued flags --- \texttt{site\_permit}, \texttt{structural\_notification},
+\texttt{fire\_only\_permit}, \texttt{reroof}, \texttt{primary\_address\_flag} --- record only
+\texttt{Y}. A blank means ``no'' or ``not recorded'', and the table cannot say which.
+\end{itemize}
+
+\input{tables/permits_content_tables}
+
+\section{Types, statuses, and the permit clock}
+
+Table~\ref{tab:types} counts permits by type and filing decade, one row per permit number
+(\S\ref{sec:caveats} gives the collapse rule). Over-the-counter alterations dominate every
+decade from the 1990s; new construction is a small share throughout. Table~\ref{tab:status} is
+the status distribution: the exits --- expired, withdrawn, cancelled, disapproved, revoked,
+suspended --- are marked, because they are the observable trace of a project that did not
+proceed.
+
+Table~\ref{tab:clock} and Figure~\ref{fig:clock} give the clock: filed, issued, first
+construction document, completed, and the exits, by type and filing decade. Two features stand
+out. The time from filing to issuance for new construction has lengthened decade on decade;
+and every recent decade is right-censored --- a permit filed in 2024 has not had time to be
+completed or to expire --- so its completion and exit shares are floors, not rates.
+\pcIssueNeg\% of permits show an issuance before their filing; they are excluded from the
+medians rather than trimmed from the table.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_permit_clock.pdf}
+\caption{Top: median days from filing to issuance, by permit type and filing year, among
+issued permits; over-the-counter permits are issued the day they are filed and are drawn in
+the lower panel only. Bottom: the share of each year's permits that expired, were withdrawn,
+cancelled or disapproved. Faint lines are annual values; bold lines a \pcSmoothYears-year
+centred mean; years with fewer than \pcMinYearN\ permits of a type are not drawn. The last years are
+right-censored in both panels: the permits filed then that are already issued are the fast
+ones, and the rest have not had time to expire.}
+\label{fig:clock}
+\end{figure}
+
+\section{A development-relevant universe}
+
+The question of whether Commission projects differ is not a question about kitchen remodels.
+Table~\ref{tab:universe} builds the comparison universe rule by rule and reports what each keeps:
+new construction of every construction type, demolitions, site permits, and additions or
+alterations that either change the dwelling-unit count or have an estimated cost in the top
+\pcCostQ\% of additions and alterations filed the same year. Over-the-counter alterations are
+excluded outright. The cost rule is a within-year percentile so that it means the same thing in
+1985 and in 2025; a nominal threshold tilts the universe toward recent years, when nominal
+costs are higher. The sensitivity rows show the universe under the top \pcCostQAltHi\% and top
+\pcCostQAltLo\% and under a nominal \$\pcCostNominal\ million, with the Commission-linked
+share of each. The universe holds \pcUniverse\ permits.
+
+\section{Three linkage tiers, kept apart}
+
+Table~\ref{tab:tiers} gives the tiers:
+
+\begin{itemize}
+\item \textbf{T1}, a permit number printed in the minutes, parsed and matched exactly as in the
+permit-linkage memo: \pcTone\ permits.
+\item \textbf{T2}, the Planning Department records' \texttt{building\_permits} field, read
+through the case, its parent project record and every record sharing its stem, as in the
+data-acquisition memo's bridge: \pcTtwo\ permits. \pcTboth\ are reached both ways.
+\item \textbf{T3}, the parcel $+$ type $+$ window rule --- a major permit filed at the item's
+parcel between three years before and one year after the hearing. Its precision of
+\pcTthreePrecision\ and recall of \pcTthreeRecall\ were measured on discretionary reviews,
+where the printed number is ground truth, and are unmeasured anywhere else.
+\end{itemize}
+
+\textbf{``Commission-linked'' means T1 or T2.} T3 returns candidate sets whose error rate outside
+discretionary review is unknown, so T3-only permits --- \pcTthreeOnly\ of them in the universe
+--- are reported as their own group and never pooled with either side of a comparison.
+
+\section{Are Commission projects different?}
+
+Table~\ref{tab:compare} compares the \pcLinked\ Commission-linked permits in the universe with
+the development-relevant permits no tier reaches. Each row gives means and medians and the
+standardised difference three ways: raw; after reweighting the unlinked group to the linked
+group's distribution over cells of permit type $\times$ \pcYearBin-year filing bin $\times$
+analysis neighbourhood (\pcSupportCells\% of linked permits have a counterpart cell); and after
+reweighting over type $\times$ filing bin $\times$ unit-count bin (\pcSupportUnits\%).
+Table~\ref{tab:byunits} repeats the outcome comparison within unit-count bins.
+
+\begin{itemize}
+\item \textbf{Era is the first difference, and cells remove it by construction.} Linked permits
+were filed on average in \pcLinkedFy\ against \pcUnlinkedFy: both linkage routes reach recent
+permits better than old ones. Every raw difference in the table is partly this.
+\item \textbf{Scale.} Linked permits cost more: \pcSdLogCostRaw\ standard deviations in log
+cost raw, \pcSdLogCostCell\ within cells, \pcSdLogCostUnits\ within unit-count cells.
+Proposed units differ by \pcSdUnitsRaw\ raw and \pcSdUnitsCell\ within cells. Some of the gap
+is where and when; the rest is that a project large enough to need a hearing is large.
+\item \textbf{Time.} Filing to issuance is where the linked group stands apart: \pcSdDaysRaw\
+raw, \pcSdDaysCell\ within cells and \pcSdDaysUnits\ within unit-count cells.
+Table~\ref{tab:byunits} shows the gap in every unit-count bin. A project that appears in the
+minutes takes markedly longer from filing to permit than a similar project in the same
+neighbourhood and period that does not --- which is the sign the real-options frame predicts
+for the cost of discretion, and which this table describes without identifying.
+\item \textbf{Abandonment.} Linked permits expire or are withdrawn less often
+(\pcLinkedExit\% against \pcUnlinkedExit\%; \pcSdExitCell\ within cells). A project that has
+been through a hearing has sunk more by the time it holds a permit, and a project that would be
+abandoned may be abandoned before it ever reaches one.
+\item \textbf{Use and place.} Linked permits are more often apartments and less often offices
+or one-family dwellings, and more often in residential-house and neighbourhood-commercial
+districts at filing; within cells these differences mostly vanish, because the cells hold
+place and type fixed.
+\end{itemize}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_dr_clock.pdf}
+\caption{The two clocks on the discretionary-review track, one observation per DR case. The
+display is clipped; the medians use every observation.}
+\label{fig:drclock}
+\end{figure}
+
+\section{Three targeted comparisons}
+
+Table~\ref{tab:targeted} gives three narrower comparisons, each reweighted over the cells it
+names.
+
+\paragraph{The DR track, as a proxy.} The brief asked for noticed permits that drew a DR request
+against noticed permits that did not. \textbf{The Planning records do not identify \S311
+notification records}: no record type is a notice, and the text mentions notice mostly to say
+it was not required. What the records do identify is the DR request, whose description names
+its permit from \pcDrpYears; \pcDrpNamed\ of the \pcDrpN\ requests opened in those years do,
+and \pcDrNamedInDbi\ of the named permits are major permits in DBI. They are compared with the
+other major permits filed \pcDrFiled\ in residential districts, where notice applies. That is a
+comparison of permits that drew a DR request against permits that could have, not against
+permits known to have been noticed, and it is labelled a proxy wherever it appears.
+
+\paragraph{The CU track.} Permits linked to a conditional use, against development-relevant
+permits of the same proposed use in the same zoning district at filing, in the same filing
+period, with no Commission link.
+
+\paragraph{Ministerial against Commission, 2018 on.} New construction approved under SB~35 ---
+flagged on \pcSbThirtyFive\ project records --- or SB~423, which has no field and is found in
+\pcSbFourTwoThree\ records only by its name in the text, reaches \pcMinisterialPermits\ permits
+in DBI, against \pcMinCommissionPermits\ Commission-linked new-construction permits of the same
+period, reweighted over unit-count bins. The ministerial group is too small for its percentages
+to carry weight, and the table says so by giving the counts.
+
+\section{Bunching at the thresholds}
+
+Figure~\ref{fig:bunching} and Table~\ref{tab:bunch} give proposed units from 1 to 40 for every
+development-relevant permit and for the Commission-linked ones, before and after
+\pcPropC\ (Proposition~C raised the inclusionary requirement that year). The lines mark the
+inclusionary threshold at \pcInclusionary\ units, the Transportation Sustainability Fee's
+residential tiers --- which begin, as the fee register prints them, at \pcTsfBands\ units ---
+and \pcOrdinanceUnits\ units, the brief's figure for the July 2026 ordinance, which this memo
+has not checked against the ordinance and which too few 2026 permits exist to test.
+
+Read as counts, the distribution has visible heaping at round numbers in both periods, and the
+counts just below and just above each threshold are in Table~\ref{tab:bunch} so the reader can
+judge. No bunching estimate is attempted here: the counts near any single threshold are in the
+tens, the Commission-linked counts in single digits, and a proposed unit count on a permit is
+not the same object as the count at entitlement.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_bunching.pdf}
+\caption{Proposed dwelling units on development-relevant permits, 1 to 40, as a share of each
+group, on a log scale; before and after \pcPropC. The solid line sits just below the
+inclusionary threshold, the dashed lines below the TSF residential tiers, the dotted line
+below the brief's 2026 threshold.}
+\label{fig:bunching}
+\end{figure}
+
+\section{The developer's clock on the DR track}
+
+The data-acquisition memo measured filing to first hearing from the opening of the Planning
+record. For a discretionary review that record is the DR request --- filed by a neighbour
+against a pending permit --- so the clock starts when the neighbour acts, not when the developer
+does. Table~\ref{tab:drclock} and Figure~\ref{fig:drclock} measure the developer's clock
+instead: from the DBI filing of the permit the review is about, reached by T1 or T2, to the
+first DR hearing. On \pcDrDbiN\ of the \pcDrCases\ DR cases it is a median \pcDrDbiMed\ days
+with a 90th percentile of \pcDrDbiPninety; the Planning-record clock on \pcDrRecN\ cases is a
+median \pcDrRecMed\ with a 90th percentile of \pcDrRecPninety. On the \pcDrBothN\ cases with
+both, the developer's clock is a median \pcDrDiffMed\ days longer. \pcDrDbiNeg\% of the
+developer's clocks are negative --- the linked permit was filed after the first hearing ---
+and they are kept rather than trimmed.
+
+\section{Caveats}
+\label{sec:caveats}
+
+\begin{itemize}
+\item \textbf{Duplicate permit numbers.} \pcRowsRepeating\ rows repeat a permit number already
+in the table, spread over \pcPermitsRepeating\ permits --- one row per lot a permit touches.
+Every count here is on one row per permit, the earliest filed. DBI marks one row per permit
+itself (\texttt{primary\_address\_flag}); the two rules pick the same row for \pcRulesAgree\%
+of permits, and the choice barely matters for what is compared here: type, cost, units,
+dates and status differ between a permit's rows for at most \pcFieldsDiffer\% of the
+permits that repeat.
+\item \textbf{T3 is unvalidated outside discretionary review}, and is never pooled.
+\item \textbf{Coverage rises with era.} Both Commission-linkage routes reach recent permits
+better than old ones, which is why every comparison is repeated within filing-period cells.
+\item \textbf{Linked does not mean the permit the hearing was about.} T2 in particular reads
+every record sharing a case stem, so a large project's linked set can include permits for other
+phases or parcels of the same project. The comparison is of permits connected to a Commission case, not of the single permit
+each hearing decided.
+\item \textbf{The unlinked group is not a control group.} It is the set of development permits
+no route reaches, which includes Commission projects whose link is missing. If the missing
+links resemble the found ones, the differences are understated rather than overstated; either
+way they are descriptions, not effects.
+\end{itemize}
+
+\section{Established, and not established}
+
+\textbf{Established.}
+\begin{enumerate}
+\item The table's \pcCols\ columns, their fill by decade, and \pcNoted\ columns whose rows do not
+deliver what the name suggests, including the absence of construction-start dates before the
+late 1990s.
+\item A development-relevant universe of \pcUniverse\ permits under stated rules, reported
+beside three alternative cost rules.
+\item Commission-linked development permits take longer from filing to issuance than similar
+unlinked permits in the same place, period and type, by \pcSdDaysCell\ standard deviations,
+and the gap holds within every unit-count bin; they are larger, and less often abandoned.
+\item The developer's clock on the DR track runs a median \pcDrDiffMed\ days longer than the
+Planning-record clock.
+\end{enumerate}
+
+\textbf{Not established.}
+\begin{enumerate}
+\item Anything causal. The within-cell differences describe who reaches the Commission; they
+do not say what the hearing did.
+\item Which of a linked set is the permit the hearing decided.
+\item The \S311 comparison as the brief framed it: notices are not in the records.
+\item Whether the ministerial group, at \pcMinisterialPermits\ permits, is large enough to say
+anything.
+\item Any response to the 2026 threshold.
+\end{enumerate}
+
+\section{Reproducing this}
+
+\begin{verbatim}
+python analyze_permit_content.py fetch            # every column, resumable
+python analyze_permit_content.py fetch --refresh  # re-download
+python analyze_permit_content.py report           # figures, tables, macros
+\end{verbatim}
+
+\texttt{fetch} pages DataSF's Building Permits on the system row identifier into one file per
+page under \texttt{\$MFHR\_DATA\_ROOT/external/datasf/dbi\_full\_parts/} and stacks them into
+\texttt{dbi\_permits\_full.csv.gz}, with its retrieval time and column list beside it.
+\texttt{report} imports the printed-permit parser, the parcel rule and its window from
+\texttt{analyze\_permits.py}, and the case normalisers, the planning records and the
+\texttt{building\_permits} bridge from \texttt{acquire\_external\_data.py}; it joins the zoning
+district in force at filing from the parcel-year panel, reads the fee register for the TSF
+tiers, and writes the three figures, \texttt{tables/permits\_content\_tables.tex} and
+\texttt{tables/permits\_content\_macros.tex}. The linkage tiers are cached beside the DBI file
+and rebuilt whenever it is newer. The only numerals typed into the \texttt{.tex} are section
+references, identifiers, the twenty-two columns of the earlier cache, and the legal facts named
+as such (Proposition~C, SB~35, SB~423, \S311, the 1985 and 2025 of an example).
+
+\end{document}

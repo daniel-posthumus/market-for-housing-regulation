@@ -63,6 +63,21 @@ matching R.framework or rebuild `rpy2` against your R.
 `pdfplumber` (pip) covers the pipeline. The reports were produced with the
 system `poppler` `pdftotext` for spot checks: `brew install poppler`.
 
+### OCR for `collect_conditions.py` — PyMuPDF's bundled Tesseract
+`collect_conditions.py` reads Commission motions and packets with PyMuPDF (`pymupdf`,
+1.28.2 here) and OCRs only the image-only pages inside a motion, through
+`Page.get_textpage_ocr`. That uses the Tesseract library MuPDF is built with, so **no system
+`tesseract` binary is needed** (Homebrew was broken on this machine, which is why), but it
+does need the language data: `eng.traineddata` and `osd.traineddata` from
+`github.com/tesseract-ocr/tessdata_best`, kept in
+`$MFHR_DATA_ROOT/external/cpc_packets/tessdata/`. The script sets `TESSDATA_PREFIX` to that
+directory unless it is already set. On a new machine, download the two files there first:
+```bash
+cd "$MFHR_DATA_ROOT/external/cpc_packets/tessdata"
+curl -LO https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata
+curl -LO https://github.com/tesseract-ocr/tessdata_best/raw/main/osd.traineddata
+```
+
 ## Pre-existing issues flagged (NOT changed — see processing_review.md)
 
 1. **Exposed secret** — `code/cleaning_code/08_acs_pull.py` hard-codes a Census

@@ -391,6 +391,20 @@ def expand_yy(cn: str, hearing_year) -> str:
     return f"{max(ok)}.{m.group(2)}{m.group(3)}" if ok else cn
 
 
+def case_universe(it: pd.DataFrame) -> list[str]:
+    """THE case universe, defined once and imported by every memo that counts cases.
+
+    A case is a distinct `cn`: the printed case number upper-cased and stripped of
+    whitespace (`norm_case`), with a two-digit year expanded against the hearing year
+    (`expand_yy`). Counting the printed strings instead gives 8,987, because 29 cases
+    were printed both ways --- `99.530C` at one hearing and `1999.530C` at another ---
+    and each is one case. The corpus and
+    conditions memos were written against the printed count and this memo against the
+    expanded one; this function is the reconciliation, and nothing should count cases
+    any other way."""
+    return sorted(set(it.loc[it.cn.ne(""), "cn"]))
+
+
 def digits(s) -> str:
     return re.sub(r"[^0-9]", "", str(s or ""))
 
@@ -1414,6 +1428,26 @@ def permit_bridge(it: pd.DataFrame, rec: pd.DataFrame, stems: set[str]) -> dict:
     return {"frame": it}
 
 
+COND_SECTIONS = EXT / "cpc_packets" / "motion_sections.csv"
+
+
+def conditions_reach(it: pd.DataFrame) -> pd.Series:
+    """Which items some condition text now exists for, read from the conditions census
+    (`collect_conditions.py parse`). An item has condition text when a parsed motion section
+    with at least one condition is keyed to its case --- draft or adopted --- or is the
+    adopted motion whose number the item records. This is what the bridge's reach has to be
+    crossed with before anyone says the two routes cover the same projects: the bridge
+    reaches conditional uses of every year, the condition text only the years it survives."""
+    if not COND_SECTIONS.exists():
+        return pd.Series(False, index=it.index)
+    s = pd.read_csv(COND_SECTIONS, dtype=str).fillna("")
+    s = s[pd.to_numeric(s.n_conditions, errors="coerce").fillna(0) > 0]
+    cases = set(s.case_key) - {""}
+    motions = set(s.loc[s.doc_type.eq("adopted_motion"), "motion_no"]) - {""}
+    ino = it.action_instrument_no.astype(str).str.strip().str.lstrip("0")
+    return it.cn.isin(cases) | (ino.ne("") & ino.isin(motions))
+
+
 def units_from_records(it: pd.DataFrame) -> pd.DataFrame:
     """Unit counts reached from the Projects table, by case number and by stem."""
     pr = read_cached("records_project")
@@ -1623,18 +1657,22 @@ def write_tables(ctx: dict):
     a(r"\begin{table}[htbp]\centering")
     a(r"\caption{Every identifier resolved against the live catalogue on %s. `Key unique' "
       r"is tested on the cached rows, not assumed: DBI's \texttt{permit\_number} was not "
-      r"unique and 145{,}795 rows repeated one. A dash means the column is not a key we "
-      r"join on.}\label{tab:inventory}" % T(pr["retrieved"]))
+      r"unique and 145{,}795 rows repeated one. A key that repeats (`no: $k$ repeat') and a "
+      r"key that is blank (`Null key') are counted apart; this table's first version "
+      r"counted a blank as a repeat. The assessor roll is a parcel-year panel and repeats "
+      r"its parcel number by design.}\label{tab:inventory}" % T(pr["retrieved"]))
     a(r"\resizebox{\textwidth}{!}{%")
-    a(r"\begin{tabular}{llrrll}\toprule")
-    a(r"Dataset & Identifier & Rows & Distinct key & Key unique & Date range\\\midrule")
+    a(r"\begin{tabular}{llrrrll}\toprule")
+    a(r"Dataset & Identifier & Rows & Distinct key & Null key & Key unique & Date range\\"
+      r"\midrule")
     last = None
     for name, row in ctx["inventory"]:
         if row["category"] != last:
-            a(rf"\multicolumn{{6}}{{l}}{{\emph{{{T(row['category'])}}}}}\\")
+            a(rf"\multicolumn{{7}}{{l}}{{\emph{{{T(row['category'])}}}}}\\")
             last = row["category"]
         a(rf"\quad {T(row['label'])} & \texttt{{{T(row['id'])}}} & {N(row['rows'])} & "
-          rf"{N(row['distinct'])} & {row['unique']} & {row['range']}\\")
+          rf"{N(row['distinct'])} & {N(row['nulls']) if row['nulls'] else '---'} & "
+          rf"{row['unique']} & {row['range']}\\")
     a(r"\bottomrule\end{tabular}}\end{table}")
     a("")
 
@@ -2150,9 +2188,31 @@ def write_readme(ctx: dict):
                      f"{len(gj)} layers | {ctx['probe'].get('retrieved','')} | "
                      f"`{POLY_DIR.relative_to(EXT)}/` |")
     L += ["",
-          "Two directories here predate this script and are written by others:",
-          "`cpc_packets/` (`analyze_conditions.py`) and `datasf/dbi_permits.csv.gz`",
-          "(`analyze_permits.py`). They are not re-fetched by `acquire_external_data.py`.",
+          "## Written by other scripts",
+          "",
+          "These are not re-fetched by `acquire_external_data.py`; each script's header says",
+          "how to refresh its own.",
+          "",
+          "- `datasf/dbi_permits.csv.gz` — `analyze_permits.py`: the Building Permits",
+          "  columns the permit-linkage match needs.",
+          "- `datasf/dbi_permits_full.csv.gz` (+ `_meta.json`, `dbi_full_parts/`) —",
+          "  `analyze_permit_content.py fetch`: every column of Building Permits",
+          "  (`i98e-djp9`), paged on `:id`; `_permit_content_linkage.pkl` beside it is a",
+          "  derived cache, rebuilt whenever the table is newer.",
+          "- `datasf_catalogue/` — `analyze_datasf_catalogue.py fetch`: the raw Discovery",
+          "  API result for `q=planning` (`catalogue_planning_<date>.json`), one metadata",
+          "  file per asset (`enrich/`), Planning's own data inventory, and the flat",
+          "  `catalogue_planning.csv`.",
+          "- `cpc_packets/` — the Commission's own documents. `analyze_conditions.py`",
+          "  wrote the first sample (`availability.csv`, `conditions/`);",
+          "  `collect_conditions.py` writes the census: `manifests/` (discovery),",
+          "  `availability_full.csv` (the probe), `docs/` (the motion sections kept and their",
+          "  extracted lines), `pull_log.csv`, `conditions_long.{parquet,csv}` and",
+          "  `motion_sections.csv` (the parse), `draft_vs_adopted*.csv`, `validation/`",
+          "  (gold set, labels, frozen rounds, scores), `census_summary.json`,",
+          "  `task1_summary.md`, `nsr_feasibility.md`, and `tessdata/` (the OCR language",
+          "  data). The census is the source of condition text; the sample is kept for the",
+          "  conditions memo it was written for.",
           "",
           "## Staleness",
           "",
@@ -2641,6 +2701,7 @@ def report():
     stems = dbi_stems()
     br = permit_bridge(it, rec, stems)
     it = br["frame"]
+    it["cond_text"] = conditions_reach(it)
     it = units_from_records(it)
     cl_sf = corelogic_sf(it, set(par.blklot.dropna()))
     if cl_sf:
@@ -2685,9 +2746,17 @@ def report():
         if not p.exists():
             continue
         key = _resolve_key(p, src["key"])
+        # A blank key and a repeated key are different failures and are counted apart. The
+        # first version of this table reported rows minus distinct values as "repeats",
+        # which called the Development Pipeline's 124 blank case numbers 124 repeats.
+        nnull = duprows = keysrep = 0
         try:
             col = pd.read_csv(p, dtype=str, usecols=[key], low_memory=False)[key]
             nrows, ndist = len(col), col.nunique(dropna=True)
+            nnull = int(col.isna().sum())
+            vals = col.dropna()
+            duprows = int(vals.duplicated().sum())
+            keysrep = int(vals[vals.duplicated(keep=False)].nunique())
         except Exception:
             nrows = sum(1 for _ in gzip.open(p, "rt")) - 1
             ndist = 0
@@ -2695,8 +2764,10 @@ def report():
         meta = pr["datasets"].get(name, {})
         inventory.append((name, {
             "label": src["label"], "id": src["id"], "category": src["category"],
-            "rows": nrows, "distinct": ndist,
-            "unique": "yes" if ndist == nrows else f"no ({N(nrows-ndist)} repeats)",
+            "rows": nrows, "distinct": ndist, "nulls": nnull, "dup_rows": duprows,
+            "keys_repeated": keysrep,
+            "unique": ("yes" if not duprows else
+                       f"no: {N(keysrep)} repeat ({N(duprows)} rows)"),
             "range": rng}))
         readme_rows.append({"label": src["label"], "id": src["id"], "host": SOCRATA_HOST,
                             "rows": f"{nrows:,}", "retrieved": pr.get("retrieved", ""),
@@ -3383,9 +3454,24 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
         "acqBridgeDR": f"{100*dr.bridge_in_dbi.mean():.1f}",
         "acqPrintedCU": f"{100*cu.printed_permit.mean():.1f}",
         "acqPrintedAll": f"{100*br_all[3]/br_all[0]:.1f}",
-        "acqNonUniqueSources": str(sum(1 for _, r in ctx["inventory"]
-                                       if r["unique"] != "yes")),
+        "acqNonUniqueSources": str(sum(1 for _, r in ctx["inventory"] if r["dup_rows"])),
+        "acqNullKeySources": str(sum(1 for _, r in ctx["inventory"] if r["nulls"])),
+        "acqPipelineNullKeys": N(dict(ctx["inventory"])["pipeline"]["nulls"]
+                                 if "pipeline" in dict(ctx["inventory"]) else 0),
+        "acqPipelineDupRows": N(dict(ctx["inventory"])["pipeline"]["dup_rows"]
+                                if "pipeline" in dict(ctx["inventory"]) else 0),
         "acqSourcesCached": str(len(ctx["inventory"])),
+        # the case universe, defined once in `case_universe` and stated here
+        "acqCasesPrinted": N(it.loc[it.cn_raw.ne(""), "cn_raw"].nunique()),
+        "acqCaseMerges": N(it.loc[it.cn_raw.ne(""), "cn_raw"].nunique() - cj["n"]),
+        "acqCaseExp": f"{100*cj['exp']/cj['n']:.1f}",
+        # the bridge crossed with the conditions census: the overlap, measured
+        "acqCondTextCU": N(int(cu.cond_text.sum())),
+        "acqCondTextCUPct": f"{100*cu.cond_text.mean():.1f}",
+        "acqOverlapCU": N(int((cu.cond_text & cu.bridge_in_dbi).sum())),
+        "acqOverlapCUPct": f"{100*(cu.cond_text & cu.bridge_in_dbi).mean():.1f}",
+        "acqOverlapOfBridge": (f"{100*(cu.cond_text & cu.bridge_in_dbi).sum()/cu.bridge_in_dbi.sum():.1f}"
+                               if cu.bridge_in_dbi.sum() else "---"),
         "acqPrintedDR": f"{100*dr.printed_permit.mean():.1f}",
         "acqCuUnits": f"{100*cu_reach['prj_units']:.1f}",
         "acqCuPipeline": f"{100*cu_reach['pipeline']:.1f}",
@@ -3406,6 +3492,21 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
     }
     (TAB / "acquisition_macros.tex").write_text(macros(m))
     print("→", TAB / "acquisition_macros.tex")
+    # The numbers other memos quote from this one, written where they read them, the way
+    # `analyze_permits.py` writes permit_summary.json: the conditions memo quoted this
+    # memo's bridge once by hand and it went stale within a day.
+    n_printed = int(it.loc[it.cn_raw.ne(""), "cn_raw"].nunique())
+    assert cj["n"] == len(case_universe(it)), "the case join must count the universe"
+    summary = {"run": RUN, "retrieved": ctx["probe"].get("retrieved", ""),
+               "cases": int(cj["n"]), "cases_printed": n_printed,
+               "case_merges": n_printed - int(cj["n"]),
+               "cu_items": int(len(cu)), "bridge_cu_items": int(cu.bridge_in_dbi.sum()),
+               "bridge_cu_pct": float(100 * cu.bridge_in_dbi.mean()),
+               "cond_text_cu_items": int(cu.cond_text.sum()),
+               "overlap_cu_items": int((cu.cond_text & cu.bridge_in_dbi).sum())}
+    (DATA_ROOT / "extraction" / RUN / "acquisition_summary.json").write_text(
+        json.dumps(summary, indent=2) + "\n")
+    print("→", DATA_ROOT / "extraction" / RUN / "acquisition_summary.json")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

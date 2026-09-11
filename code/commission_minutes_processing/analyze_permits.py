@@ -272,10 +272,16 @@ def fig_outcomes(m: pd.DataFrame):
     d = m[m.stem.notna()].copy()
     d["lag"] = (d.issued_date - d.meeting_date).dt.days
     fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4))
-    lag = d.loc[d.lag.between(0, 2000), "lag"]
+    # The median is the table's: every permit issued after the hearing, untruncated. The
+    # histogram is truncated at 2,000 days for display only. An earlier version took the
+    # median over the displayed window instead --- which admits same-day issuance and drops
+    # the tail --- and printed 244 days against the table's 245.
+    lag_all = d.loc[d.lag > 0, "lag"]
+    lag = lag_all[lag_all <= 2000]
+    med = lag_all.median()
     axes[0].hist(lag, bins=40, color="#5b7fa6")
-    axes[0].axvline(lag.median(), color="#a33", lw=1.5)
-    axes[0].annotate(f"median {lag.median():.0f} days", xy=(lag.median(), axes[0].get_ylim()[1]),
+    axes[0].axvline(med, color="#a33", lw=1.5)
+    axes[0].annotate(f"median {med:.0f} days", xy=(med, axes[0].get_ylim()[1]),
                      xytext=(6, -10), textcoords="offset points", color="#a33", fontsize=8)
     axes[0].set_xlabel("days, hearing → permit issued")
     axes[0].set_ylabel("matched permits")

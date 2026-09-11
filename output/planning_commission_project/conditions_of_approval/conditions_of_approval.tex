@@ -7,6 +7,10 @@
 \hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
 \sloppy
 
+% The figures quoted by the dated corrections of 2026-09-11 come from the memos that now own
+% them, through tables/condition_macros.tex (written by analyze_conditions.py report).
+\input{tables/condition_macros}
+
 \title{Recovering What Was Conditioned:\\
 \large The content of the Planning Commission's conditions of approval}
 \author{Dan Post}
@@ -44,7 +48,9 @@ and \emph{names} each condition. It is a conditional-use instrument: across ever
 packets the probe found, \textbf{89 of 101 conditional-use cases} carry a conditions section
 with a median of fifteen numbered, named conditions, against \textbf{1 of 41 discretionary
 reviews}, because a DR produces a Discretionary Review Action rather than a conditioned
-authorisation.
+authorisation. \emph{(Correction, 2026-09-11: the ``0\% before 2010'' was a finding about two
+URL patterns; a census of every case finds condition text for conditioned items heard from
+\condEarliestItemYear, thin before 2010 but not absent. See the corrections in \S\ref{sec:complement} and \S\ref{sec:left}.)}
 
 \medskip\noindent
 \textbf{The conditions are templated, and a small scheme spans them.} The 225 packets yield
@@ -189,6 +195,19 @@ pattern, which is a \emph{time series}: the conditioning share rose from 13.4\% 
 that span. Any claim about how the \emph{content} of conditions changed will be a claim about
 2011 onwards.
 
+\paragraph{Correction, 2026-09-11: Table~\ref{tab:packets} is superseded.} The table and the
+list above were a sample of \emph{two URL patterns}, and ``1998--2009: 0 of 240 probed.
+Nothing. The packet archive does not reach back that far'' was a statement about those
+patterns, not about the archive. The conditions-content memo replaces the sample with a census
+of every case and motion number against every address the department has published a motion
+at: \condProbed\ URLs asked for, \condProbeHits\ documents found. Adopted motions --- not
+only draft packets --- survive on the old site's FTP tree from \condEarliestFtp, in its document
+modules from \condEarliestModules, and in Wayback captures of the pre-2003 city site from
+\condEarliestWayback; the earliest conditioned item that now has condition text was heard in
+\condEarliestItemYear, and the oldest motion read dates from \condEarliestAny. That memo's census table is what this table becomes when every case is
+asked about.
+
+
 \subsection{What the packet yields, by kind of case}
 \label{sec:complement}
 
@@ -242,6 +261,17 @@ use through it reaches a permit present in DBI on \textbf{46.0\% of the 5{,}074
 conditional-use items} --- against the 0.3\% that print a permit number in the minutes. The
 two routes do overlap, on nearly half of the conditional-use docket, and construction outcomes
 and condition content \emph{can} be had on the same project.
+
+\paragraph{Correction, 2026-09-11.} The correction above cites the data-acquisition memo as
+``(\S3.3)'' and gives the bridge as reaching ``46.0\% of the 5{,}074 conditional-use items''.
+Both were right of that memo's draft and are wrong of its final version. The section is now
+\S5.4, and the share is \textbf{\condBridgeCUPct\%} (\condBridgeCUItems\ of \condCUItems):
+the figure moved when that memo's revision of 2026-09-08 (commit \texttt{11059d9}) began
+expanding two-digit years, which lets pre-2002 conditional uses reach their records. And
+``nearly half of the conditional-use docket'' is the bridge's reach, not the overlap: the
+bridge reaches conditional uses of every year, condition text survives only for some. Measured
+directly against the conditions census, \textbf{\condOverlapCU\ conditional-use items have both}
+a permit through the bridge and condition text; \condCondTextCU\ have condition text at all.
 
 A second constraint: the packet is published \emph{before} the hearing, so its motion is a
 \textbf{draft} and its conditions are what staff proposed. What the Commission actually adopted
@@ -340,6 +370,7 @@ they support is the one the question asks, that a small scheme spans most of the
 not that they constitute a validated classifier.
 
 \section{What this establishes, and what is left}
+\label{sec:left}
 
 \textbf{Established.}
 \begin{enumerate}
@@ -350,7 +381,8 @@ content.
 from 1998--2001, all dais amendments.
 \item Neither DataSF's planning records nor DBI's permit records carry conditions.
 \item The Commission packet does, addressably, by case number on two hosts --- for 70.1\% of
-sampled cases from 2011 on and none before 2010.
+sampled cases from 2011 on and none before 2010. \emph{(Correction, 2026-09-11: ``none before
+2010'' was about the sampled URL patterns, not the archive; see \S\ref{sec:complement}.)}
 \item The packet route is a conditional-use instrument: 89 of 101 conditional-use packets carry
 a conditions section against 1 of 41 discretionary reviews. This is the exact complement of the
 permit route \emph{as the minutes print it} --- but not of the permit route as such: see the
@@ -364,7 +396,12 @@ finished; what remains a sample is the \emph{probe}, which drew 20 cases per hea
 To go from here to an indicator matrix:
 
 \begin{enumerate}
-\item \textbf{Probe every case, not twenty a year.} 8{,}987 cases, of which the families that
+\item \textbf{Probe every case, not twenty a year.} 8{,}987 cases\footnote{Correction,
+2026-09-11: this counted the case numbers as printed. \condCaseMerges\ cases were printed both
+ways (\texttt{99.530C} and \texttt{1999.530C}), and the case universe --- defined once, in
+\texttt{case\_universe}, and used by every memo --- is \condUniverse\ cases, not
+\condCasesPrinted. The census the item proposes has since been run, in the conditions-content
+memo.}, of which the families that
 end in a motion --- conditional use plus the downtown, office-allocation and large-project
 authorisations that fall into `Other' in Table~\ref{tab:kinds} --- heard from 2011 on are the
 addressable set. The probe is one or two HEAD requests per case and costs under an hour. The
@@ -388,6 +425,17 @@ pipeline is scored, on a frozen split, with in-sample and out-of-sample reported
 The measure will be a 2011--2026 measure, and the pre-2010 half of the corpus will have to be
 carried on the flag alone. Saying so now is cheaper than discovering it in a regression.
 \end{enumerate}
+
+\paragraph{Correction, 2026-09-11.} Item~5 above --- ``No amount of work recovers condition
+content before 2010'' --- is withdrawn. It generalised from two URL patterns to the archive.
+The census found adopted motions from before 2010 on the old site and in the Wayback Machine,
+and adopted motions attached to later packets; condition text now exists for
+\condReachEarlyHtml\% of conditioned items heard in 1998--2002 and \condReachLateHtml\% in
+2003--2009, against \condReachEarlyPdf\% in 2011--2014. The corrected statement is that pre-2010
+condition text is \emph{thin}, not absent, and that the residual is documents not found at any
+address --- \condResPreTenNone\ of the \condResPreTen\ pre-2010 conditioned items without text
+--- rather than documents found and unread. The measure is still weighted towards 2011 onward,
+and the earlier half of the corpus will still be carried mostly on the flag.
 
 \section{Reproducing this}
 
