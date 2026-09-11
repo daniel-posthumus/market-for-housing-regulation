@@ -1,5 +1,92 @@
 # Progress Log
 
+## 2026-09-10 — Code review of the minutes pipeline: 20 defects fixed, memos reconciled
+
+**Goal**: Review every script in `code/commission_minutes_processing` (52 files, ~19k lines)
+for logic errors, fix everything whose right answer was unambiguous, then bring all eight
+memos back into agreement with the code.
+
+**What was done**:
+- **Reviewed the whole directory** and verified each finding against `labels.db`,
+  `date_gold.db`, `meetings_all.csv`, the `corpus_v2_g3` extraction and the published tables,
+  rather than reporting from reading alone.
+- **Fixed seven defects that produced wrong numbers** (conditions rate, DataSF parcel key,
+  `_action_enum`, speaker stance/counts, `action_instrument`, `lot_list`, `name_reducer`) and
+  one script that crashed on import (`data_collect.py`).
+- **Fixed five measurement-hygiene defects**: machine pre-marks scored as date gold, few-shot
+  items retrieved as their own example, the regex arm scored without `normalize_record`,
+  accuracy denominators conflated with coverage, pre-v2 runs compared silently against v2 gold.
+- **Closed two reproducibility gaps**: `extract_all_meetings.py --score` (no field-level
+  scorer for the meeting table existed anywhere) and `bakeoff_report.py --write-report`
+  (nothing in the repo wrote `g3_report.json`, which the method-comparison memo is built from).
+- **Lifted `pad_key`/`blklot`/`parcel_keys` into `normalize.py`** so the padding rule has one
+  implementation; added 18 self-tests (`normalize.py` now 50/50).
+- **Regenerated and recompiled all eight memos** — 0 undefined references, 0 overfull
+  alignment boxes — and reconciled their prose with the regenerated tables.
+
+**Key decisions / findings**:
+- **The parcel-key bug `acquire_external_data.py` fixed for itself was still live in four
+  other scripts.** `'17A'.zfill(3)` is a no-op, so 1,156 of 13,620 parcel-bearing items (8.5%)
+  built a key that joined to nothing. Fixing it adds 470 items to the DBI parcel join and
+  grows the parcel-rule validation set from 2,909 to 3,274.
+- **Three numbers were measured against something they helped produce.** The worst was
+  few-shot retrieval not excluding the item from its own pool: `raw_haiku-4.5-g3` scores
+  97.7%/76.8% exact on train against 96.6%/64.0% on test, and the gap is the leak. The test
+  half was always clean, so no published figure was wrong — but any "all items" figure was.
+- **The regex baseline was understated by its own scoring.** Scored through the storage layer
+  the model arm already went through, and with the enum and instrument gaps closed, it is
+  **75.2%** on the test half, not 70.7%.
+- **`plot_extraction_accuracy.py` was entirely hand-typed constants**, and all three modules
+  had changed since `FROZEN_ROUND4`, so the figure described a code state nobody could
+  reproduce. The current-state panel is now computed; the four-round series stays a documented
+  historical constant, because those code states genuinely no longer exist.
+- **A mojibake token was splitting six commissioners into two people each.** `name_reducer`
+  treated a recurring `"????????????????? Theoharis"` as a second claimant of the surname,
+  which blocked reduction corpus-wide. 146 distinct roll-call names → 78.
+- **93.9% vs 96.0% are not the same measurement** and the meeting memo now says so: 96.0% is
+  round 4's 14 held-out meetings; 93.9% is all 134 confirmed meetings, current code, stricter
+  comparison, **unadjudicated**. Spot-checking its 60 disagreements turns up hand labels that
+  are themselves wrong.
+- **Two judgment calls left open rather than guessed**: which of the two accuracy figures is
+  the headline, and how to split four run-on roll-call names (`Melgar Moore`, `Moore Sugaya`)
+  that need a roster the project does not hold.
+
+**Next steps**:
+- **Propagate the multi-block fix, not just the padding one.** 309 items name several blocks
+  in one field (`"3720, 3721, 3736, 3737"`) and `analyze_corpus`/`analyze_permits`/
+  `analyze_delay` still concatenate that into a nonsense key. `acquire_external_data` solves
+  it with a block×lot cross-product filtered against the parcel layer — which the analysis
+  scripts do not load, so this needs a decision, not a copy. This is the prior entry's open
+  item (the corpus memo's 8,295 parcels vs the acquisition memo's 8,980).
+- **Adjudicate the meeting-level gold** before quoting 93.9%; at least one 1999 `staff` label
+  attributes the roll to a Commission Secretary who took office in ~2013.
+- **Re-point the adjudication queue.** Its 143 unjudged rows are built against the superseded
+  zero-shot v1 run; `--pred bakeoff/raw_haiku-4.5-g3.json` builds it against the live
+  configuration, but that discards the current queue's framing and is a deliberate choice.
+- Consider re-running `extract_corpus` now that `few_shot_block` excludes self — 155 of the
+  16,199 corpus records were self-answered. Cheap to leave; ~$70 to redo.
+
+**Files touched**:
+- `code/commission_minutes_processing/normalize.py` — modified (`pad_key`/`blklot`/
+  `parcel_keys` added, `lot_list` separator fix, 50 self-tests)
+- `autoextract.py` — modified (6 action values, 2 prelim-rec values, speaker stance,
+  `action_instrument`)
+- `meeting_headers.py` — modified (name reducer guards, run-on label split, prefill docstring)
+- `extract_all_meetings.py` — modified (`--score` + `meeting_field_score.json`)
+- `bakeoff_report.py` / `bakeoff_extract.py` / `bakeoff_memo.py` — modified (regex arm
+  normalised, coverage denominators, `--write-report`, two generated verdict tables)
+- `analyze_corpus.py` / `analyze_permits.py` / `analyze_delay.py` / `link_permits.py` /
+  `acquire_external_data.py` — modified (shared parcel-key helper; conditions rate; captions)
+- `date_boundary_app/app.py` — modified (hand-marks-only scoring, missing DDL migrations)
+- `data_collect.py` — rewritten (v2-correct, no module-level execution)
+- `label_qa.py`, `rebuild_review_db.py`, `flag_representative_sample.py`, `review_queue.py`,
+  `extract_corpus.py`, `extraction_common.py`, `run_extraction.py`, `parse_modern_minutes.py`,
+  `build_adjudication.py`, `labeling_app/app.py`, `plot_*.py` — modified (see commit ea938b2)
+- `output/planning_commission_project/` — all eight memos regenerated and recompiled;
+  `data_acquisition_memo.pdf` rebuilt (it was deleted in the tree before this session)
+- `STRUCTURE.md` — modified (18 missing scripts added, run order split item/meeting level)
+- `.gitignore` — modified (`meeting_field_score.json`, regenerable like `meetings_all.csv`)
+
 ## 2026-09-08 (later) — External data acquisition: a denominator, a clock, a price, and two corrections to our own keys
 
 **Goal**: Execute `.claude/instructions/data_acquisition_brief.md` — find, verify and cache the
