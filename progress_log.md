@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-09-12 — Next-phase brief: exactions, clocks, regulatory timeline, envelope, records request, chronicle
+
+**Goal**: Carry out `.claude/instructions/mfhr_next_phase_brief.md` end to end — Part 0 housekeeping on the existing memos, the project chronicle (Part A), and the work queue (Parts 1–7: exaction panel, duration moments, state-law audit, outcome chain, parcel envelope, numbers inside the conditions, records request). `run_log.md` records each task as it happened.
+
+**What was done**:
+- **Part 0**: finished the conditions pull; `condition_parser.py` round 3 (title-number section rule, letter/footer rules), frozen and re-scored (98.2/98.5 in sample, 29/30 out of sample, 2016–2025); corrected the misdated "1994" document and every span on it; permits memo gained the landmark (immortal-time) comparison, dropped $≤1 cost placeholders and the first-construction date as an outcome, split the DR negative clocks; data-acquisition memo's DR-clock note.
+- **Part 1** — `build_exaction_panel.py` + `exactions.tex` (19 pp): 394 claims (112 legal, 282 register rates), all verified by quotation; inclusionary version chain 2002–2026 incl. Prop C, 158-17, 201-23; fee registers 2011–2026 (no 2017) recovered via Wayback CDX; a 3,574-project new-construction panel priced in dollars; cross-check against the conditions' printed percentages; bunching and notch counts.
+- **Part 2 / Part 4** — `analyze_permit_content.py clocks` + `clocks.tex` (KM, hazards, CV by track × value × size × period × neighbourhood); `outcomes` stage adds the outcome chain (cumulative incidence with exit competing).
+- **Part 3** — `audit_state_laws.py` + `regulatory_timeline.tex` (20 pp) + `law_inventory.csv`: 45 laws, 156 claims verified, docket-composition and first-stage series.
+- **Part 5** — `acquire_external_data.py envelope`: parcel-year feasible envelope (5.8M rows) from quoted zoning-table rules, with sensitivity; new data-acquisition section. **Part 6** — `conditions_numeric.parquet` + conditions-memo section. **Part 7** — `collect_conditions.py records` → `records_request.md` + two CSVs (not sent).
+- **Part A** — `build_chronicle.py` + `project_chronicle.tex` (15 pp): timeline with revisions, 21 supersessions read from the logs, inventory, model, identification map, open register.
+- Refreshed `conditions_of_approval` correction macros; updated STRUCTURE.md, READMEs, standing memo, `external/README.md`; all touched memos compile 0 undefined / 0 overfull.
+
+**Key decisions / findings**:
+- New buildings of 10+ units owe a median ~$61k/unit (~20% of DBI valuation), mostly the inclusionary fee; counts drop just above every inclusionary threshold (9 vs 10 units: 18 vs 5 since 2016).
+- The 2006 inclusionary percentages are keyed to the first application (62-13's Table 415.3), confirmed by the conditions cross-check; the 2016 grandfathering deadline is contradicted by several conditions — left open.
+- The Wayback Machine silently served the 2020 register for the 2019 capture; `source_text` now refuses a capture other than the one cited.
+- CA effective dates are not computed from the Constitution's 90-day rule (it contradicts leginfo history notes); 5 from notes, 18 inferred and marked.
+- Brief premises checked: the July 2026 25-unit ordinance was not found (Board list via sf.gov through Ord. 133-26); AB 1763 is a density-bonus bill; records-request counts are 1,032 / 554 and 127,920 addresses, not ~1,040 / 590 / 50,366.
+- Housing Production ordinances (2024) shifted the docket's composition — docket series need an era split; SB 330's five-hearing cap does not show in hearing counts.
+
+**Next steps**:
+- Specify the filing-hazard estimator on the risk set (τ from the exaction panel, envelope as capacity) and decide how σ enters — the chronicle's three blocking items.
+- Exaction gaps: area-specific (UMU/SUD) rates, TSF grandfathering, existing-use credits, 2017 and pre-2011 registers, how the 2016 deadline was applied.
+- Join the Priority Equity Geographies polygon; validate T3 linkage outside DR.
+- Dan to edit and send the records request and the Assessor-Recorder questions.
+
+**Files touched**:
+- `code/commission_minutes_processing/build_exaction_panel.py` — created (sources, claims, probe, panel, report)
+- `code/commission_minutes_processing/audit_state_laws.py` — created
+- `code/commission_minutes_processing/build_chronicle.py` — created
+- `code/commission_minutes_processing/condition_parser.py` — modified (round 3)
+- `code/commission_minutes_processing/collect_conditions.py` — modified (round-3 report, numbers, records stages)
+- `code/commission_minutes_processing/analyze_permit_content.py` — modified (landmark, clocks, outcomes)
+- `code/commission_minutes_processing/acquire_external_data.py` — modified (envelope stage, README generator)
+- `output/planning_commission_project/{exactions,clocks,regulatory_timeline,project_chronicle,records_request}/` — created
+- `output/planning_commission_project/{conditions_content,conditions_of_approval,permits_content,data_acquisition,memo}/` — modified
+- `STRUCTURE.md`, `output/planning_commission_project/README.md`, `run_log.md` — modified / created
+
 ## 2026-09-11 — Conditions census, three new memos, and the reconcile-list corrections
 
 **Goal**: Carry out `.claude/instructions/claude_code_brief_conditions_permits_catalogue.md`:

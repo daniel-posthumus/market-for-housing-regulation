@@ -75,7 +75,7 @@ Field & Most frequent values & What the rows deliver\\\midrule\endfirsthead
 \texttt{permit\_\allowbreak{}number} & 201602179765; 201602179758; 201602179775 & \\
 \texttt{permit\_\allowbreak{}type} & 8; 3; 4 & \\
 \texttt{permit\_\allowbreak{}type\_\allowbreak{}definition} & otc alterations permit; additions alterations or rep; sign - erect & \\
-\texttt{permit\_\allowbreak{}creation\_\allowbreak{}date} & 2017-09-15T00:00:00.000; 1991-08-30T00:00:00.000; 2015-11-03T00:00:00.000 & the same day as filed\_date on 99.7\% of rows\\
+\texttt{permit\_\allowbreak{}creation\_\allowbreak{}date} & 2017-09-15; 1991-08-30; 2015-11-03 & the same day as filed\_date on 99.7\% of rows\\
 \texttt{block} & 3708; 3709; 0289 & \\
 \texttt{lot} & 001; 007; 006 & \\
 \texttt{street\_\allowbreak{}number} & 1; 101; 50 & \\
@@ -86,12 +86,12 @@ Field & Most frequent values & What the rows deliver\\\midrule\endfirsthead
 \texttt{unit\_\allowbreak{}suffix} & A; B; C & filled on 0.83\% of rows\\
 \texttt{description} & reroofing; street space; street space permit & \\
 \texttt{status} & complete; issued; expired & \\
-\texttt{status\_\allowbreak{}date} & 1983-03-04T00:00:00.000; 2026-01-09T08:39:29.000; 1986-03-04T00:00:00.000 & \\
-\texttt{filed\_\allowbreak{}date} & 1991-08-30T00:00:00.000; 1999-06-30T00:00:00.000; 1990-09-27T00:00:00.000 & \\
-\texttt{issued\_\allowbreak{}date} & 1999-01-15T00:00:00.000; 1987-07-06T00:00:00.000; 1989-11-08T00:00:00.000 & \\
-\texttt{completed\_\allowbreak{}date} & 1983-03-04T00:00:00.000; 1986-03-04T00:00:00.000; 1992-05-13T00:00:00.000 & filled on 100.0\% of permits with status `complete'\\
-\texttt{first\_\allowbreak{}construction\_\allowbreak{}document\_\allowbreak{}date} & 2019-12-31T00:00:00.000; 2002-11-05T12:49:18.000; 2009-05-13T16:29:31.000 & on issued new-construction permits: filled on 0.05\% of those filed in the 1980s, 11.9\% in the 1990s, 69.6\% in the 2000s\\
-\texttt{approved\_\allowbreak{}date} & 1994-08-30T00:00:00.000; 1989-11-30T00:00:00.000; 1999-01-14T00:00:00.000 & \\
+\texttt{status\_\allowbreak{}date} & 1983-03-04; 2026-01-09; 1986-03-04 & \\
+\texttt{filed\_\allowbreak{}date} & 2017-09-15; 1991-08-30; 2015-11-03 & \\
+\texttt{issued\_\allowbreak{}date} & 2016-06-15; 2018-10-02; 2016-07-26 & \\
+\texttt{completed\_\allowbreak{}date} & 1983-03-04; 1986-03-04; 1992-05-13 & filled on 100.0\% of permits with status `complete'\\
+\texttt{first\_\allowbreak{}construction\_\allowbreak{}document\_\allowbreak{}date} & 2016-11-07; 2016-11-01; 2006-11-09 & on issued new-construction permits: filled on 0.05\% of those filed in the 1980s, 11.9\% in the 1990s, 69.6\% in the 2000s\\
+\texttt{approved\_\allowbreak{}date} & 2018-10-02; 2016-06-14; 2016-07-26 & \\
 \texttt{structural\_\allowbreak{}notification} & Y & a flag with one value (Y) on 4.0\% of rows; blank means no, or not recorded\\
 \texttt{number\_\allowbreak{}of\_\allowbreak{}existing\_\allowbreak{}stories} & 2; 3; 1 & \\
 \texttt{number\_\allowbreak{}of\_\allowbreak{}proposed\_\allowbreak{}stories} & 2; 3; 1 & \\
@@ -112,7 +112,7 @@ Field & Most frequent values & What the rows deliver\\\midrule\endfirsthead
 \texttt{proposed\_\allowbreak{}construction\_\allowbreak{}type} & 5; 1; 3 & \\
 \texttt{proposed\_\allowbreak{}construction\_\allowbreak{}type\_\allowbreak{}description} & wood frame (5); constr type 1; constr type 3 & \\
 \texttt{site\_\allowbreak{}permit} & Y & a flag with one value (Y) on 2.4\% of rows; blank means no, or not recorded\\
-\texttt{last\_\allowbreak{}permit\_\allowbreak{}activity\_\allowbreak{}date} & 1960-01-01T00:00:00.000; 1994-08-30T00:00:00.000; 1999-01-14T00:00:00.000 & \\
+\texttt{last\_\allowbreak{}permit\_\allowbreak{}activity\_\allowbreak{}date} & 1960-01-01; 2018-10-02; 2016-06-22 & \\
 \texttt{application\_\allowbreak{}submission\_\allowbreak{}method} & in-house; website; epr website & \\
 \texttt{adu} & N; Y & \\
 \texttt{primary\_\allowbreak{}address\_\allowbreak{}flag} & Y & a flag with one value (Y) on 88.7\% of rows; blank means no, or not recorded\\
@@ -123,8 +123,8 @@ Field & Most frequent values & What the rows deliver\\\midrule\endfirsthead
 \texttt{point\_\allowbreak{}source} & eas\_address\_point; parcel\_centroid & \\
 \texttt{reroof} & Y & a flag with one value (Y) on 9.0\% of rows; blank means no, or not recorded\\
 \texttt{record\_\allowbreak{}id} & 1410598100118; 141060174315; 1410604404163 & not a Planning record: 0.0\% of values have a case-number shape; DBI's own identifier\\
-\texttt{data\_\allowbreak{}as\_\allowbreak{}of} & 2025-08-07T23:55:01.000; 2026-01-11T01:05:01.000; 2026-01-25T01:05:00.000 & \\
-\texttt{data\_\allowbreak{}loaded\_\allowbreak{}at} & 2025-08-08T03:30:43.448; 2026-01-11T04:54:22.840; 2026-01-25T04:42:11.762 & \\
+\texttt{data\_\allowbreak{}as\_\allowbreak{}of} & 2025-08-07; 2026-01-11; 2026-01-25 & \\
+\texttt{data\_\allowbreak{}loaded\_\allowbreak{}at} & 2025-08-08; 2026-01-11; 2026-01-25 & \\
 \bottomrule\end{longtable}}
 
 \begin{table}[htbp]\centering
@@ -177,30 +177,30 @@ overruled & 1 & 0.0\%\\
 \begin{table}[htbp]\centering
 \caption{The permit clock by type and filing decade: the share reaching each stage, and the median days between stages among permits that reached both. Negative intervals are excluded from the medians and counted in the text. Recent decades are right-censored.}\label{tab:clock}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrrrrrrr}\toprule
-Type & Filed & Permits & Issued & \multicolumn{2}{c}{Filed $\to$ issued} & Started & Issued $\to$ start & Completed & Issued $\to$ done & Exited\\
-\cmidrule(lr){5-6} & & & & median & p90 & & median & & median & \\\midrule
-new construction (types 1, 2) & 1980s & 4{,}343 & 85.4\% & 177 & 527 & 0.0\% & 560 & 68.7\% & 335 & 29.9\%\\
- & 1990s & 3{,}418 & 87.5\% & 278 & 1{,}245 & 10.1\% & 13 & 68.3\% & 400 & 29.0\%\\
- & 2000s & 2{,}546 & 80.0\% & 410 & 1{,}475 & 55.0\% & 13 & 61.9\% & 573 & 30.2\%\\
- & 2010s & 1{,}819 & 74.5\% & 437 & 1{,}533 & 51.1\% & 195 & 55.3\% & 941 & 15.3\%\\
- & 2020s & 631 & 42.3\% & 453 & 1{,}090 & 17.0\% & 307 & 13.3\% & 792 & 9.4\%\\
-additions and alterations (3) & before 1980 & 217 & 87.6\% & 74 & 706 & 0.0\% & --- & 12.4\% & 2{,}598 & 78.8\%\\
- & 1980s & 72{,}026 & 87.7\% & 36 & 155 & 0.0\% & --- & 65.3\% & 144 & 33.8\%\\
- & 1990s & 74{,}191 & 91.6\% & 37 & 182 & 0.6\% & 0 & 56.2\% & 135 & 43.0\%\\
- & 2000s & 47{,}919 & 88.6\% & 51 & 315 & 10.2\% & 2 & 56.1\% & 194 & 35.8\%\\
- & 2010s & 21{,}892 & 79.8\% & 223 & 734 & 20.1\% & 120 & 60.2\% & 381 & 21.8\%\\
- & 2020s & 8{,}813 & 69.1\% & 225 & 717 & 6.3\% & 224 & 39.2\% & 328 & 11.5\%\\
-demolition (6) & 1980s & 1{,}668 & 86.3\% & 39 & 265 & 0.0\% & --- & 73.4\% & 102 & 24.8\%\\
- & 1990s & 1{,}450 & 87.0\% & 177 & 573 & 0.0\% & --- & 66.3\% & 152 & 23.4\%\\
- & 2000s & 1{,}672 & 76.9\% & 279 & 1{,}154 & 0.0\% & --- & 55.3\% & 182 & 28.1\%\\
- & 2010s & 1{,}002 & 82.0\% & 234 & 1{,}129 & 0.0\% & --- & 62.9\% & 351 & 13.1\%\\
- & 2020s & 434 & 62.4\% & 148 & 841 & 0.0\% & --- & 38.7\% & 153 & 6.0\%\\
-over-the-counter (8) & 1980s & 37{,}621 & 97.9\% & 0 & 0 & 0.0\% & --- & 77.7\% & 85 & 22.4\%\\
- & 1990s & 144{,}500 & 99.8\% & 0 & 0 & 0.0\% & --- & 53.2\% & 69 & 47.2\%\\
- & 2000s & 251{,}014 & 99.1\% & 0 & 0 & 0.0\% & 0 & 51.0\% & 85 & 23.4\%\\
- & 2010s & 306{,}443 & 96.7\% & 0 & 22 & 0.0\% & 0 & 57.9\% & 105 & 5.9\%\\
- & 2020s & 139{,}967 & 93.9\% & 0 & 60 & 0.0\% & 0 & 68.2\% & 101 & 5.3\%\\
+\begin{tabular}{llrrrrrrr}\toprule
+Type & Filed & Permits & Issued & \multicolumn{2}{c}{Filed $\to$ issued} & Completed & Issued $\to$ done & Exited\\
+\cmidrule(lr){5-6} & & & & median & p90 & & median & \\\midrule
+new construction (types 1, 2) & 1980s & 4{,}343 & 85.4\% & 177 & 527 & 68.7\% & 335 & 29.9\%\\
+ & 1990s & 3{,}418 & 87.5\% & 278 & 1{,}245 & 68.3\% & 400 & 29.0\%\\
+ & 2000s & 2{,}546 & 80.0\% & 410 & 1{,}475 & 61.9\% & 573 & 30.2\%\\
+ & 2010s & 1{,}819 & 74.5\% & 437 & 1{,}533 & 55.3\% & 941 & 15.3\%\\
+ & 2020s & 631 & 42.3\% & 453 & 1{,}090 & 13.3\% & 792 & 9.4\%\\
+additions and alterations (3) & before 1980 & 217 & 87.6\% & 74 & 706 & 12.4\% & 2{,}598 & 78.8\%\\
+ & 1980s & 72{,}026 & 87.7\% & 36 & 155 & 65.3\% & 144 & 33.8\%\\
+ & 1990s & 74{,}191 & 91.6\% & 37 & 182 & 56.2\% & 135 & 43.0\%\\
+ & 2000s & 47{,}919 & 88.6\% & 51 & 315 & 56.1\% & 194 & 35.8\%\\
+ & 2010s & 21{,}892 & 79.8\% & 223 & 734 & 60.2\% & 381 & 21.8\%\\
+ & 2020s & 8{,}813 & 69.1\% & 225 & 717 & 39.2\% & 328 & 11.5\%\\
+demolition (6) & 1980s & 1{,}668 & 86.3\% & 39 & 265 & 73.4\% & 102 & 24.8\%\\
+ & 1990s & 1{,}450 & 87.0\% & 177 & 573 & 66.3\% & 152 & 23.4\%\\
+ & 2000s & 1{,}672 & 76.9\% & 279 & 1{,}154 & 55.3\% & 182 & 28.1\%\\
+ & 2010s & 1{,}002 & 82.0\% & 234 & 1{,}129 & 62.9\% & 351 & 13.1\%\\
+ & 2020s & 434 & 62.4\% & 148 & 841 & 38.7\% & 153 & 6.0\%\\
+over-the-counter (8) & 1980s & 37{,}621 & 97.9\% & 0 & 0 & 77.7\% & 85 & 22.4\%\\
+ & 1990s & 144{,}500 & 99.8\% & 0 & 0 & 53.2\% & 69 & 47.2\%\\
+ & 2000s & 251{,}014 & 99.1\% & 0 & 0 & 51.0\% & 85 & 23.4\%\\
+ & 2010s & 306{,}443 & 96.7\% & 0 & 22 & 57.9\% & 105 & 5.9\%\\
+ & 2020s & 139{,}967 & 93.9\% & 0 & 60 & 68.2\% & 101 & 5.3\%\\
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
@@ -238,9 +238,9 @@ Commission-linked (T1 or T2) & & 6{,}130 & 4{,}517\\
 \caption{Commission-linked permits against development-relevant permits no tier reaches. Standardised difference is the difference in means over the pooled standard deviation; `cells' reweights the unlinked group to the linked group's distribution over permit type $\times$ 5-year filing bin $\times$ analysis neighbourhood (97.3\% of linked permits have a counterpart cell), `units' over type $\times$ bin $\times$ unit-count bin (99.7\%). T3-only permits are in neither group.}\label{tab:compare}\\\toprule
  & \multicolumn{2}{c}{Linked} & \multicolumn{2}{c}{Not linked} & \multicolumn{3}{c}{Std.\ difference}\\ \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-8} Variable & mean & median & mean & median & raw & cells & units\\\midrule\endfirsthead
 \toprule & \multicolumn{2}{c}{Linked} & \multicolumn{2}{c}{Not linked} & \multicolumn{3}{c}{Std.\ difference}\\ \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-8} Variable & mean & median & mean & median & raw & cells & units\\\midrule\endhead
-estimated cost (log) & 12.55 & 12.69 & 11.39 & 11.88 & 0.43 & 0.19 & 0.13\\
-estimated cost (\$) & 6{,}135{,}886 & 325{,}000 & 771{,}479 & 145{,}000 & 0.28 & 0.10 & 0.07\\
-revised cost (log) & 12.99 & 13.09 & 11.85 & 12.04 & 0.47 & 0.22 & 0.15\\
+estimated cost (log) & 12.79 & 12.77 & 11.63 & 11.92 & 0.54 & 0.23 & 0.16\\
+estimated cost (\$) & 6{,}257{,}088 & 350{,}000 & 788{,}881 & 150{,}000 & 0.29 & 0.10 & 0.07\\
+revised cost (log) & 13.14 & 13.12 & 12.04 & 12.07 & 0.54 & 0.26 & 0.18\\
 existing units & 4.0 & 1.0 & 11.4 & 1.0 & -0.09 & -0.08 & -0.09\\
 proposed units & 21.6 & 2.0 & 11.2 & 1.0 & 0.12 & 0.07 & -0.02\\
 net units & 3.6 & 0.0 & -0.4 & 0.0 & 0.07 & 0.14 & 0.09\\
@@ -261,7 +261,6 @@ zoning at filing: RH (house) & 48.4\% &  & 33.6\% &  & 0.30 & -0.06 & -0.00\\
 zoning at filing: RM (mixed) & 10.6\% &  & 4.5\% &  & 0.23 & 0.04 & 0.05\\
 outcome: issued & 78.7\% &  & 81.5\% &  & -0.07 & 0.13 & 0.13\\
 outcome: days filed to issued & 689.5 & 500.0 & 303.4 & 191.0 & 0.71 & 0.43 & 0.44\\
-outcome: construction started & 40.3\% &  & 21.1\% &  & 0.43 & 0.12 & 0.09\\
 outcome: completed & 53.2\% &  & 56.8\% &  & -0.07 & 0.05 & 0.03\\
 outcome: expired or withdrawn & 20.9\% &  & 31.7\% &  & -0.25 & -0.16 & -0.13\\
 \bottomrule\end{longtable}}
@@ -281,19 +280,43 @@ Proposed units & Linked & Unlinked & Support & \multicolumn{2}{c}{Issued} & \mul
 \bottomrule\end{tabular}}\end{table}
 
 \begin{table}[htbp]\centering
+\caption{Immortal time. `Raw' and `within cells' are Table~\ref{tab:compare}'s rows. `Landmark' keeps only permits alive at their hearing --- for a linked permit the first linked hearing on or after its filing; for an unlinked permit a date its filing plus a lag drawn from the linked permits' filing-to-hearing lags in the same cell --- and measures from that date: days from the hearing to issuance, and the share issued or expired or withdrawn afterwards. Unlinked means and medians are reweighted to the linked cells (type $\times$ 5-year filing bin $\times$ neighbourhood; 97.1\% of the linked landmark sample has a counterpart). The standardised difference in brackets is its range over 5 draws of the lags.}\label{tab:landmark}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrr}\toprule
+ & Raw & Within cells & Landmark, within cells\\\midrule
+\emph{Days to issuance (issued permits)} & filing $\to$ issued & filing $\to$ issued & hearing $\to$ issued\\
+\quad linked, mean & 690 & 690 & 408\\
+\quad unlinked, mean & 303 & 444 & 390\\
+\quad linked, median & 500 & 500 & 274\\
+\quad unlinked, median & 191 & 303 & 219\\
+\quad standardised difference & 0.71 & 0.43 & 0.04 [0.03, 0.06]\\
+\emph{Expired or withdrawn} & & & after the hearing\\
+\quad linked & 20.9\% & 20.9\% & 23.7\%\\
+\quad unlinked & 31.7\% & 27.8\% & 34.5\%\\
+\quad standardised difference & -0.25 & -0.16 & -0.24 [-0.26, -0.24]\\
+\emph{Issued} & & & after the hearing\\
+\quad linked & 78.7\% & 78.7\% & 77.6\%\\
+\quad unlinked & 81.5\% & 73.8\% & 64.7\%\\
+\quad standardised difference & -0.07 & 0.13 & 0.29 [0.29, 0.30]\\
+\midrule \emph{Samples} & & & \\
+\quad linked permits & 4{,}517 & & 3{,}354\\
+\quad unlinked permits & 51{,}593 & & 14{,}926\\
+\bottomrule\end{tabular}}\end{table}
+
+\begin{table}[htbp]\centering
 \caption{Three targeted comparisons. In each, the first group is the one named; the second is reweighted to it over the cells shown (`support' is the share of the first group with a counterpart cell). The DR comparison is a proxy: the Planning records carry no \S311 notification record, so it compares the permits a DR request named with the other major permits in residential districts, where notice applies.}\label{tab:targeted}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrr}\toprule
  & First group & Second, raw & Second, reweighted & Std.\ diff.\ raw & reweighted\\\midrule
 \multicolumn{6}{l}{\emph{DR track (proxy): major permits a DR request named vs other major permits in residential districts filed 2006--2020; cells type $\times$ filing year $\times$ neighbourhood; 487 vs 22{,}268, support 94.9\%}}\\
-\quad estimated cost (log) & 12.19 & 10.49 & 10.97 & 0.68 & 0.45\\
+\quad estimated cost (log) & 12.41 & 10.97 & 11.42 & 0.86 & 0.54\\
 \quad proposed units & 4 & 8 & 6 & -0.17 & -0.18\\
 \quad issued & 81.5\% & 80.1\% & 80.0\% & 0.04 & 0.05\\
 \quad days filed to issued & 947 & 368 & 486 & 1.01 & 0.76\\
 \quad completed & 50.3\% & 58.5\% & 58.9\% & -0.16 & -0.17\\
 \quad expired or withdrawn & 23.4\% & 24.2\% & 21.0\% & -0.02 & 0.06\\
 \multicolumn{6}{l}{\emph{CU track: CU-linked vs same proposed use and zoning district, no Commission link; cells use $\times$ zoning $\times$ filing bin; 1{,}685 vs 53{,}366, support 90.7\%}}\\
-\quad estimated cost (log) & 12.90 & 11.42 & 11.40 & 0.54 & 0.50\\
+\quad estimated cost (log) & 13.18 & 11.67 & 11.82 & 0.69 & 0.59\\
 \quad proposed units & 29 & 12 & 25 & 0.20 & 0.04\\
 \quad issued & 72.8\% & 81.5\% & 70.5\% & -0.20 & 0.05\\
 \quad days filed to issued & 698 & 304 & 467 & 0.65 & 0.37\\
@@ -328,4 +351,14 @@ Planning record opened $\to$ first hearing & 2{,}418 & 70 & 101 & 169 & 315 & 0.
 \quad DBI clock, cases with both & 2{,}269 & 183 & 296 & 509 & 798 & 2.5\%\\
 \quad Planning clock, cases with both & 2{,}269 & 71 & 101 & 169 & 315 & 0.4\%\\
 \quad difference (DBI $-$ Planning) & 2{,}269 & 68 & 150 & 338 & 623 & 8.9\%\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[htbp]\centering
+\caption{The DR cases whose linked permit was filed after the Planning record opened (the negative differences in Table~\ref{tab:drclock}), by why. `Planning date from another record': the case number has no DR record of its own and the clock fell back to the earliest record sharing its stem. `Permit through a sibling or parent record': a T2 link read from another record sharing the stem, not from the DR record itself or the minutes. `The DR's own permit': printed in the minutes (T1) or named by the DR record, and filed after the request opened. `On the item's parcel': the permit's block and lot are among the item's.}\label{tab:drneg}
+\begin{tabular}{lrr}\toprule
+Why & Cases & On the item's parcel\\\midrule
+Planning date from another record & 76 & 68\\
+Permit through a sibling or parent record & 15 & 13\\
+The DR's own permit, filed after the request & 110 & 102\\
+\midrule All & 201 & 183\\
 \bottomrule\end{tabular}\end{table}

@@ -41,15 +41,18 @@ change the unit count or sit in the top \pcCostQ\% of their year's cost. \pcLink
 Planning records' own permit field.
 
 \medskip\noindent
-\textbf{Linked projects are bigger and slower, and the difference in time survives the
-comparison within cells.} Their median estimated cost is \$\pcLinkedCostMed\ against
+\textbf{Linked projects are bigger and slower, but most of the difference in time is
+immortal time.} Their median estimated cost is \$\pcLinkedCostMed\ against
 \$\pcUnlinkedCostMed; the standardised difference in log cost is \pcSdLogCostRaw\ raw and
 \pcSdLogCostCell\ within cells of permit type, filing period and neighbourhood. From filing to
-issuance they take a median \pcLinkedDays\ days against \pcUnlinkedDays; that difference is
-\pcSdDaysRaw\ raw and still \pcSdDaysCell\ within cells --- the largest gap in the comparison
-after the filing year itself. Linked permits are less often abandoned (\pcLinkedExit\% expired
-or withdrawn against \pcUnlinkedExit\%), and the difference narrows to \pcSdExitCell\ within
-cells.
+issuance they take a median \pcLinkedDays\ days against \pcUnlinkedDays, a standardised
+difference of \pcSdDaysRaw\ raw and \pcSdDaysCell\ within cells. But a permit linked through a
+hearing held while it was pending had to survive to that hearing and could not issue before
+it. Measured from the hearing forward, on permits alive at it, the standardised difference is
+\pcLmSdDays\ --- about \pcLmSurviveDays\% of the within-cell gap survives, \pcLmMedSurvive\% of
+it in medians. The lower abandonment of
+linked permits does survive: \pcLinkedExit\% expired or withdrawn against \pcUnlinkedExit\%
+(\pcSdExitCell\ within cells), and \pcLmSdExit\ after the hearing.
 
 \medskip\noindent
 \textbf{The developer's clock on the DR track starts well before the Planning record does.}
@@ -83,11 +86,20 @@ The ones that matter for this project:
 \item \texttt{record\_id} is DBI's own identifier. None of its values has the shape of a
 Planning case or record number; the name invites a join that does not exist.
 \item \texttt{first\_construction\_document\_date} --- the permit memo's ``construction
-started'' --- is effectively absent before the late 1990s, and Table~\ref{tab:clock} shows the
-consequence: the share of permits with a construction start reads as zero for the 1980s
-because the field is empty, not because nothing was built.
-\item \texttt{estimated\_cost} carries placeholder values: its note gives the share at \$1 or
-less.
+started'' --- is filled on \pcFcdFilled\% of permits and is effectively absent before the late
+1990s, and its fill rate on new construction moves with the era (Table~\ref{tab:fieldnotes}).
+A ``construction started'' share would measure the field, not construction, so \textbf{it is
+not used as an outcome anywhere in this memo}; an earlier version reported one, in the permit
+clock and the comparison. (That version's field notes also listed the column's most frequent
+value as one midnight timestamp, which read as a placeholder; it held a few dozen rows and led
+only because timestamps were counted as strings. Dates are now counted by calendar day.)
+\item \texttt{estimated\_cost} carries placeholder values: \pcCostPlaceholder\% of filled rows
+are \$1 or less. \textbf{They are dropped from every cost comparison below}, as missing rather
+than as a cost. Dated correction (2026-09-11): the previous version logged them as
+zero, and reported standardised differences in log cost of 0.43 raw and 0.19 within cells. In
+the two comparison groups they are \pcCostPlaceholderLinked\% of linked and
+\pcCostPlaceholderUnlinked\% of unlinked permits. The universe's cost rule is a within-year
+percentile computed with them in the denominator; they can never pass it.
 \item The one-valued flags --- \texttt{site\_permit}, \texttt{structural\_notification},
 \texttt{fire\_only\_permit}, \texttt{reroof}, \texttt{primary\_address\_flag} --- record only
 \texttt{Y}. A blank means ``no'' or ``not recorded'', and the table cannot say which.
@@ -177,14 +189,14 @@ Proposed units differ by \pcSdUnitsRaw\ raw and \pcSdUnitsCell\ within cells. So
 is where and when; the rest is that a project large enough to need a hearing is large.
 \item \textbf{Time.} Filing to issuance is where the linked group stands apart: \pcSdDaysRaw\
 raw, \pcSdDaysCell\ within cells and \pcSdDaysUnits\ within unit-count cells.
-Table~\ref{tab:byunits} shows the gap in every unit-count bin. A project that appears in the
-minutes takes markedly longer from filing to permit than a similar project in the same
-neighbourhood and period that does not --- which is the sign the real-options frame predicts
-for the cost of discretion, and which this table describes without identifying.
+Table~\ref{tab:byunits} shows the gap in every unit-count bin. \textbf{Most of it is
+mechanical}: \S\ref{sec:landmark} measures from the hearing forward and the gap all but
+disappears.
 \item \textbf{Abandonment.} Linked permits expire or are withdrawn less often
-(\pcLinkedExit\% against \pcUnlinkedExit\%; \pcSdExitCell\ within cells). A project that has
-been through a hearing has sunk more by the time it holds a permit, and a project that would be
-abandoned may be abandoned before it ever reaches one.
+(\pcLinkedExit\% against \pcUnlinkedExit\%; \pcSdExitCell\ within cells), and this one survives
+the landmark comparison. A project that has been through a hearing has sunk more by the time it
+holds a permit, and a project that would be abandoned may be abandoned before it ever reaches
+one.
 \item \textbf{Use and place.} Linked permits are more often apartments and less often offices
 or one-family dwellings, and more often in residential-house and neighbourhood-commercial
 districts at filing; within cells these differences mostly vanish, because the cells hold
@@ -197,6 +209,48 @@ place and type fixed.
 display is clipped; the medians use every observation.}
 \label{fig:drclock}
 \end{figure}
+
+\section{Immortal time: the comparison from the hearing forward}
+\label{sec:landmark}
+
+``Commission-linked'' is defined by a hearing, and for most linked permits the hearing fell
+while the permit was pending. Such a permit had to survive to the hearing, and could not issue
+before it; an unlinked permit carries no such condition. So part of the linked group's longer
+filing-to-issuance time and of its lower abandonment is mechanical --- guaranteed by how the
+group is defined --- rather than a difference between projects.
+
+Table~\ref{tab:landmark} removes it with a landmark. For a linked permit the landmark is the
+first linked hearing on or after its filing; \pcLmLinkedWith\ linked permits have one, and
+\pcLmLinkedAfter\ were filed after every hearing they are linked to (their survival was not
+conditioned on a hearing; they are left out rather than given a date). An unlinked permit has
+no hearing, so it is given one: its filing date plus a lag drawn at random from the linked
+permits' filing-to-hearing lags in the same cell of type, filing period and neighbourhood (the
+median linked lag is \pcLmLagMed\ days). Both groups are then kept only if still pending at
+their landmark --- filed, not issued, completed, expired or withdrawn by it --- which leaves
+\pcLmLinkedAlive\ linked and \pcLmUnlinkedAlive\ unlinked permits, and every outcome is measured
+from the landmark. The unlinked group is reweighted to the linked group's cells as before
+(\pcLmSupport\% support), and the draw is repeated \pcLmDraws\ times to show how much it moves
+the result.
+
+\textbf{How much of the headline gap survives.} In days to issuance, little. The
+standardised difference in means is \pcSdDaysRaw\ raw, \pcSdDaysCell\ within cells, and
+\pcLmSdDays\ (between \pcLmSdDaysLo\ and \pcLmSdDaysHi\ across draws) from the hearing forward
+--- about \pcLmSurviveDays\% of the within-cell gap. Medians keep more of it: within cells a
+linked permit's median is \pcCellMedGap\ days longer (\pcLinkedDays\ against a reweighted
+\pcCellDaysMedB); from the hearing it is \pcLmMedGap\ days longer (\pcLmDaysMedA\ against
+\pcLmDaysMedB), about \pcLmMedSurvive\% of the within-cell median gap --- the typical linked
+permit is still somewhat slower after its hearing, while the means, which the long tails of
+both groups dominate, barely differ. \textbf{Most of the longer filed-to-issued time of
+Commission-linked permits is the time before the hearing that the definition of the group
+guarantees}, not a slower passage after it. Abandonment is the opposite: linked permits alive at their hearing expire or are
+withdrawn afterwards \pcLmExitA\% of the time against \pcLmExitB\% for unlinked permits alive at
+the matched date, a standardised difference of \pcLmSdExit\ against \pcSdExitCell\ within cells.
+That gap does not come from immortal time. What it does come from --- a project that has come
+through a hearing being further committed, or the unlinked permits still pending at a year's lag
+being a slower, weaker set --- this comparison does not say.
+
+The targeted comparisons in the next section measure days from filing, and are subject to the
+same mechanism; they have not been re-anchored.
 
 \section{Three targeted comparisons}
 
@@ -263,6 +317,20 @@ both, the developer's clock is a median \pcDrDiffMed\ days longer. \pcDrDbiNeg\%
 developer's clocks are negative --- the linked permit was filed after the first hearing ---
 and they are kept rather than trimmed.
 
+\paragraph{Where the permit comes after the request.} On \pcDrNegPct\% of the cases with both
+clocks (\pcDrNegN) the difference is negative: the linked permit was filed after the Planning
+record opened. A neighbour files a DR request against a pending permit, so this should not
+happen, and Table~\ref{tab:drneg} sorts the cases by why. For \pcDrNegRecord\ the Planning date
+is not the DR request's: the case number has no DR record of its own, and the clock fell back
+to the earliest record sharing its stem --- a record-type issue in the Planning clock, not a
+mislink. For \pcDrNegStem\ the permit was reached only through a sibling or parent record
+sharing the stem (a T2 stem link to another phase, parcel or revision), \pcDrNegStemOff\ of them
+off the item's parcel. The largest group, \pcDrNegOwn, is the DR's own permit --- printed in the
+minutes or named by the DR record --- filed after the request opened; the data do not say why
+(a revision permit filed after the original drew the request is one possibility). So
+\textbf{the negative differences are mostly not T2 stem mislinks}: \pcDrNegStem\ of \pcDrNegN.
+Across all three groups \pcDrNegOffParcel\ permits sit off the item's parcel.
+
 \section{Caveats}
 \label{sec:caveats}
 
@@ -297,16 +365,24 @@ late 1990s.
 \item A development-relevant universe of \pcUniverse\ permits under stated rules, reported
 beside three alternative cost rules.
 \item Commission-linked development permits take longer from filing to issuance than similar
-unlinked permits in the same place, period and type, by \pcSdDaysCell\ standard deviations,
-and the gap holds within every unit-count bin; they are larger, and less often abandoned.
+unlinked permits in the same place, period and type, by \pcSdDaysCell\ standard deviations ---
+but measured from the hearing forward, on permits alive at it, by \pcLmSdDays\ (a median gap
+of \pcLmMedGap\ days against \pcCellMedGap): \textbf{the gap in time is mostly immortal time.} They are larger, and less often abandoned, and the
+abandonment gap survives the landmark (\pcLmSdExit).
 \item The developer's clock on the DR track runs a median \pcDrDiffMed\ days longer than the
-Planning-record clock.
+Planning-record clock. Of the \pcDrNegN\ cases where the permit postdates the Planning record,
+\pcDrNegStem\ are T2 links through a sibling or parent record; \pcDrNegRecord\ take the Planning
+date from another record and \pcDrNegOwn\ are the DR's own permit.
 \end{enumerate}
 
 \textbf{Not established.}
 \begin{enumerate}
 \item Anything causal. The within-cell differences describe who reaches the Commission; they
 do not say what the hearing did.
+\item Why linked permits alive at their hearing are abandoned less afterwards: commitment, or
+the composition of the unlinked permits still pending at the matched date.
+\item The landmark comparison for the targeted DR, CU and ministerial comparisons, which still
+measure from filing.
 \item Which of a linked set is the permit the hearing decided.
 \item The \S311 comparison as the brief framed it: notices are not in the records.
 \item Whether the ministerial group, at \pcMinisterialPermits\ permits, is large enough to say

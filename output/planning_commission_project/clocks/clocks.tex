@@ -1,0 +1,380 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is defined by analyze_permit_content.py (`clocks') in the
+% generated files under tables/. Nothing is typed by hand.
+\input{tables/clocks_macros}
+\input{tables/outcomes_macros}
+
+\title{The Clocks:\\
+\large the full distribution of every duration, by track and parcel value}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The model separates a deterministic cost from uncertainty, and the uncertainty channel is
+identified by dispersion: a level alone cannot tell the two apart. The earlier memos reported
+means and medians. This memo reports, for every clock the project measures --- application to
+first hearing, first hearing to final action, permit filing to issuance, final action to
+issuance, issuance to completion, and the developer's whole clock from first filing to
+completion --- the full distribution, by track, and handles right-censoring with
+Kaplan--Meier estimates so that recent cohorts count.
+
+\medskip\noindent
+\textbf{The developer's clock is long and dispersed on every track.} Its Kaplan--Meier median
+is \ckTotMedCu\ days for conditional use, \ckTotMedDr\ for discretionary review, \ckTotMedLpa\
+for large project authorisations and \ckTotMedMin\ for development permits that never reach
+the Commission. Among cohorts first filed before \ckMature, whose spells have had a decade to
+finish, the coefficient of variation of the completed clock is \ckTotCvCu, \ckTotCvDr,
+\ckTotCvLpa\ and \ckTotCvMin.
+
+\medskip\noindent
+\textbf{About a third of spells never record a completion.} Ten years after first filing,
+\ckTotStenPctCu\%, \ckTotStenPctDr\%, \ckTotStenPctLpa\% and \ckTotStenPctMin\% of spells on the
+four tracks are still open. The survival curves therefore never reach their upper quartile,
+and the upper tail of the developer's clock --- where dispersion lives --- is not observed; it
+is truncated by non-completion, not only by censoring.
+
+\medskip\noindent
+\textbf{Dispersion does not fall consistently with parcel value.} Across city-wide quintiles of assessed
+value per square foot, the CV of the completed developer's clock goes from \ckCvLoCu\ to
+\ckCvHiCu\ on the conditional-use track (rank correlation \ckCvRhoCu), from \ckCvLoDr\ to
+\ckCvHiDr\ on the DR track (\ckCvRhoDr), and from \ckCvLoMin\ to \ckCvHiMin\ off the Commission
+(\ckCvRhoMin). A CV falling with value would be the wedge's signature. These moments do not
+show it; they are descriptions, and they do not rule it out.
+
+\medskip\noindent
+\textbf{The hearing is rarely where the time goes.} \ckFirstFinalPctCu\% of conditional uses
+and \ckFirstFinalPctDr\% of DRs are decided at their first hearing; the waits that carry the
+dispersion are before the hearing and after it, in the permit.
+\end{abstract}
+
+\clearpage
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{What this memo measures, and why it is a memo of its own}
+
+The brief allowed either a new memo or a section of the permits memo. It is a memo of its own
+because its object is different: the permits memo asks whether projects that reach the
+Commission differ from similar projects that do not, and answers with means compared within
+cells; this memo asks for the whole distribution of each duration --- the moments a model with
+an uncertainty channel is estimated on --- and its unit of observation, for the Commission
+tracks, is the case rather than the permit. The code is a stage of the permit-content pipeline
+(\texttt{analyze\_permit\_content.py clocks}), which it shares its permit table, linkage tiers
+and development-relevant universe with.
+
+\paragraph{Tracks.} A \emph{Commission track} is a case --- a case number in the item table ---
+whose first hearing was on a conditional use (including its modification), a discretionary
+review, or a large project authorisation. The \emph{ministerial or by-right track} is the
+development-relevant permits (the permits memo's universe) that no linkage tier connects to the
+Commission, filed from \ckClockFrom, when the corpus begins; earlier permits that never
+recorded a completion would otherwise sit ``at risk'' for decades and hold up every survival
+curve. These are \ckUnitsCu\ conditional-use cases, \ckUnitsDr\ DR cases, \ckUnitsLpa\ large
+project authorisations and \ckUnitsMin\ ministerial permits.
+
+\paragraph{The permit a case's clock runs through.} A case reaches DBI through the permits
+memo's tiers T1 (a permit number printed in the minutes) and T2 (the Planning records' permit
+field). On the DR track the clock runs through the permit under review --- the earliest-filed
+linked permit, as in the permits memo's DR clock. Otherwise it runs through the project's main
+permit: new construction first, then a site permit, then the largest estimated cost. A case
+with no linked permit has no permit clock at all (missing, not censored): \ckPermitPctCu\% of
+conditional-use cases, \ckPermitPctDr\% of DRs and \ckPermitPctLpa\% of large project
+authorisations have one. Many conditional uses are changes of use that need no
+development permit.
+
+\paragraph{The clocks.} Appendix~\ref{sec:defs} states each one's start and end. Two choices
+matter. \emph{Application} is the opening of the earliest entitlement record for the case (the
+data-acquisition memo's entitlement clock) except on the DR track, where it is the DBI filing of
+the permit under review --- the developer's clock, not the neighbour's, as the note of
+2026-09-11 in that memo now fixes by track. \emph{Final action} is the first hearing at which the
+item table records a disposition that ends the case (approval, disapproval, taking or not taking
+DR, withdrawal, adoption, certification, an appeal upheld); a continuance, an intent to approve
+and ``no action'' do not.
+
+\paragraph{Parcel value.} Assessed value (land plus improvements) per square foot of lot ---
+of building where the roll records no lot area, as for condominium parcels --- in the roll year
+nearest the first filing, binned into city-wide quintiles within that roll year; a case on
+several parcels takes the median. \ckValueCover\% of units are valued. The assessor's roll
+begins in 2007, so the \ckValuedLater\ units first filed earlier are valued at 2007. Proposition
+13 holds assessed values at the acquisition price plus two percent a year, so the ranking is by
+what was paid for a parcel as much as by what it is worth; the price surface in the
+data-acquisition memo is the alternative, not used here.
+
+\input{tables/clk_inventory}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Censoring, and what it cannot fix}
+
+A spell still running at the retrieval date (\ckRetrieved) is right-censored; so is a permit
+spell that ends in expiry or withdrawal, censored at the exit. Reporting only completed spells
+understates every duration for recent cohorts, because their long spells have not finished.
+The Kaplan--Meier estimator counts each censored spell's exposure up to the point it was last
+seen, and Figure~\ref{fig:km} draws it for every clock and track; Figure~\ref{fig:hazard} gives
+the hazards of the permit clock and the developer's clock.
+
+Censoring is not the only thing missing from the upper tail. Table~\ref{tab:inventory} shows
+that only about half of the developer's clocks end in a recorded completion, and
+Table~\ref{tab:headline} that a third of spells are still open ten years after first filing ---
+far longer than any project is still under construction. Those spells are not running: they are
+projects abandoned without an exit status, or completions DBI did not record. Kaplan--Meier
+cannot tell a completion that was never recorded from one that has not happened, so for the
+developer's clock its upper quartile is never reached (a dash in the tables) and the completed
+spells of mature cohorts are the only view of the dispersion. The CV reported for the headline
+is on those spells: cohorts first filed before \ckMature, which have had a decade to finish. It
+describes the projects that finished, and says nothing about the ones that did not.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_km.pdf}
+\caption{Kaplan--Meier survival of each clock by track, drawn to \ckHorizon\ days. The legend
+gives spells per track. The plateau in the second panel is cases with no final action in the
+item table; in the last two, spells with no completion recorded.}
+\label{fig:km}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_hazard.pdf}
+\caption{Hazards of the permit clock and the developer's clock by track: the share of running
+spells that end in the next 90 days.}
+\label{fig:hazard}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Every clock, by track}
+
+Table~\ref{tab:moments} gives the distribution of every clock on every track: completed-spell
+percentiles from the 10th to the 99th, the mean, the standard deviation of log days, the
+coefficient of variation, and the Kaplan--Meier median and 90th percentile beside them.
+Negative intervals are kept and counted, as in the earlier memos: they enter the quantiles and
+the mean, and are left out only of the log-scale dispersion.
+
+\begin{itemize}
+\item \textbf{Application to first hearing} is the longest wait at the Commission and the most
+dispersed: a Kaplan--Meier median of \ckAppHearingMedCu\ days on the conditional-use track (CV
+\ckAppHearingCvCu), \ckAppHearingMedDr\ on the DR track (CV \ckAppHearingCvDr) --- where the
+clock starts at the permit filing --- and \ckAppHearingMedLpa\ for large project authorisations.
+\item \textbf{First hearing to final action} is short: \ckFirstFinalPctCu\% of conditional uses,
+\ckFirstFinalPctDr\% of DRs and \ckFirstFinalPctLpa\% of large project authorisations are decided
+at their first hearing. Its CV is high only because the distribution is a spike at zero with a
+tail of continued cases.
+\item \textbf{Permit filed to issued} has a median of \ckFiledIssuedMedCu, \ckFiledIssuedMedDr\
+and \ckFiledIssuedMedLpa\ days on the three Commission tracks against \ckFiledIssuedMedMin\ off
+it --- the permits memo's immortal-time caution applies: a permit reviewed at a hearing had to
+survive to it.
+\item \textbf{Final action to permit issued} carries negative intervals --- a permit issued
+before the final action (\ckFinalIssuedNegCu\ conditional-use cases, \ckFinalIssuedNegDr\ DR
+cases) --- which are kept.
+\item \textbf{Permit issued to completion} and \textbf{the developer's clock} are the ones
+non-completion truncates; see the previous section.
+\end{itemize}
+
+\input{tables/clk_moments}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The headline: the developer's clock against parcel value}
+
+The real-options frame predicts that uncertainty in delay and outcome raises a developer's
+filing threshold and re-routes development toward higher-value parcels: uncertainty shifts the
+threshold differently across parcel values, where a deterministic cost shifts it more nearly
+uniformly. If the regulatory
+process imposes more uncertainty on some parcels than others, the dispersion of the clock by
+parcel value is where it would show first, and a CV falling with parcel value would be the
+signature of the wedge. Table~\ref{tab:headline} and Figure~\ref{fig:dispersion} give the
+developer's clock by track and value quintile.
+
+The signature is not there. On the DR track the CV of the completed clock falls, loosely, from
+\ckCvLoDr\ in the lowest quintile to \ckCvHiDr\ in the highest (rank correlation across the five
+quintiles \ckCvRhoDr); on the conditional-use track it has no pattern (\ckCvLoCu\ to \ckCvHiCu,
+\ckCvRhoCu); off the Commission it drifts up (\ckCvLoMin\ to \ckCvHiMin, \ckCvRhoMin). The permit
+clock, which completes for most spells, does not line up with it track by track. Its CV goes from
+\ckPermitCvLoCu\ to \ckPermitCvHiCu\ on the conditional-use track (\ckPermitCvRhoCu) and from
+\ckPermitCvLoDr\ to \ckPermitCvHiDr\ on the DR track (\ckPermitCvRhoDr) --- no pattern on either
+--- and from \ckPermitCvLoMin\ to \ckPermitCvHiMin\ off the Commission, where it falls
+(\ckPermitCvRhoMin) while the developer's clock on the same track rose. A falling CV appears on
+one clock of one track at a time, and the two clocks disagree on the ministerial track. The
+large-project track has too few mature completions per quintile to say anything (\ckTotMatNLpa\
+in all).
+
+\textbf{This is a description, not an estimate, and it does not reject the prediction.} Four
+things stand between these moments and the model's object. (i) The completed spells are the
+projects that finished; if dispersion deters filing or causes abandonment on low-value parcels,
+the high-dispersion projects there are the ones missing. (ii) Assessed value under Proposition
+13 ranks parcels partly by when they last sold. (iii) The quintiles pool every period, and the
+clock lengthened over time. (iv) The model's $\sigma$ is the dispersion a developer faces
+\emph{ex ante}, conditional on what the developer knows; a cross-sectional CV mixes that with
+the heterogeneity of the projects themselves --- size, type and neighbourhood, which the next
+section cuts by, one at a time.
+
+\input{tables/clk_headline}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_dispersion_value.pdf}
+\caption{Coefficient of variation of completed spells by parcel-value quintile and track, for
+cohorts first filed before \ckMature: the developer's clock (left) and the permit clock
+(right).}
+\label{fig:dispersion}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The other cuts}
+
+Tables~\ref{tab:byunitsPermit}--\ref{tab:byperiodTotal} and~\ref{tab:bynbhd} cut the permit
+clock and the developer's clock by proposed units, by the five-year period of first filing, and
+by the analysis neighbourhood of the project's permit. Every cell of every clock, with all the statistics of
+Table~\ref{tab:moments}, is in \texttt{clock\_moments.csv} (\S\ref{sec:repro}); the tables here
+show the Kaplan--Meier median and 90th percentile and the CV of completed spells, and omit cells
+under \ckMinCell\ spells. By period the Kaplan--Meier medians of recent cohorts are computed on
+short follow-up, and their 90th percentiles are mostly not yet reached.
+
+\input{tables/clk_byunitsPermit}
+\input{tables/clk_byunitsTotal}
+\input{tables/clk_byperiodPermit}
+\input{tables/clk_byperiodTotal}
+\input{tables/clk_bynbhd}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The outcome chain: from entitlement to units}
+\label{sec:outcomes}
+
+The clocks stop at completion; the model's counterfactual needs the extensive margin as well:
+conditional on entitlement, what fraction of approved projects --- and of approved units --- is
+built, and how long it takes. This section follows every housing project (the principal permit
+adds at least one unit) from entitlement --- the Commission's first approving action, or for a
+ministerial permit its filing --- through issuance and DBI's first construction document to the
+first recorded completion: Housing Production's completion date on the principal permit, else
+the first certificate of occupancy in the unit-completion table, else DBI's completion date.
+Units delivered are Housing Production's completed units on the principal permit. Table
+\ref{tab:outcomes} reads the projects entitled \ocMatureFrom--\ocMatureTo, which have had more
+than a decade to finish, and adds for every cohort the cumulative incidence of completion within
+\ocYears\ years, with withdrawal, expiry and cancellation as a competing event rather than a
+censoring: a project that exits does not go on to deliver at the others' rate.
+
+\input{tables/clk_outcomes}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_outcomes.pdf}
+\caption{Cumulative incidence of completion (a) and of exit (b) by years from entitlement,
+housing projects, every cohort; the legend gives the number of projects.}\label{fig:outcomes}
+\end{figure}
+
+\paragraph{Most entitled housing is built; a large minority is not.} Of the housing
+projects entitled \ocMatureFrom--\ocMatureTo, \ocDoneCu\% of conditional uses, \ocDoneDr\% of
+DRs, \ocDoneLpa\% of large project authorisations and \ocDoneMin\% of ministerial permits record
+a completion; \ocExitCu\%, \ocExitDr\%, \ocExitLpa\% and \ocExitMin\% exited, and the rest are
+still open. Over every cohort, the cumulative incidence of completion within \ocYears\ years is
+\ocCifCu\%, \ocCifDr\%, \ocCifLpa\% and \ocCifMin\%: by that measure \ocNeverCu\%, \ocNeverDr\%,
+\ocNeverLpa\% and \ocNeverMin\% of entitled projects have not delivered \ocYears\ years on. The median
+time from entitlement to completion, among the mature projects that completed, is \ocMedYearsCu\
+years for conditional uses, \ocMedYearsDr\ for DRs, \ocMedYearsLpa\ for large projects and
+\ocMedYearsMin\ for ministerial permits.
+
+\paragraph{Units.} The mature conditional-use projects were approved for \ocUnitsApprCu\ net
+units and Housing Production records \ocUnitsHpCu\ completed on their principal permits
+(\ocUnitsShareCu\%); large project authorisations \ocUnitsApprLpa\ and \ocUnitsHpLpa\
+(\ocUnitsShareLpa\%); ministerial permits \ocUnitsApprMin\ and \ocUnitsHpMin\ (\ocUnitsShareMin\%).
+A completion recorded under another of the project's permit numbers --- an addendum, a second
+building --- is missed, so the unit shares are lower bounds; the gap is widest on the ministerial
+track, where the principal permit is the only one this frame follows.
+
+\paragraph{By parcel value.} Within tracks the completion share varies across value quintiles
+without a monotone pattern (\ocDoneLoCu\% in the lowest valued quintile shown against
+\ocDoneHiCu\% in the highest for conditional uses; \ocDoneLoMin\% against \ocDoneHiMin\% for
+ministerial permits); cells are small on the Commission tracks.
+
+\paragraph{What the chain cannot see.} DBI's first construction document is recorded for
+\ocFcdCover\% of the mature projects, so the chain's middle link is not reliable and is shown only
+as a share. Housing Production begins in \ocMatureFrom; completions before it rest on DBI's own
+date. And ``entitled'' is the Commission's approving action: a project that dies before its
+hearing, or is never filed, is not in the frame --- the deterred-development problem that the
+risk set is meant to handle.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Established, and not established}
+
+\textbf{Established.}
+\begin{enumerate}
+\item The full distribution --- ten percentiles and moments, and Kaplan--Meier quantiles --- of six
+clocks on four tracks, by units, parcel value, period and neighbourhood, written as a table the
+model can be fitted to.
+\item Dispersion is large on every clock: the CV of the completed developer's clock is
+\ckTotCvCu\ (conditional use), \ckTotCvDr\ (DR), \ckTotCvLpa\ (large projects) and \ckTotCvMin\
+(ministerial).
+\item The pre-hearing wait and the permit carry the time; most cases are decided at their first
+hearing.
+\item Across parcel-value quintiles the CV of the developer's clock does not fall consistently
+on any track.
+\item Of housing projects entitled \ocMatureFrom--\ocMatureTo, \ocDoneCu\% (conditional use) to
+\ocDoneMin\% (ministerial) record a completion; the cumulative incidence of completion within
+\ocYears\ years, with exit competing, is \ocCifCu\% to \ocCifMin\%.
+\end{enumerate}
+
+\textbf{Not established.}
+\begin{enumerate}
+\item The upper tail of the developer's clock. About a third of spells record no completion
+within ten years; whether they were abandoned or finished unrecorded is a question for DBI's
+data, and until it is answered the dispersion reported is that of completed projects.
+\item Anything about $\sigma$ as the model defines it: ex-ante uncertainty conditional on the
+developer's information. A cross-sectional CV is an upper bound on it only if the cells hold the
+developer's information fixed, which they do not.
+\item The CV--value relation net of period and project size, which needs a joint model, not
+one-way cuts.
+\item Whether the DR track's loosely falling CV is real: five quintiles, a rank correlation of
+\ckCvRhoDr.
+\item The share of approved units built: the unit counts miss completions recorded under a
+project's other permit numbers, and are lower bounds.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Reproducing this}
+\label{sec:repro}
+
+\begin{verbatim}
+python analyze_permit_content.py fetch     # DBI Building Permits, every column
+python analyze_permit_content.py report    # permits memo; linkage cache
+python analyze_permit_content.py clocks    # this memo
+python analyze_permit_content.py outcomes  # the outcome chain
+\end{verbatim}
+
+\texttt{clocks} reads the permit table, the linkage tiers (cached beside the DBI file by
+\texttt{report}), the item table, the Planning records and the assessor's roll, and writes
+\texttt{\$MFHR\_DATA\_ROOT/external/clocks/clocks.parquet} (one row per unit, every clock's
+duration and event flag and every cut), \texttt{clock\_moments.csv} (every cell), the three
+figures, one table file per table and \texttt{tables/clocks\_macros.tex}. The Kaplan--Meier
+estimator and the hazard are implemented in the script (\texttt{km}, \texttt{km\_hazard}); the
+project has no survival library.
+
+\appendix
+\section{The clocks, defined}
+\label{sec:defs}
+
+\begin{itemize}
+\item \textbf{Application to first hearing}: from the application (the earliest entitlement
+record of the case, by case number and else by stem; on the DR track, the DBI filing of the permit
+under review) to the first hearing of the case. Censored at retrieval.
+\item \textbf{First hearing to final action}: from the first hearing to the first hearing
+recording a disposition that ends the case. Censored at retrieval.
+\item \textbf{Permit filed to issued}: DBI filing to issuance of the case's permit (or of the
+ministerial permit). Censored at the permit's expiry, withdrawal or other exit, else at retrieval.
+\item \textbf{Final action to permit issued}: from the final action to the permit's issuance.
+Censored as above.
+\item \textbf{Permit issued to completion}: issuance to DBI's completion date. Censored as above.
+\item \textbf{First filing to completion}: from the earlier of the application and the permit
+filing to the permit's completion --- the developer's clock. Censored as above.
+\end{itemize}
+
+\end{document}

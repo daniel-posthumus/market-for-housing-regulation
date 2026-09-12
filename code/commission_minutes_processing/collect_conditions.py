@@ -1613,7 +1613,8 @@ GOLD_LABELS = VALID / "gold_labels.csv"
 # Labels changed after checking the source, one row per decision, applied by `score` rather
 # than by editing the labels: the labels stay as written, and the decision is on the record.
 ADJUDICATIONS = VALID / "gold_adjudications.csv"
-ROUND = 2                   # the current round; round 1 is kept to report the pre-tuning score
+ROUND = 3                   # the current round; rounds 1 and 2 are kept to report what each
+                            # later round changed
 GOLD_N, CHECK_N, SEED = 20, 30, 20260911
 
 
@@ -1728,6 +1729,9 @@ def freeze(r: int = ROUND):
         "note": "in-sample = the gold documents, drawn from the pool of documents the rules "
                 "were written against" + (" and, from round 2, revised against after round 1 "
                                           "was scored" if r > 1 else "") +
+                (". Round 3's rules were written against corpus-wide merge detectors run over "
+                 "every document, gold included, with the gold documents themselves never "
+                 "opened; its gold score is still in-sample" if r > 2 else "") +
                 "; out-of-sample = the hand-checked rows, drawn after this freeze from "
                 "documents outside the gold set that were pulled after it"},
         indent=2) + "\n")
@@ -1735,7 +1739,9 @@ def freeze(r: int = ROUND):
 
 
 def archive_round(r: int):
-    """Close round `r`: keep its frozen parser and its parse of the gold documents."""
+    """Close round `r`: keep its frozen parser, its parse of the gold documents, and its
+    whole parse --- the last so that what the next round changes can be counted against it
+    (the memo reports each round's effect on the numbers the previous one produced)."""
     fz = json.loads(frozen_path(r).read_text())
     d = round_archive(r)
     d.mkdir(parents=True, exist_ok=True)
@@ -1745,6 +1751,9 @@ def archive_round(r: int):
     (d / "condition_parser.py").write_bytes(src.read_bytes())
     c = pd.read_parquet(COND_LONG.with_suffix(".parquet"))
     c[c.doc_id.isin(fz["gold_docs"])].to_parquet(d / "gold_rows.parquet", index=False)
+    c.to_parquet(d / "conditions_long.parquet", index=False)
+    if SECTIONS.exists():
+        (d / "motion_sections.csv").write_bytes(SECTIONS.read_bytes())
     print(f"round {r} archived → {d}")
 
 
@@ -1858,6 +1867,28 @@ def score(r: int = ROUND):
             "end_ok": float(h.end_ok.eq("1").mean()) if len(h) else None,
             "heading_accuracy": float(hh.heading_ok.eq("1").mean()) if len(hh) else None,
             "heading_n": len(hh)}
+    # What this round did to the previous round's out-of-sample rows: a row the current parse
+    # reproduces exactly (same document, heading, body and compliance line) keeps its hand
+    # judgment; one it no longer produces is listed, because its judgment no longer applies.
+    prev = handcheck_path(r - 1)
+    if r == ROUND and r > 1 and prev.exists():
+        h0 = pd.read_csv(prev, dtype=str).fillna("")
+        h0 = h0[h0.start_ok.ne("")]
+        cur = c.assign(k=[f"{d}|{_norm(a_)}|{_norm(b_)}|{_norm(x_)}" for d, a_, b_, x_ in
+                          zip(c.doc_id, c.heading.fillna(""), c.body.fillna(""),
+                              c.compliance_contact.fillna(""))])
+        keys = set(cur.k)
+        h0["k"] = [f"{d}|{_norm(a_)}|{_norm(b_)}|{_norm(x_)}" for d, a_, b_, x_ in
+                   zip(h0.doc_id, h0.heading, h0.body, h0.compliance_contact)]
+        kept = h0.k.isin(keys)
+        ok = h0.start_ok.eq("1") & h0.end_ok.eq("1")
+        res["previous_round_rows"] = {
+            "round": r - 1, "rows": len(h0), "reproduced": int(kept.sum()),
+            "reproduced_correct": int((kept & ok).sum()),
+            "previous_correct": int(ok.sum()),
+            "not_reproduced": [{"doc_id": d, "ordinal": o, "heading": hd, "was_correct": bool(w)}
+                               for d, o, hd, w in zip(h0.doc_id[~kept], h0.ordinal[~kept],
+                                                      h0.heading[~kept], ok[~kept])]}
     score_path(r).write_text(json.dumps(res, indent=2) + "\n")
     print(json.dumps(res, indent=2))
 
@@ -2093,7 +2124,9 @@ def latex_text(s: str) -> str:
     documents use mapped to its LaTeX spelling, and anything else outside ASCII dropped
     rather than left to break the build."""
     import unicodedata
-    t = str(s)
+    # A table of contents read as text carries dot leaders ("MEASURES ........ 81"); they are
+    # never content, and a run of them cannot break across a line.
+    t = re.sub(r"(?:\s*\.){4,}\s*", " ... ", str(s))
     t = (t.replace("\\", r"\textbackslash{}").replace("&", r"\&").replace("%", r"\%")
          .replace("$", r"\$").replace("#", r"\#").replace("_", r"\_").replace("{", r"\{")
          .replace("}", r"\}").replace("~", r"\textasciitilde{}").replace("^", r"\^{}")
@@ -2414,19 +2447,22 @@ def report_content():
       r"each). A section that mentions an Exhibit A but has none located is either a motion "
       r"that attaches no conditions and says so, one whose Exhibit A is another kind of "
       r"attachment (rejected: a draft resolution, an agreement, a mitigation table), or a "
-      r"parser miss; the last is what the validation measures.}\label{tab:mention}")
-    a(r"\begin{tabular}{lrrrrr}\toprule")
+      r"parser miss; the last is what the validation measures. `Located' is an Exhibit A heading "
+      r"found and accepted as conditions; every line after it becomes at least one row, so a "
+      r"located Exhibit A yields a parsed condition in all but %s sections, and the count of "
+      r"sections with a condition is not shown as a column of its own.}\label{tab:mention}"
+      % N(int((sa.has_exhibit_a & sa.n_conditions.eq(0)).sum())))
+    a(r"\begin{tabular}{lrrrr}\toprule")
     a(r"Hearing years & Sections & \shortstack[r]{Mention\\Exhibit A} & \shortstack[r]{Exhibit A\\rejected} & "
-      r"\shortstack[r]{Exhibit A\\located} & \shortstack[r]{$\geq$1\\condition}\\\midrule")
+      r"\shortstack[r]{Exhibit A\\located}\\\midrule")
     for e in eras + ["undated"]:
         g = sa[sa.era.eq(e)]
         if not len(g):
             continue
         a(rf"{e} & {f0(len(g))} & {f0(g.mentions_exhibit_a.sum())} & {f0(g.rejected.sum())} & "
-          rf"{f0(g.has_exhibit_a.sum())} & {f0(g.n_conditions.gt(0).sum())}\\")
+          rf"{f0(g.has_exhibit_a.sum())}\\")
     a(rf"\midrule All & {f0(len(sa))} & {f0(sa.mentions_exhibit_a.sum())} & "
-      rf"{f0(sa.rejected.sum())} & {f0(sa.has_exhibit_a.sum())} & "
-      rf"{f0(sa.n_conditions.gt(0).sum())}\\")
+      rf"{f0(sa.rejected.sum())} & {f0(sa.has_exhibit_a.sum())}\\")
     a(r"\bottomrule\end{tabular}\end{table}")
     a("")
     loc = sa[sa.has_exhibit_a]
@@ -2739,8 +2775,11 @@ def report_content():
       r"for OCR in the adopted copy), and what is left by text. `Reworded' is a matched condition "
       r"whose number-masked text is less than %.0f\%% similar to the draft's; `near-identical' "
       r"differs by less --- OCR, typography, a touched-up word --- and is not counted as a "
-      r"change. The lower panel crosses any change (reworded, removed or added) with the item "
-      r"table's record of the hearing.}\label{tab:diff}" % (100 * DIFF_SAME))
+      r"change. An added condition is `template text' when its opening %d characters, numbers "
+      r"masked, recur in the motions of at least %d other cases. The lower panel crosses the "
+      r"change with the item table's record of the hearing, counting any change (reworded, "
+      r"removed or added) and a change beyond template additions.}\label{tab:diff}"
+      % (100 * DIFF_SAME, TEMPLATE_CHARS, TEMPLATE_MIN_CASES))
     a(r"\begin{tabular}{lrr}\toprule")
     a(r"Quantity & Value & \\\midrule")
     d_ = dv["pairs"]
@@ -2753,19 +2792,25 @@ def report_content():
                        ("\\quad carried near-identical", f0(d_.near_identical.sum())),
                        ("\\quad reworded", f0(d_.changed.sum())),
                        ("\\quad removed", f0(d_.removed.sum())),
-                       ("Conditions added from the dais", f0(d_.added.sum()))):
+                       ("Conditions in the adopted motion, not the draft", f0(d_.added.sum())),
+                       ("\\quad template text", f0(d_.added_template.sum())),
+                       ("\\quad other text", f0(d_.added_other.sum()))):
             a(rf"{lab} & {v} & \\")
-        a(r"\midrule & Any change & No change\\")
+        a(r"\midrule & Any change & \shortstack[r]{Change beyond\\template additions}\\")
         for lab, m_ in (("Item records modifications", d_.mods.eq(True)),
                         ("No modifications recorded", d_.mods.eq(False)),
                         ("No item at that hearing", d_.mods.isna())):
-            a(rf"{lab} & {f0((m_ & d_.any_change).sum())} & {f0((m_ & ~d_.any_change).sum())}\\")
+            a(rf"{lab} & {f0((m_ & d_.any_change).sum())} & "
+              rf"{f0((m_ & d_.change_beyond_template).sum())}\\")
     a(r"\bottomrule\end{tabular}\end{table}")
     a("")
     if len(dv["added"]):
         a(r"{\small\begin{longtable}{@{}L{3.3cm}L{10.9cm}@{}}")
-        a(r"\caption{Conditions the adopted motion carries and the draft did not --- what the "
-          r"Commission added --- drawn at random.}\label{tab:added}\\\toprule")
+        a(r"\caption{Conditions the adopted motion carries and the draft did not, drawn at random "
+          r"from the %s whose text is not template text (Table~\ref{tab:diff}). Some are the "
+          r"Commission's changes; some are staff completing the draft, or conditions the parse "
+          r"missed on the draft side --- the table cannot tell which.}\label{tab:added}\\\toprule"
+          % N(int(d_.added_other.sum())))
         a(r"Case & Added condition\\\midrule\endfirsthead")
         a(r"\toprule Case & Added condition\\\midrule\endhead")
         for r in dv["added"].itertuples():
@@ -2778,6 +2823,12 @@ def report_content():
         M.update({"ccDiffPairs": N(len(d_)), "ccDiffAnyChange": N(d_.any_change.sum()),
                   "ccDiffAnyChangePct": f"{100*d_.any_change.mean():.0f}",
                   "ccDiffAdded": N(d_.added.sum()), "ccDiffRemoved": N(d_.removed.sum()),
+                  "ccDiffAddedTemplate": N(d_.added_template.sum()),
+                  "ccDiffAddedOther": N(d_.added_other.sum()),
+                  "ccDiffTemplateChars": str(TEMPLATE_CHARS),
+                  "ccDiffTemplateCases": str(TEMPLATE_MIN_CASES),
+                  "ccDiffBeyondTemplate": N(d_.change_beyond_template.sum()),
+                  "ccDiffNoModsBeyond": N((d_.mods.eq(False) & d_.change_beyond_template).sum()),
                   "ccDiffChanged": N(d_.changed.sum()), "ccDiffUnchanged": N(d_.unchanged.sum()),
                   "ccDiffIdentical": N(d_.identical.sum()), "ccDiffNear": N(d_.near_identical.sum()),
                   "ccDiffSame": f"{100*DIFF_SAME:.0f}",
@@ -2795,8 +2846,11 @@ def report_content():
                   "ccDiffRemoved", "ccDiffChanged", "ccDiffUnchanged", "ccDiffDraftConds",
                   "ccDiffIdentical", "ccDiffNear", "ccDiffSame", "ccDiffCarriedPct",
                   "ccDiffModsChange", "ccDiffModsNoChange", "ccDiffNoModsChange",
-                  "ccDiffNoModsNoChange", "ccDiffNoItem", "ccDiffMods", "ccDiffByText"):
+                  "ccDiffNoModsNoChange", "ccDiffNoItem", "ccDiffMods", "ccDiffByText",
+                  "ccDiffAddedTemplate", "ccDiffAddedOther", "ccDiffBeyondTemplate",
+                  "ccDiffNoModsBeyond"):
             M[k] = "0"
+        M["ccDiffTemplateChars"], M["ccDiffTemplateCases"] = str(TEMPLATE_CHARS), str(TEMPLATE_MIN_CASES)
 
     # ── 7. the option-relevant conditions ───────────────────────────────────
     oc = c[c.part.eq("conditions")].copy()
@@ -2979,6 +3033,7 @@ def report_content():
     # ── validation scores, if the round has been scored ──────────────────────
     def pc(x):
         return f"{100*x:.1f}" if isinstance(x, (int, float)) else "---"
+    M["ccValOutYearFrom"] = M["ccValOutYearTo"] = "---"
     for k in ("ccValGoldDocs", "ccValGoldConds", "ccValInPrec", "ccValInRecall", "ccValInHead",
               "ccValInHeadN", "ccValNoneDocs", "ccValNoneFalse", "ccValOutRows",
               "ccValOutPrec", "ccValOutStart", "ccValOutEnd", "ccValOutHead", "ccValOutHeadN",
@@ -3006,17 +3061,48 @@ def report_content():
                   "ccValOutHeadN": str(oos.get("heading_n", "---"))})
         hc = handcheck_path(ROUND)
         if hc.exists():
-            M["ccValOutDocs"] = str(pd.read_csv(hc, dtype=str).doc_id.nunique())
+            hh = pd.read_csv(hc, dtype=str).fillna("")
+            M["ccValOutDocs"] = str(hh.doc_id.nunique())
+            yy = pd.to_numeric(hh.hearing_date.str[:4], errors="coerce").dropna()
+            M["ccValOutYearFrom"] = str(int(yy.min())) if len(yy) else "---"
+            M["ccValOutYearTo"] = str(int(yy.max())) if len(yy) else "---"
     if score_path(1).exists() and ROUND > 1:
         s1 = json.loads(score_path(1).read_text())
         M.update({"ccValRoneInPrec": pc(s1["in_sample"].get("boundary_precision")),
                   "ccValRoneInRecall": pc(s1["in_sample"].get("boundary_recall")),
                   "ccValRoneFrozen": s1["frozen"].replace("T", " ")[:16]})
+    # the round before this one: its scores, and what this round did to its hand-checked rows
+    for k in ("ccValRtwoInPrec", "ccValRtwoInRecall", "ccValRtwoFrozen", "ccValRtwoOutRows",
+              "ccValRtwoOutPrec", "ccValRtwoOutCorrect", "ccValCarryRows", "ccValCarryReproduced",
+              "ccValCarryCorrect", "ccValRound"):
+        M[k] = "---"
+    M["ccValRound"] = str(ROUND)
+    if ROUND > 2 and score_path(ROUND - 1).exists():
+        s2 = json.loads(score_path(ROUND - 1).read_text())
+        o2 = s2.get("out_of_sample", {})
+        M.update({"ccValRtwoInPrec": pc(s2["in_sample"].get("boundary_precision")),
+                  "ccValRtwoInRecall": pc(s2["in_sample"].get("boundary_recall")),
+                  "ccValRtwoFrozen": s2["frozen"].replace("T", " ")[:16],
+                  "ccValRtwoOutRows": str(o2.get("rows", "---")),
+                  "ccValRtwoOutPrec": pc(o2.get("boundary_precision")),
+                  "ccValRtwoOutCorrect": str(round(o2["boundary_precision"] * o2["rows"]))
+                  if o2.get("rows") else "---"})
+    if score_path(ROUND).exists():
+        pr = json.loads(score_path(ROUND).read_text()).get("previous_round_rows")
+        if pr:
+            M.update({"ccValCarryRows": str(pr["rows"]),
+                      "ccValCarryReproduced": str(pr["reproduced"]),
+                      "ccValCarryCorrect": str(pr["reproduced_correct"])})
+    # ── what this round's rules changed, counted on the previous round's whole parse ────────
+    a(round_effect_table(M))
+    a("")
+    M.update(correction_macros())
     lg = pd.read_csv(PULL_LOG, dtype=str).fillna("")
     M.update({"ccDocsRead": N(lg.status.str.startswith("ok").sum()),
               "ccOcrPages": N(pd.to_numeric(lg.ocr_pages, errors="coerce").fillna(0).sum()),
               "ccQuoteWords": str(QUOTE_WORDS)})
     fig_coverage_content(it, s_c)
+    numbers_report(a, M)
     # One file holds every table; each is guarded by its label so the memo can place it in
     # its own section with \cctable{<label>} (\def\cctab{<label>}\input{...}).
     chunks = [ch for ch in "\n".join(L[1:]).split("\n\n") if ch.strip()]
@@ -3200,8 +3286,10 @@ def discovery_macros() -> dict:
                 "ccProbeOther": N((~a.status.isin(["200", "404", "login", "vault_not_public",
                                                    "soft_404"])).sum())})
     plog = STORE / "probe.log"
+    # a verb phrase, because the memo reads "The probe \ccProbeFinished." (the bare "still
+    # running" once printed "The probe still running.")
     out["ccProbeFinished"] = "finished" if plog.exists() and \
-        "probe done" in plog.read_text()[-3000:] else "still running"
+        "probe done" in plog.read_text()[-3000:] else "was still running"
     return out
 
 
@@ -3381,6 +3469,10 @@ def draft_vs_adopted(c: pd.DataFrame, s_c: pd.DataFrame, it: pd.DataFrame) -> di
     ad = s_c[s_c.doc_type.eq("adopted_motion") & s_c.case_key.ne("")]
     dr = s_c[s_c.doc_type.eq("draft_packet") & s_c.case_key.ne("")]
     strict = c[c.strict]
+    # How many cases' motions carry each condition text: an addition whose text recurs across
+    # many other cases is the template, and more likely staff completing the draft between the
+    # packet and adoption, or a draft-side parse miss, than something the Commission wrote.
+    tk_cases = strict.assign(tk=strict.body.map(template_key)).groupby("tk").case_key.nunique()
     mods = it[it.cn.ne("")].assign(
         m=it.modifications.astype(str).str.strip().ne("") |
         it.project_modified.astype(str).str.lower().eq("yes"))
@@ -3431,8 +3523,14 @@ def draft_vs_adopted(c: pd.DataFrame, s_c: pd.DataFrame, it: pd.DataFrame) -> di
                 near += 1
             else:
                 reworded += 1
+        tmpl = 0
         for k in free:
-            added.append(A.iloc[k])
+            row = A.iloc[k].copy()
+            # its own case is one of the cases carrying it, so it must recur in TEMPLATE_MIN_CASES
+            # others
+            row["template"] = tk_cases.get(template_key(row.body), 0) >= TEMPLATE_MIN_CASES + 1
+            tmpl += int(row["template"])
+            added.append(row)
         # The item heard on the adoption date is the one whose `modifications` speaks for
         # this hearing. No such item (a hearing the corpus lacks, or a date the motion and
         # the minutes disagree on) is unknown, not "no modifications".
@@ -3446,13 +3544,178 @@ def draft_vs_adopted(c: pd.DataFrame, s_c: pd.DataFrame, it: pd.DataFrame) -> di
                      "n_draft": len(D), "n_adopted": len(A),
                      "unchanged": identical + near, "identical": identical,
                      "near_identical": near, "changed": reworded, "removed": removed,
-                     "added": len(free), "any_change": bool(reworded or removed or free),
+                     "added": len(free), "added_template": tmpl,
+                     "added_other": len(free) - tmpl,
+                     "any_change": bool(reworded or removed or free),
+                     "change_beyond_template": bool(reworded or removed or len(free) - tmpl),
                      "mods": bool(m_.m.any()) if len(m_) else None, "year": r.year})
     pairs = pd.DataFrame(rows)
     add_all = pd.DataFrame(added)
-    add = add_all.sample(min(10, len(add_all)), random_state=SEED).sort_values("year") \
-        if len(add_all) else add_all
+    # The quoted draw is of the non-template additions: the template ones are the same few
+    # standard conditions (Revocation, Noise Control, Managing Traffic During Construction ...)
+    # and a random draw over all of them is mostly those.
+    other = add_all[~add_all.template] if len(add_all) else add_all
+    add = other.sample(min(10, len(other)), random_state=SEED).sort_values("year") \
+        if len(other) else other
     return {"pairs": pairs, "added": add, "added_all": add_all}
+
+
+TEMPLATE_MIN_CASES = 10
+TEMPLATE_CHARS = 200
+
+
+def merge_detectors(c: pd.DataFrame) -> dict:
+    """Three signs that a condition's body swallowed what follows it, counted over canonical
+    rows. (a) The next condition's number and name inside the body ("... Standards. 10.
+    Community Liaison. Prior to ..." in condition 9). (b) One of the frequent headings, as a
+    name, after a sentence end in the body of another heading. (c) A letter's salutation or
+    "Re:" line in a body: the Exhibit A ran into correspondence. (b) also counts real
+    sub-parts that carry a name ("Unit Mix." inside "Affordable Units"), so its level is not
+    an error count; its change between rounds is what it is for."""
+    c = c[c.canonical]
+    hc = c.heading.fillna("").str.strip()
+    freq = hc[hc.ne("")].value_counts()
+    heads = [h for h, n in freq.items() if n >= 30 and 2 <= len(h.split()) <= 6 and h[:1].isupper()]
+    rx_h = re.compile(r"(?<=[a-z0-9)\]]\. )(" + "|".join(re.escape(h) for h in
+                                                      sorted(heads, key=len, reverse=True))
+                      + r")\. [A-Z]")
+
+    def emb_num(no, body):
+        try:
+            n = int(str(no))
+        except ValueError:
+            return False
+        return bool(re.search(r"(?:^|[.;:)] )%d\s?\.\s+[A-Z][A-Za-z,/&\-]+(?:\s+[A-Za-z,/&\-()]+){0,7}"
+                              r"\.\s" % (n + 1), str(body)))
+    a_ = pd.Series([emb_num(n, b) for n, b in zip(c.condition_no, c.body)], index=c.index)
+    b_ = pd.Series([bool(m := rx_h.search(str(body))) and m.group(1).lower() != h.lower()
+                    for body, h in zip(c.body, hc)], index=c.index)
+    d_ = c.body.str.contains(r"(?i)(?:^|\s)dear\s+(?:president|commissioner|members|planning|mr|"
+                             r"ms|mrs|sir|madam)", regex=True) | \
+        c.body.str.contains(r"(?:^|\. )Re: ", regex=True)
+    return {"next_number": int(a_.sum()), "frequent_heading": int(b_.sum()),
+            "correspondence": int(d_.sum()), "any": int((a_ | b_ | d_).sum()),
+            "docs": int(c[a_ | b_ | d_].doc_id.nunique())}
+
+
+def parse_metrics(c: pd.DataFrame, s: pd.DataFrame, universe: set) -> dict:
+    """The quantities a parser round moves, computed the same way on any round's parse."""
+    cc = c[c.canonical]
+    strict = cc[cc.part.eq("conditions") & ~cc.implicit]
+    per = strict[strict.doc_type.eq("adopted_motion")].groupby(["doc_id", "section"]).size()
+    s = s.copy()
+    s["canon"] = s.canonical.astype(str).eq("True")
+    s["nc"] = pd.to_numeric(s.n_conditions, errors="coerce").fillna(0)
+    s["yr"] = pd.to_numeric(s.hearing_date.fillna("").astype(str).str[:4].where(
+        s.hearing_date.fillna("").astype(str).ne(""), s.adoption_date.fillna("").astype(str).str[:4]),
+        errors="coerce")
+    sc = s[s.canon & s.nc.gt(0)]
+    inu = sc[sc.case_key.fillna("").isin(universe)]
+    return {"rows": len(cc), "sections": int(s.canon.sum()),
+            "with_exhibit_a": int((s.canon & s.has_exhibit_a.astype(str).eq("True")).sum()),
+            "with_conditions": len(sc), "section_blocks": int(cc.implicit.sum()),
+            "headings": int(strict.heading.fillna("").map(norm_heading).replace("", np.nan).nunique()),
+            "median_per_motion": float(per.median()) if len(per) else np.nan,
+            "earliest_in_universe": int(inu.yr.min()) if inu.yr.notna().any() else np.nan,
+            **merge_detectors(c)}
+
+
+# The document behind the conditions memo's withdrawn "earliest motion ... 1994": a 2021 packet
+# with a 1994 scanned motion and a 2013 motion bound into it, which round 2 read as one section.
+CORRECTION_1994_DOC = "25d1dfc00f4c91a4"
+
+
+def _long_date(d: str) -> str:
+    try:
+        t = pd.Timestamp(d)
+    except (ValueError, TypeError):
+        return "---"
+    return f"{t:%B} {t.day}, {t.year}"
+
+
+def correction_macros() -> dict:
+    """The facts the memo's dated correction states, read from the current parse rather than
+    typed: the packet's case, and each motion bound into it with its date and case."""
+    out = {k: "---" for k in ("ccFixPacketCase", "ccFixOldMotion", "ccFixOldDate", "ccFixOldCase",
+                              "ccFixNewMotion", "ccFixNewDate", "ccFixNewCase")}
+    if not SECTIONS.exists():
+        return out
+    s = pd.read_csv(SECTIONS, dtype=str).fillna("")
+    s = s[s.doc_id.eq(CORRECTION_1994_DOC)]
+    if not len(s):
+        return out
+    s = s.assign(d=s.hearing_date.where(s.hearing_date.ne(""), s.adoption_date))
+    adopted = s[s.doc_type.eq("adopted_motion") & s.motion_no.ne("")].sort_values("d")
+    draft = s[s.doc_type.eq("draft_packet")]
+    if len(draft):
+        out["ccFixPacketCase"] = latex_text(draft.case_no.iloc[0])
+    if len(adopted) >= 2:
+        o, n_ = adopted.iloc[0], adopted.iloc[-1]
+        out.update({"ccFixOldMotion": o.motion_no, "ccFixOldDate": _long_date(o.d),
+                    "ccFixOldCase": latex_text(o.case_no), "ccFixNewMotion": n_.motion_no,
+                    "ccFixNewDate": _long_date(n_.d), "ccFixNewCase": latex_text(n_.case_key or n_.case_no)})
+    return out
+
+
+def round_effect_table(M: dict) -> str:
+    """Table: the previous round's whole parse against this round's, on the same measures.
+    Written only when the previous round was archived with its full parse."""
+    prev = round_archive(ROUND - 1)
+    if not (prev / "conditions_long.parquet").exists():
+        return ""
+    it = load_items()
+    uni = set(case_universe(it))
+    c0, s0 = pd.read_parquet(prev / "conditions_long.parquet"), \
+        pd.read_csv(prev / "motion_sections.csv", dtype=str)
+    c1, s1 = pd.read_parquet(COND_LONG.with_suffix(".parquet")), pd.read_csv(SECTIONS, dtype=str)
+    # Only the documents both parses read: the pull went on after the previous round closed,
+    # and a document it added is not something this round's rules changed.
+    both = set(s0.doc_id) & set(s1.doc_id)
+    new_docs = len(set(s1.doc_id) - set(s0.doc_id))
+    m0 = parse_metrics(c0[c0.doc_id.isin(both)], s0[s0.doc_id.isin(both)], uni)
+    m1 = parse_metrics(c1[c1.doc_id.isin(both)], s1[s1.doc_id.isin(both)], uni)
+    M["ccRoundDocs"], M["ccRoundNewDocs"] = N(len(both)), N(new_docs)
+    labels = [("rows", "condition rows (one copy of each motion)"),
+              ("sections", "motion sections read"), ("with_exhibit_a", "\\quad with an Exhibit A located"),
+              ("with_conditions", "\\quad with at least one condition"),
+              ("section_blocks", "standing blocks and unsplit sections (implicit rows)"),
+              ("headings", "distinct condition headings"),
+              ("median_per_motion", "median conditions per adopted motion"),
+              ("earliest_in_universe", "earliest year of a motion read for a case in the universe"),
+              ("next_number", "bodies holding the next condition's number and name"),
+              ("frequent_heading", "bodies holding another frequent heading as a name"),
+              ("correspondence", "bodies holding a letter's salutation or ``Re:'' line")]
+    def fmt(v, k=""):
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return "---"
+        if k.startswith("earliest"):            # a year, not a count
+            return str(int(v))
+        return f"{v:.0f}" if isinstance(v, float) else f"{v:,}".replace(",", "{,}")
+    L = [r"\begin{table}[htbp]\centering",
+         r"\caption{What round %d's boundary rules changed. Each quantity is computed the same way "
+         r"on round %d's whole parse (archived at its close) and on this one, over the %s "
+         r"documents both read; the %s documents pulled after round %d closed are left out of "
+         r"both columns. The last three rows "
+         r"are the merge detectors the round was written against (the second also counts real "
+         r"sub-parts that carry a name, so its level is not an error count). Nothing here is "
+         r"a validation score; those are in the text.}\label{tab:roundeffect}"
+         % (ROUND, ROUND - 1, N(len(both)), N(new_docs), ROUND - 1),
+         r"\begin{tabular}{lrr}\toprule",
+         rf"Quantity & Round {ROUND - 1} & Round {ROUND}\\\midrule"]
+    for k, lab in labels:
+        L.append(rf"{lab} & {fmt(m0[k], k)} & {fmt(m1[k], k)}\\")
+    L.append(r"\bottomrule\end{tabular}\end{table}")
+    for k in ("rows", "next_number", "frequent_heading", "correspondence", "section_blocks",
+              "earliest_in_universe", "with_conditions", "headings"):
+        tag = "".join(w.title() for w in k.split("_"))
+        M[f"ccRprev{tag}"], M[f"ccRcur{tag}"] = fmt(m0[k], k), fmt(m1[k], k)
+    return "\n".join(L)
+
+
+def template_key(body) -> str:
+    """The opening of a condition's text with its numbers masked: two conditions from one
+    template share it whatever figures they state."""
+    return mask(body)[:TEMPLATE_CHARS]
 
 
 def fig_validity(oc: pd.DataFrame):
@@ -3541,6 +3804,271 @@ def fig_coverage_content(it: pd.DataFrame, s_c: pd.DataFrame):
     plt.close(fig)
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# the numbers inside the conditions (brief of 2026-09-11, Part 6)
+# ═══════════════════════════════════════════════════════════════════════════
+# The census found that conditions are a template and that what varies is the figures. This
+# stage reads those figures into typed columns instead of parsing more prose: one row per
+# canonical condition that states at least one of them, with the matched text kept beside
+# each value so any value can be checked against its sentence.
+NUMERIC = STORE / "conditions_numeric.parquet"
+WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+         "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15,
+         "twenty": 20, "twenty-five": 25, "thirty": 30, "forty": 40, "fifty": 50,
+         "sixty": 60, "ninety": 90, "hundred": 100}
+# a count as the template prints it: "21", "1,040", "one (1)", "two"
+NUMTOK = r"(?:(?P<w>[A-Za-z\-]+)\s*\(\s*(?P<p>\d[\d,]*)\s*\)|(?P<d>\d[\d,]*)|(?P<w2>[A-Za-z\-]+))"
+
+
+def _count(m) -> float | None:
+    g = m.groupdict()
+    for k in ("p", "d"):
+        if g.get(k):
+            return float(g[k].replace(",", ""))
+    w = (g.get("w2") or g.get("w") or "").lower()
+    return float(WORDS[w]) if w in WORDS else None
+
+
+TIME = r"(\d{1,2})(?::(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?|noon|midnight)"
+TIME_RANGE = re.compile(rf"(?i){TIME}\s*(?:to|until|through|-|–|—)\s*{TIME}")
+DAYS = re.compile(r"(?i)(daily|every day|seven days|7 days|monday|tuesday|wednesday|thursday|"
+                  r"friday|saturday|sunday|weekday|weekend|holiday)")
+
+
+def _hour(h, mnt, ap) -> float:
+    h, mnt, ap = int(h), int(mnt or 0), ap.lower().replace(".", "").replace(" ", "")
+    if ap == "noon":
+        return 12.0
+    if ap == "midnight":
+        return 24.0
+    if ap == "am" and h == 12:
+        h = 0
+    if ap == "pm" and h != 12:
+        h += 12
+    return h + mnt / 60
+
+
+def hours_of(body: str) -> dict:
+    """The first operating-hours range a condition states, as decimal hours; a closing time
+    earlier than the opening runs past midnight and is written +24 (2 a.m. is 26). The day
+    type is read from the forty characters around the range."""
+    b = str(body)
+    if re.search(r"(?i)24[\s-]*hours?(?: a| per)? day", b):
+        return {"hours_open": 0.0, "hours_close": 24.0, "hours_days": "24 hours",
+                "hours_ranges": 1, "hours_text": re.search(r"(?i).{0,30}24[\s-]*hours?.{0,20}", b).group(0)}
+    ms = list(TIME_RANGE.finditer(b))
+    if not ms:
+        return {}
+    m = ms[0]
+    o = _hour(m.group(1), m.group(2), m.group(3))
+    c = _hour(m.group(4), m.group(5), m.group(6))
+    if c <= o:
+        c += 24
+    ctx = b[max(0, m.start() - 40): m.end() + 40]
+    days = sorted({d.lower() for d in DAYS.findall(ctx)})
+    kind = ("daily" if any(d in ("daily", "every day", "seven days", "7 days") for d in days)
+            else "weekend" if days and all(d in ("saturday", "sunday", "weekend") for d in days)
+            else "weekday" if days else "unspecified")
+    return {"hours_open": o, "hours_close": c, "hours_days": kind, "hours_ranges": len(ms),
+            "hours_text": m.group(0)}
+
+
+BIKE = re.compile(rf"(?i){NUMTOK}\s+class\s*(?P<cls>1|2|i{{1,2}})\b\s+bicycle")
+PARK_MAX = re.compile(rf"(?i)no more than\s+{NUMTOK}\s+(?:off[\s-]*street\s+|accessory\s+|"
+                      r"vehicular\s+|residential\s+)*(?:parking|vehicle|car)")
+INCL_PCT = re.compile(r"(?i)required to provide\s+(\d{1,2}(?:\.\d+)?)\s*%\s+of the (?:proposed |total )?"
+                      r"(?:dwelling )?units")
+INCL_UNITS = re.compile(r"(?i)the project contains\s+(\d[\d,]*)\s+(?:dwelling\s+)?units;?\s*"
+                        r"therefore,?\s+(\d[\d,]*)\s+affordable units")
+AMI = re.compile(r"(?i)(\d{2,3})\s*%\s+of\s+(?:the\s+)?area median income")
+FEET = re.compile(rf"(?i){NUMTOK}\s*[-\s]?(?:foot|feet|ft\.?)\b")
+NOTICE_RADIUS = re.compile(rf"(?i)within\s+{NUMTOK}\s*(?:foot|feet|ft\.?)\b")
+NOTICE_DAYS = re.compile(rf"(?i){NUMTOK}\s+(?:calendar\s+|business\s+)?days?\s+(?:prior|before|in advance|"
+                         r"notice|written notice|advance notice)")
+INTERVAL = re.compile(r"(?i)\b(annual(?:ly)?|every year|each year|quarterly|semi[\s-]?annual(?:ly)?|"
+                      r"every six months|every (?:two|2|three|3|five|5) years|biennial(?:ly)?|monthly)\b")
+INTERVAL_MONTHS = {"annual": 12, "annually": 12, "every year": 12, "each year": 12, "quarterly": 3,
+                   "semi annual": 6, "semi-annual": 6, "semiannual": 6, "semi annually": 6,
+                   "semi-annually": 6, "semiannually": 6, "every six months": 6, "every two years": 24,
+                   "every 2 years": 24, "biennial": 24, "biennially": 24, "every three years": 36,
+                   "every 3 years": 36, "every five years": 60, "every 5 years": 60, "monthly": 1}
+
+
+def numbers_of(heading: str, body: str) -> dict:
+    """Every figure this stage types, from one condition. Each field is read only from the
+    conditions of its kind (by heading, or the body's own words where the era prints no
+    heading), so a figure is never borrowed from a neighbouring subject."""
+    h, b = str(heading or "").lower(), str(body or "")
+    lead = (h + " " + b[:200].lower())
+    out = {}
+    kind = option_kind(heading, body)
+    if kind == "validity":
+        ds = durations(b)
+        if ds:
+            out.update(validity_months=float(ds[0]),
+                       validity_text=DUR.search(b).group(0))
+    if "hours of operation" in lead or re.search(r"(?i)hours of operation|operating hours|"
+                                                 r"shall be (?:open|closed)|limited to the "
+                                                 r"following hours", b[:400]):
+        out.update(hours_of(b))
+    if "bicycle" in lead:
+        c1 = c2 = 0.0
+        found = []
+        for m in BIKE.finditer(b):
+            n = _count(m)
+            if n is None:
+                continue
+            found.append(m.group(0))
+            if m.group("cls").lower() in ("1", "i"):
+                c1 += n
+            else:
+                c2 += n
+        if found:
+            out.update(bike_class1=c1, bike_class2=c2, bike_text="; ".join(found)[:300])
+    if "parking maximum" in h or ("parking" in lead and "no more than" in b.lower()):
+        m = PARK_MAX.search(b)
+        if m and _count(m) is not None:
+            out.update(parking_max=_count(m), parking_max_text=m.group(0))
+    if re.search(r"(?i)affordable|inclusionary|below market", lead):
+        m = INCL_PCT.search(b)
+        if m:
+            out.update(incl_pct=float(m.group(1)), incl_pct_text=m.group(0))
+        m = INCL_UNITS.search(b)
+        if m:
+            out.update(units_total=float(m.group(1).replace(",", "")),
+                       units_affordable=float(m.group(2).replace(",", "")),
+                       units_text=m.group(0))
+        m = AMI.search(b)
+        if m:
+            out.update(incl_ami_pct=float(m.group(1)), incl_ami_text=m.group(0))
+    if "screen" in h and "wts" not in h and "fcc" not in b.lower()[:300]:
+        m = FEET.search(b)
+        if m and _count(m) is not None:
+            out.update(screen_ft=_count(m), screen_text=m.group(0))
+    if re.search(r"(?i)notif|notice|posted", lead):
+        m = NOTICE_RADIUS.search(b)
+        if m and _count(m) is not None:
+            out.update(notice_radius_ft=_count(m), notice_radius_text=m.group(0))
+        m = NOTICE_DAYS.search(b)
+        if m and _count(m) is not None:
+            out.update(notice_days=_count(m), notice_days_text=m.group(0))
+    if re.search(r"(?i)monitor|report|periodic|certif", h):
+        m = INTERVAL.search(b)
+        if m:
+            k = re.sub(r"\s+", " ", m.group(1).lower())
+            out.update(monitor_months=float(INTERVAL_MONTHS.get(k, INTERVAL_MONTHS.get(k.replace(" ", "-"), np.nan))),
+                       monitor_text=m.group(0))
+    return out
+
+
+NUMERIC_FIELDS = [("validity_months", "validity period (months)"),
+                  ("hours_open", "opening hour (24h)"), ("hours_close", "closing hour (24h; +24 past midnight)"),
+                  ("bike_class1", "bicycle spaces, Class 1"), ("bike_class2", "bicycle spaces, Class 2"),
+                  ("parking_max", "parking maximum (spaces)"), ("incl_pct", "inclusionary share stated (%)"),
+                  ("units_total", "dwelling units stated"), ("units_affordable", "affordable units stated"),
+                  ("incl_ami_pct", "income level stated (% of AMI)"), ("screen_ft", "screening dimension (feet)"),
+                  ("notice_radius_ft", "notice radius (feet)"), ("notice_days", "notice period (days)"),
+                  ("monitor_months", "monitoring or reporting interval (months)")]
+
+
+def numbers_stage():
+    """conditions_numeric.parquet: the typed figures of every canonical condition."""
+    c = pd.read_parquet(COND_LONG.with_suffix(".parquet"))
+    c = c[c.canonical & c.part.eq("conditions")].copy()
+    rows = []
+    for r in c.itertuples():
+        v = numbers_of(r.heading, r.body)
+        if v:
+            rows.append({"doc_id": r.doc_id, "section": r.section, "ordinal": r.ordinal,
+                         "case_key": r.case_key, "motion_no": r.motion_no, "doc_type": r.doc_type,
+                         "hearing_date": r.hearing_date, "adoption_date": r.adoption_date,
+                         "heading": r.heading, **v})
+    d = pd.DataFrame(rows)
+    d["year"] = pd.to_numeric(d.hearing_date.str[:4].where(d.hearing_date.ne(""),
+                                                           d.adoption_date.str[:4]), errors="coerce")
+    d.to_parquet(NUMERIC, index=False)
+    print(f"{len(d):,} conditions with a typed figure → {NUMERIC}")
+    print(d[[f for f, _ in NUMERIC_FIELDS]].notna().sum().to_string())
+    return d
+
+
+
+NUMERIC_SPOTCHECK = 60        # values read against their matched sentence when the stage was written
+
+
+def numbers_report(a, M: dict):
+    """The two pages Part 6 asks for: every typed figure's distribution, and how it moved by
+    hearing year. Reads conditions_numeric.parquet (the `numbers` stage)."""
+    if not NUMERIC.exists():
+        return
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    d = pd.read_parquet(NUMERIC)
+    a(r"\begin{table}[htbp]\centering")
+    a(r"\caption{The figures inside the conditions, typed: one row per field, over the canonical "
+      r"conditions that state it. `Conditions' counts those carrying the field; the years are the "
+      r"first and last hearing year seen; the statistics are over the values. Hours are on a "
+      r"24-hour clock, a closing time after midnight written past 24 (2 a.m.\ is 26).}"
+      r"\label{tab:numeric}")
+    a(r"\resizebox{\textwidth}{!}{%")
+    a(r"\begin{tabular}{lrrrrrrrl}\toprule")
+    a(r"Field & Conditions & Years & p10 & Median & p90 & Mean & Distinct & Most common\\\midrule")
+    for f, lab in NUMERIC_FIELDS:
+        x = d[f].dropna()
+        if not len(x):
+            a(rf"{lab} & 0 & & & & & & & \\")
+            continue
+        yrs = d.loc[x.index, "year"].dropna()
+        mc = x.value_counts()
+        g = lambda v: f"{v:,.1f}".rstrip("0").rstrip(".").replace(",", "{,}")
+        a(rf"{lab} & {f0(len(x))} & {int(yrs.min()) if len(yrs) else ''}--{int(yrs.max()) if len(yrs) else ''} & "
+          rf"{g(x.quantile(.1))} & {g(x.median())} & {g(x.quantile(.9))} & {g(x.mean())} & "
+          rf"{f0(x.nunique())} & {g(mc.index[0])} ({100*mc.iloc[0]/len(x):.0f}\%)\\")
+    a(r"\bottomrule\end{tabular}}\end{table}")
+    a("")
+    # the figure: median and interquartile band by hearing year, one panel per field
+    show = [(f, lab) for f, lab in NUMERIC_FIELDS if d[f].notna().sum() >= 50]
+    n = len(show)
+    cols = 3
+    rows_ = int(np.ceil(n / cols))
+    fig, axes = plt.subplots(rows_, cols, figsize=(7.4, 1.9 * rows_), sharex=True)
+    for ax, (f, lab) in zip(axes.flat, show):
+        g = d.dropna(subset=[f, "year"]).groupby("year")[f]
+        k = g.size()
+        ok = k.index[k >= MIN_NUMERIC_YEAR]
+        med, lo, hi = g.median()[ok], g.quantile(.25)[ok], g.quantile(.75)[ok]
+        ax.fill_between(ok, lo, hi, color="#5b7fa6", alpha=0.25, lw=0)
+        ax.plot(ok, med, color="#5b7fa6", lw=1.6)
+        ax.set_title(lab, fontsize=7, loc="left")
+        ax.tick_params(labelsize=6.5)
+    for ax in list(axes.flat)[n:]:
+        ax.axis("off")
+    fig.suptitle(f"The figures inside the conditions by hearing year: median and interquartile "
+                 f"band; years with fewer than {MIN_NUMERIC_YEAR} conditions stating the field not "
+                 f"drawn", fontsize=7.5, x=0.02, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(FIG2 / "fig_numeric.pdf")
+    plt.close(fig)
+    M.update({"ccNumConditions": N(len(d)), "ccNumSpot": str(NUMERIC_SPOTCHECK),
+              "ccNumMinYear": str(MIN_NUMERIC_YEAR),
+              "ccNumValidity": N(d.validity_months.notna().sum()),
+              "ccNumHours": N(d.hours_open.notna().sum()),
+              "ccNumHoursLate": f"{100*(d.hours_close.dropna() > 24).mean():.0f}",
+              "ccNumBike": N(d.bike_class1.notna().sum()),
+              "ccNumParkMax": N(d.parking_max.notna().sum()),
+              "ccNumInclPct": N(d.incl_pct.notna().sum()),
+              "ccNumInclPctFirst": str(int(d.loc[d.incl_pct.notna(), "year"].min())) if d.incl_pct.notna().any() else "---",
+              "ccNumInclPctMode": f"{d.incl_pct.mode().iloc[0]:g}" if d.incl_pct.notna().any() else "---",
+              "ccNumUnits": N(d.units_total.notna().sum()),
+              "ccNumScreen": N(d.screen_ft.notna().sum()),
+              "ccNumNotice": N(d.notice_radius_ft.notna().sum()),
+              "ccNumMonitor": N(d.monitor_months.notna().sum())})
+
+
+MIN_NUMERIC_YEAR = 10
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -3567,7 +4095,7 @@ def main():
     rx = sub.add_parser("reextract")
     rx.add_argument("--network", action="store_true",
                     help="re-download documents whose whole PDF was not kept")
-    for c in ("diff", "gold", "summary", "report"):
+    for c in ("diff", "gold", "summary", "report", "numbers", "records"):
         sub.add_parser(c)
     for c in ("freeze", "sample", "score", "archive"):
         x = sub.add_parser(c)
@@ -3607,6 +4135,192 @@ def main():
         diff_stage()
     elif a.cmd == "report":
         report_content()
+    elif a.cmd == "numbers":
+        numbers_stage()
+    elif a.cmd == "records":
+        records_request()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# the records request package (next-phase brief, Part 7): a document to send, not analysis
+# ═══════════════════════════════════════════════════════════════════════════
+RR_DIR = HERE.parents[1] / "output" / "planning_commission_project" / "records_request"
+CPRA = "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=7920.000"
+CPRA_TIME = "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=7922.535"
+
+
+def records_request():
+    """records_request.md and its two attachment CSVs: the conditioned items heard before 2010
+    whose adopted motion no address answered for, with and without a motion number. Every count
+    in the letter is computed here from the census; the legal citations are quoted from
+    leginfo and checked."""
+    import build_exaction_panel as bx
+    RR_DIR.mkdir(parents=True, exist_ok=True)
+    it = content_frames()[0]
+    it["year"] = pd.to_numeric(it.year, errors="coerce")
+    cond = it[it.flag]
+    res = residual(it, cond)
+    early = res[res.year < 2010].copy()
+    cols = {"cn": "case_number", "action_instrument_no": "motion_number", "meeting_date": "hearing_date",
+            "request_type": "request_type", "project_address": "project_address",
+            "assessor_block": "block", "lot_number": "lot"}
+    early["meeting_date"] = pd.to_datetime(early.meeting_date).dt.date.astype(str)
+    sel = early[list(cols) + ["why"]].rename(columns=cols)
+    fmt = lambda v: ";".join(map(str, v)) if isinstance(v, (list, tuple, set, np.ndarray)) else (
+        "" if v is None or (isinstance(v, float) and np.isnan(v)) else str(v).strip("[]").replace(", ", ";"))
+    sel["lot"] = sel.lot.map(fmt)
+    sel["block"] = sel.block.map(fmt)
+    num = sel[sel.why.eq("none found, number")][list(cols.values())]
+    nonum = sel[sel.why.eq("none found, no number")][
+        ["case_number", "hearing_date", "request_type", "project_address", "block", "lot"]]
+    num = num.sort_values(["hearing_date", "case_number"])
+    nonum = nonum.sort_values(["hearing_date", "case_number"])
+    num.to_csv(RR_DIR / "pre2010_with_motion_number.csv", index=False)
+    nonum.to_csv(RR_DIR / "pre2010_without_motion_number.csv", index=False)
+    a = load_census()
+    fam = a.groupby("family").agg(tried=("candidate_url", "nunique"),
+                                  found=("status", lambda s: int(s.eq("200").sum())))
+    sj = STORE / "census_summary.json"
+    summ = json.loads(sj.read_text()) if sj.exists() else {}
+    g = lambda k: str(summ.get(k, "?")).replace("{,}", ",")
+    ok_cpra = bx.quote_found("This division shall be known and may be cited as the California Public Records Act", CPRA)
+    ok_time = bx.quote_found("within 10 days from receipt of the request, determine whether the request", CPRA_TIME)
+    first, last = early.meeting_date.min(), early.meeting_date.max()
+    lines = [
+        "# Records request: adopted Planning Commission motions, hearings before 2010",
+        "",
+        f"*Draft for Dan Post to edit and send. Nothing has been sent. Generated by "
+        f"`collect_conditions.py records` on {pd.Timestamp.now().date()} from the conditions census; every "
+        f"count below is computed from the census files, and the two statutory citations were "
+        f"checked against leginfo ({'verified' if ok_cpra and ok_time else 'NOT verified'}).*",
+        "",
+        "---",
+        "",
+        "To: Custodian of Records, San Francisco Planning Department  ",
+        "[address / email for public records requests — to be filled in]",
+        "",
+        "From: Dan Post  ",
+        "[affiliation, mailing address, email — to be filled in]",
+        "",
+        f"Re: Request under the California Public Records Act (Gov. Code § 7920.000 et seq.) for "
+        f"adopted Planning Commission motions, {first[:4]}–{last[:4]}",
+        "",
+        "Dear Custodian of Records,",
+        "",
+        "I am a researcher studying the San Francisco Planning Commission's decisions on land use "
+        "since 1998. I have assembled, from the Commission's published minutes, a list of every "
+        "item the Commission heard, and from the Department's own web hosts the adopted motions "
+        "and conditions of approval for most of them. For items heard before 2010 the adopted "
+        "motion is almost never online. I am writing to request copies of those motions.",
+        "",
+        "## What I am requesting",
+        "",
+        f"1. **Adopted motions with a known motion number.** For each of the {len(num):,} items "
+        f"listed in the attached `pre2010_with_motion_number.csv` (case number, motion number and "
+        f"hearing date, heard {num.hearing_date.min()} to {num.hearing_date.max()}), the adopted "
+        f"Planning Commission motion, including its Exhibit A (conditions of approval), in "
+        f"whatever form the Department holds it (paper, microfilm, scanned image or the case file).",
+        f"2. **Adopted motions without a recorded motion number.** For each of the {len(nonum):,} "
+        f"items listed in `pre2010_without_motion_number.csv` (case number and hearing date), the "
+        f"same, or, if the Commission adopted no motion for the item, a note to that effect.",
+        "",
+        "Each of these items is one the minutes record as approved with conditions. I am not "
+        "requesting staff reports, correspondence or other parts of the case file unless the "
+        "adopted motion and its exhibits exist only within them.",
+        "",
+        "If it would reduce the burden, I would welcome (a) electronic copies of whatever is "
+        "already scanned, first; (b) access to inspect the paper records in person; or (c) a "
+        "conversation about narrowing the request, for example to a sample of years. I am happy "
+        "to pay reasonable duplication costs; please tell me in advance if they will exceed "
+        "[amount].",
+        "",
+        "## What I have already searched",
+        "",
+        "So that this request does not duplicate records that are publicly available, here is "
+        "what I searched before writing. For every case number and motion number in the minutes "
+        f"I constructed the addresses at which the Department has published motions and packets, "
+        f"and requested each one: {int(fam.tried.sum()):,} addresses in all, of which "
+        f"{int(fam.found.sum()):,} returned a document.",
+        "",
+        "| Where | Addresses tried | Documents found |",
+        "|---|---:|---:|",
+    ]
+    FAMILY_LABEL = {
+        "cpcmotions_year": "commissions.sfplanning.org motions by year", "cpcmotions_year_mirror":
+        "the same keys on the Department's S3 mirror", "cpcmotions_ftp": "the old site's FTP tree (motions)",
+        "cpcpackets": "hearing packets", "cpcpackets_mirror": "hearing packets, S3 mirror",
+        "cpcpackets_ftp": "hearing packets, old FTP tree", "citypln": "citypln-m-extnl.sfgov.org",
+        "minutes_vault": "the minutes vault", "oldsite_modules": "the old site's document modules",
+        "cpcdra": "discretionary-review actions", "cpcdra_mirror": "discretionary-review actions, S3 mirror",
+        "cpcdra_ftp": "discretionary-review actions, old FTP tree", "f_motion": "other motion URL patterns"}
+    for f, r in fam.sort_values("tried", ascending=False).iterrows():
+        lines.append(f"| {FAMILY_LABEL.get(f, f)} | {int(r.tried):,} | {int(r.found):,} |")
+    lines += [
+        "",
+        f"I also collected every document address linked from the minutes themselves "
+        f"({g('ccMinutesLinks')} links), from {g('ccHearingPages')} archived hearing pages and "
+        f"{g('ccOldsitePages')} pages of the pre-2003 city site in the Wayback Machine "
+        f"({g('ccOldsiteLinks')} links), and from the Wayback Machine's index of the Department's "
+        f"hosts ({g('ccCdxUrls')} archived addresses under {g('ccCdxPrefixes')} prefixes): "
+        f"{g('ccDiscoveredUrls')} distinct addresses in all. None answered for the items listed.",
+        "",
+        "## Timing",
+        "",
+        "I understand that the Act asks the Department to determine within 10 days of receipt "
+        "whether the request seeks disclosable records, and to estimate when they will be "
+        "available (Gov. Code § 7922.535). Given the number of items, I would be grateful for a "
+        "rolling production.",
+        "",
+        "Thank you for your help.",
+        "",
+        "Sincerely,  ",
+        "Dan Post",
+        "",
+        "---",
+        "",
+        "## Separate: questions for the Assessor-Recorder on Recorded Notices of Special Restrictions",
+        "",
+        "*Not part of the Planning request. To be sent, if at all, to the Office of the "
+        "Assessor-Recorder. Based on a read-only check of the Recorder's public pages on "
+        "2026-09-11 (`external/cpc_packets/nsr_feasibility.md`); nothing was searched or downloaded.*",
+        "",
+        "Conditions of approval are in some cases recorded against the parcel as a Notice of "
+        "Special Restrictions (NSR); where one was recorded it would give the conditions for an "
+        "item whose motion cannot be found. The public pages leave four questions open:",
+        "",
+        "1. Is \"Notice of Special Restrictions\" (or an equivalent) a selectable document type in "
+        "the online official-records index? The search configuration listing document types is "
+        "not served to an anonymous session, so this could not be confirmed.",
+        "2. Is bulk or automated access to the index permitted — for example, an index extract "
+        "by document type and date range, or a list of NSRs by Assessor's Parcel Number? The "
+        "disclaimer says nothing about it, and the Terms of Service are readable only with an "
+        "account.",
+        "3. The online index begins January 1, 1990, and earlier documents can be searched only in "
+        "the office. What are the terms for pre-1990 documents — is there an index by document "
+        "type, and can NSRs be retrieved in batches?",
+        "4. For a research project needing on the order of "
+        f"{len(num) + len(nonum):,} documents, is there a research or bulk rate instead of the "
+        "per-document online price, and does image purchase require the identity-verified "
+        "registration the site describes?",
+        "",
+        "---",
+        "",
+        "## Attachments",
+        "",
+        f"- `pre2010_with_motion_number.csv` — {len(num):,} rows: case number, motion number, "
+        f"hearing date, request type, address, block, lot.",
+        f"- `pre2010_without_motion_number.csv` — {len(nonum):,} rows: case number, hearing date, "
+        f"request type, address, block, lot.",
+        "",
+        f"*Scope note for Dan (delete before sending): the brief estimated about 1,040 items with a "
+        f"motion number and about 590 without; the completed census gives {len(num):,} and "
+        f"{len(nonum):,}. The brief's count of addresses (50,366) predates the full probe, which "
+        f"tried {int(fam.tried.sum()):,}. Items are those the item table flags as conditioned, heard "
+        f"before 2010, for which no probed or discovered address keyed to the case or motion "
+        f"number returned a document.*",
+    ]
+    (RR_DIR / "records_request.md").write_text("\n".join(lines) + "\n")
+    print(f"{len(num):,} with a motion number, {len(nonum):,} without → {RR_DIR}")
 
 
 if __name__ == "__main__":

@@ -63,6 +63,9 @@ carry one: it extends the clock by the length of a delay caused by an agency, an
 lawsuit.
 \end{abstract}
 
+% On a page of its own: split across the abstract's page, the contents read as if Section 5
+% were "15" (the first page's folio sat against it).
+\clearpage
 \tableofcontents
 \newpage
 
@@ -167,12 +170,27 @@ source.
 \item Draft motions in packets: from \ccEarliestPackets.
 \item Adopted motions embedded in later packets: from \ccEarliestEmbedded. A motion that
 modifies an earlier approval attaches the original, so an old motion survives inside a new
-packet. The oldest of these predate the corpus: the earliest motion read for a case in the
-universe was heard in \ccEarliestInUniverse, years before the case came back to the Commission,
-and \ccSectionsOutsideUniverse\ motion sections read belong to no case in the universe at all.
-Measured on the item table instead, the earliest conditioned item that now has condition text
-was heard in \ccEarliestItemYear.
+packet. The oldest of these predate the corpus and belong to no case in it: \ccSectionsOutsideUniverse\
+motion sections read belong to no case in the universe at all. The earliest motion read for a
+case in the universe was heard in \ccEarliestInUniverse. Measured on the item table instead, the
+earliest conditioned item that now has condition text was heard in \ccEarliestItemYear.
 \end{itemize}
+
+\paragraph{Correction (2026-09-11).} The previous version said that ``the earliest motion read
+for a case in the universe was heard in \ccRprevEarliestInUniverse, years before the case came
+back to the Commission''. No such motion was read. The document is the packet for case
+\texttt{\ccFixPacketCase}, with two earlier adopted motions bound into it: Motion
+\ccFixOldMotion\ of \ccFixOldDate\ (case \texttt{\ccFixOldCase}), and Motion \ccFixNewMotion\ of
+\ccFixNewDate\ (case \texttt{\ccFixNewCase}), a restaurant next door. The older motion is a scan
+whose running header repeats ``CITY PLANNING COMMISSION / MOTION NO.'' on every page, so every
+page read as a title page, and the rule that folds a title block spilling onto a second page
+into one section folded the later motion into the older one: its conditions were filed under
+the older motion's date and, because the later case number is printed on more pages, under the
+later case. The parser now opens a new section at a title page that carries a different motion
+number (round~3, \S\ref{sec:validation}). Every year-span that rested on it moves:
+Tables~\ref{tab:sections} and~\ref{tab:headings} no longer begin at
+\ccRprevEarliestInUniverse, and the earliest motion read for a case in the universe is now
+\ccEarliestInUniverse.
 
 \cctable{coverage}
 
@@ -201,7 +219,9 @@ work on the parser will not move them; a records request might.
 \paragraph{Mention rate beside parse rate.} A change of format looks like missing data unless
 the rate at which the documents \emph{mention} the thing is measured beside the rate at which
 it is \emph{parsed}. Table~\ref{tab:mention} does that over the \ccSecRead\ motion sections
-read. \ccSecMention\ mention an Exhibit A; \ccSecLocated\ have one located and parsed, and
+read. \ccSecMention\ mention an Exhibit A; \ccSecLocated\ have one located and parsed (a
+located Exhibit A yields at least one parsed condition in all but \ccSecLocatedNone\ of them,
+which is why the table carries one column for the two), and
 \ccSecRejected\ have an ``Exhibit A'' that is some other attachment --- a draft ordinance, a
 development agreement, the department's response to a CEQA appeal, a mitigation-monitoring
 table --- which the parser now recognises and declines. The remaining \ccSecMentionNotLocated\
@@ -232,19 +252,45 @@ misses were systematic, not scattered: numbers printed as separate text objects 
 lines, nested numbering in the 1998--2010 motions (lettered parts holding parenthesised
 conditions), numbering that restarts or jumps, compliance lines that begin mid-line, and page
 headers that scanned and HTML copies keep inside the text.
-\item \textbf{Round 2, the rules as used:} each of those was fixed, the rules were frozen again
-(\ccValFrozen), and on the same documents the precision is \ccValInPrec\% and the recall
-\ccValInRecall\%; the heading matches the label on \ccValInHead\% of the \ccValInHeadN\ matched
-rows that carry one, and in the \ccValNoneDocs\ gold documents with no conditions the parser
-found \ccValNoneFalse. \textbf{These are in-sample figures}: the rules were revised against
-these documents, and the numbers say how well they fit them, not how well they generalise.
-\item \textbf{Out of sample:} \ccValOutRows\ canonical rows drawn at random, after the second
-freeze, from \ccValOutDocs\ documents outside the gold set that were pulled after it --- documents
-no rule was written against --- and checked against the source pages. \ccValOutPrec\% start and
-end where the condition does (\ccValOutStart\% start correctly, \ccValOutEnd\% end correctly),
-and the heading is right on \ccValOutHead\% of the \ccValOutHeadN\ that have one. \textbf{These
-are the figures to quote.}
+\item \textbf{Round 2:} each of those was fixed and the rules frozen again (\ccValRtwoFrozen). On
+the same documents the precision was \ccValRtwoInPrec\% and the recall \ccValRtwoInRecall\%
+(in-sample). Out of sample, \ccValRtwoOutRows\ canonical rows drawn at random after that freeze,
+from documents pulled after it, were checked against the source pages: \ccValRtwoOutCorrect\ of
+\ccValRtwoOutRows\ started and ended where the condition does.
+\item \textbf{Round 3, the rules as used:} this memo's own tables showed round 2 running one
+condition into the next --- ``Sidewalk Maintenance'' holding ``10.~Community Liaison'', a
+``Conformity with Current Law'' that stated ``60 percent'', a ``Lighting'' condition that stated
+a period of ``107 years'' (the age of a cottage, in a neighbour's letter bound after the draft
+motion), and the \ccRprevEarliestInUniverse\ date corrected above. The round-2 checks had not caught it because a
+section read as one block is one row however many conditions it holds, and a row drawn at
+random rarely lands on it. Six boundary rules were added, each written against a failure a
+corpus-wide detector found, never against the gold labels (the gold documents were not opened):
+a title page with a different motion number opens a new section; a letter ends an Exhibit A;
+a numbered list inside one condition (the transformer-vault schedule) no longer makes the
+2011--2014 bold-named template ``numbered''; the numbering margin follows the page on a
+shifted scan; in a numbered section, prose opening with a name after a closed compliance line
+is a condition whose number the scan lost; and a garbled footer is not a section head.
+Table~\ref{tab:roundeffect} counts what they changed over the whole parse. The rules were
+frozen again (\ccValFrozen). On the gold documents the precision is \ccValInPrec\% and the
+recall \ccValInRecall\%; the heading matches the label on \ccValInHead\% of the \ccValInHeadN\
+matched rows that carry one, and in the \ccValNoneDocs\ gold documents with no conditions the
+parser found \ccValNoneFalse. \textbf{These are in-sample figures}: the gold documents belong to
+the pool the rules were written against. Of the \ccValCarryRows\ rows round~2 was checked on
+out of sample, round~3 reproduces \ccValCarryReproduced\ exactly, \ccValCarryCorrect\ of them
+correct: round~2's out-of-sample figure stands for round~3 on those rows.
+\item \textbf{Out of sample, round 3:} \ccValOutRows\ canonical rows drawn at random, after the
+third freeze, from \ccValOutDocs\ documents outside the gold set that were pulled after it ---
+documents no rule was written against --- and checked against the source pages. \ccValOutPrec\%
+start and end where the condition does (\ccValOutStart\% start correctly, \ccValOutEnd\% end
+correctly), and the heading is right on \ccValOutHead\% of the \ccValOutHeadN\ that have one.
+\textbf{These are the figures to quote}, with one qualification: the documents pulled after the
+third freeze are the last of the pull --- the largest packets --- and the rows drawn from them
+were all heard between \ccValOutYearFrom\ and \ccValOutYearTo, in the modern template, so this
+sample says nothing about the older formats; for those, round~2's check, which round~3
+reproduces row for row, is the out-of-sample evidence.
 \end{itemize}
+
+\cctable{roundeffect}
 
 % ═══════════════════════════════════════════════════════════════════════════
 \section{Anatomy of one motion}
@@ -400,13 +446,27 @@ near-identical --- \ccDiffCarriedPct\% in all --- \ccDiffChanged\ are reworded a
 \ccDiffRemoved\ dropped, and the adopted motions carry \ccDiffAdded\ conditions the drafts did
 not.
 
-The lower panel crosses any change with the item table's record of the hearing. The item
+\paragraph{What the additions are.} A condition the adopted motion carries and the draft does
+not is not necessarily one the Commission added from the dais. Many are the template's standing
+conditions --- Revocation, Noise Control, Managing Traffic During Construction, an odor-control
+unit, an area-plan fee --- which are more plausibly staff completing the draft between the packet
+and adoption, or conditions the parse missed on the draft side, than Commission action. The
+table therefore splits them: an addition is \emph{template text} when its opening
+\ccDiffTemplateChars\ characters, numbers masked, recur in the motions of at least
+\ccDiffTemplateCases\ other cases. \ccDiffAddedTemplate\ of the \ccDiffAdded\ additions are
+template text and \ccDiffAddedOther\ are not. Table~\ref{tab:added} quotes a random draw of the
+latter; even those mix the Commission's changes with staff's, and nothing in the documents says
+which is which.
+
+The lower panel crosses the change with the item table's record of the hearing. The item
 table records modifications for \ccDiffMods\ of the pairs, and in \ccDiffModsChange\ of those
-the conditions did change; but it records none for \ccDiffNoModsChange\ pairs whose conditions
-changed nonetheless. \textbf{The draft is a good proxy for most of the adopted text and a poor
-proxy for the part the Commission touches}, and the \texttt{modifications} field under-records
-that part. Table~\ref{tab:added} quotes a random draw of the conditions the adopted motions add ---
-the Commission's own margin, in its own words.
+the conditions did change. It records none for \ccDiffNoModsChange\ pairs whose conditions
+changed nonetheless --- \ccDiffNoModsBeyond\ of them with a change beyond template additions
+(a condition reworded or dropped, or a non-template one added). \textbf{The draft is a good
+proxy for most of the adopted text.} What the comparison does not establish is that the
+\texttt{modifications} field misses the Commission's own changes: the changes it does not record
+are partly the Commission's and partly staff completing the draft, and the documents cannot
+separate the two.
 
 \cctable{diff}
 \cctable{added}
@@ -467,6 +527,46 @@ imposed, not that the scheme is a validated classifier.
 \cctable{uncovered}
 
 % ═══════════════════════════════════════════════════════════════════════════
+\section{The numbers inside the conditions}
+\label{sec:numeric}
+
+The template's words barely vary, and its figures do (\S\ref{sec:template}). So the figures are
+read into typed columns rather than more prose parsed:
+\texttt{conditions\_numeric.parquet} holds one row per canonical condition that states one of
+them --- \ccNumConditions\ conditions --- with the motion section, case, hearing date and
+heading, each typed value, and beside each value the words it was read from, so any value can be
+checked against its sentence. Each field is read only from conditions of its own kind (by
+heading, or the body's opening words where the era prints none), so a figure is never borrowed
+from a neighbouring subject. The fields: the validity period in months; the first operating-hours
+range a condition states (opening and closing hour, and whether it is daily, weekday or weekend);
+bicycle parking spaces by class; the parking maximum; the inclusionary share, the dwelling and
+affordable unit counts, and the income level the affordable-housing conditions state; screening
+dimensions; notice radii and notice periods; and monitoring or reporting intervals. When the stage
+was written \ccNumSpot\ values drawn at random across the fields were read against their
+matched sentences and all were right; that is a check of the reading, not a validation of the
+coverage, and no field has been checked for conditions it missed.
+
+Table~\ref{tab:numeric} gives each field's distribution and Figure~\ref{fig:numeric} its
+median and interquartile band by hearing year. Three things stand out. The validity period is
+the template's (\ccNumValidity\ conditions state one; \S\ref{sec:option}). Operating hours are
+set for the site: \ccNumHours\ conditions state a range, and \ccNumHoursLate\% of them let the
+premises close after midnight. And the affordable-housing conditions state the inclusionary share
+the project was held to --- \ccNumInclPct\ of them, from \ccNumInclPctFirst, most often
+\ccNumInclPctMode\% --- which is the applied rate the exactions panel's vesting rule should
+reproduce, an independent check on it. Screening dimensions are almost never stated
+(\ccNumScreen\ conditions); the other screening conditions are the wireless template's, which
+state none.
+
+\cctable{numeric}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_numeric.pdf}
+\caption{The typed figures by hearing year: median (line) and interquartile band; years with
+fewer than \ccNumMinYear\ conditions stating a field are not drawn.}
+\label{fig:numeric}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════
 \section{Recorded Notices of Special Restrictions}
 \label{sec:nsr}
 
@@ -512,8 +612,9 @@ project's, and a thin tail written for the site.
 \item The count of conditions per motion is not rising with the conditioning share.
 \item The option's term is fixed by template at \ccValidityModal\ months, and its extension is
 contingent on delay by others.
-\item The item table's \texttt{modifications} field under-records the Commission's changes to
-the draft conditions.
+\item The adopted conditions differ from the draft's in \ccDiffAnyChangePct\% of pairs, often
+without the item table recording a modification; how much of that difference is the
+Commission's rather than staff completing the draft is not established.
 \end{enumerate}
 
 \textbf{Not established.}
@@ -554,7 +655,19 @@ python collect_conditions.py score --round 2    # in-sample
 python collect_conditions.py sample --round 2   # rows after the
                                          #   freeze (once), checked by hand
 python collect_conditions.py score --round 2    # ...and out of sample
+python collect_conditions.py archive --round 2  # keep round 2, whole
+                                         #   parse included
+python collect_conditions.py freeze --round 3   # after the merge fixes
+python collect_conditions.py parse
+python collect_conditions.py score --round 3    # in-sample, and
+                                         #   round 2's rows carried
+python collect_conditions.py pull --host <host> --max-mb 2000
+                                         # the rest of the pull
+python collect_conditions.py parse
+python collect_conditions.py sample --round 3   # out of sample (once)
+python collect_conditions.py score --round 3
 python collect_conditions.py summary     # task1_summary.md
+python collect_conditions.py numbers     # conditions_numeric.parquet
 python collect_conditions.py report      # tables, figures, macros
 \end{verbatim}}
 

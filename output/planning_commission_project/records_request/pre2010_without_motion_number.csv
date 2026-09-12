@@ -1,0 +1,555 @@
+case_number,hearing_date,request_type,project_address,block,lot
+1997.488D,1998-01-08,discretionary_review,168 Rae Avenue,,
+1997.504D,1998-01-08,discretionary_review,1304 Montgomery Street,106,17
+1997.736D,1998-01-08,discretionary_review,1769 Noe Street,,
+1997.778D,1998-01-08,discretionary_review,859 Elizabeth Street,2829,23
+1997.496D,1998-01-22,discretionary_review,1025 17th Street,3987,14
+1997.733D,1998-01-22,discretionary_review,727-729 Moraga Street,2036A,6
+1997.838D,1998-02-19,discretionary_review,185 Ripley Street,5542,31
+1997.839D,1998-02-19,discretionary_review,187 Ripley Street,5542,30
+1997.526D,1998-03-19,discretionary_review,2068 3rd Street,3995,25
+1997.526D,1998-03-19,discretionary_review,2068 3rd Street,3995,25
+1998.025C,1998-04-16,conditional_use_modification,70-82 Natoma Street,3721,45A;46;53;54
+1998.184D,1998-04-16,discretionary_review,4444 24th Street,2828,12
+1997.859D,1998-05-07,discretionary_review,641-643 Connecticut,4100,52
+1998.025C,1998-05-07,conditional_use_modification,70 82 Natoma Street,3721,45A;46;53;54
+1998.232D,1998-05-14,discretionary_review,3507 Jennings Street,5015,19
+1998.311D,1998-06-11,discretionary_review,1738 44th Avenue,2006,22
+1998.222D,1998-06-25,discretionary_review,135 Miguel Street,6683,10
+1998.463D/DDD,1998-07-09,discretionary_review,2067-69 Green Street,556,23
+1997.528D,1998-07-23,discretionary_review,1001-23rd Street,4228,2
+1998.225D,1998-08-06,discretionary_review,738 Capitol Avenue,7056,47
+1998.487D,1998-08-27,discretionary_review,59 Scott Street,1260,6
+1998.447D,1998-09-03,discretionary_review,236 Clara Street,3753,64
+1998.124D,1998-09-10,discretionary_review,60 Rausch Street/73 Sumner Street,,
+1997.258CC,1999-02-04,conditional_use_modification,939 Clement Street,1442,44;45
+1998.967C,1999-03-18,conditional_use,3132 23rd Street,3638,20
+1998.153D,1999-04-15,discretionary_review,1025 Minna Street,3511,70;71
+1998.523CV,1999-04-15,conditional_use,1880 Lombard Street,494,12
+1999.050CV,1999-04-15,conditional_use,577-579 geary street,317,17
+1998.076D,1999-06-17,discretionary_review,1000 Pennsylvania Avenue,4224,42
+1999.248D,1999-06-17,discretionary_review,123 Molimo Drive,3001B,16
+1999.073D,1999-11-04,discretionary_review,1032 Broadway Street,150,45
+1999.073DD,1999-11-04,discretionary_review,1032 Broadway,150,45
+1999.650D,1999-11-18,discretionary_review,3630 Jackson Street,969,5
+1999.270DD,1999-12-09,discretionary_review,2836-38 Washington Street,979,13
+1998.891D,2000-01-06,discretionary_review,2002 Third Street & 595 Mariposa Street,3995,23;22
+1999.418D,2000-01-06,discretionary_review,45 Juniper Street,3520,38
+1999.436D,2000-01-20,discretionary_review,618 16th Avenue,1629,36
+1999.753D,2000-01-20,discretionary_review,1051 Geneva Avenue,6407,15
+1999.321D,2000-01-27,discretionary_review,699 Pennsylvania Avenue,4014,2
+1999.416C,2000-01-27,conditional_use,2516-24 Mission Street,3616,61
+1999.374D,2000-03-02,discretionary_review,993 Tennessee Street,4108,19
+1998.703C,2000-03-09,conditional_use,399 Webster Street,842,1
+1999.207C,2000-03-09,conditional_use,316-318 leland street,6245,52
+2000.206D,2000-04-06,discretionary_review,39 ellert street,5677,7
+1999.558C,2000-04-27,conditional_use,601 valencia street,3576,79;81
+1999.624C,2000-04-27,conditional_use_modification,123-127 collingwood street,2695,30
+1999.829C,2000-04-27,conditional_use,7355 Geary Boulevard,1507,34
+1999.832C,2000-04-27,conditional_use,260 Sagamore Street,7137,69
+2000.144C,2000-04-27,conditional_use,1000 Van Ness Avenue,715,14;15;16
+2000.252C,2000-04-27,conditional_use,800 Velasco Street,6321,1
+1999.578C,2000-05-04,conditional_use,615 Hyde Street,302,8
+2000.113D,2000-05-04,discretionary_review,1552 polk street,644,1
+2000.199D,2000-05-11,discretionary_review,420 collingwood street,279,4
+2000.204DD,2000-05-11,discretionary_review,2690 broadway,960,2B
+1998.864D,2000-06-08,discretionary_review,690 4th Street,3786,8;9
+2000.147C,2000-06-08,conditional_use,400 McAllister Street,766,2
+2000.345D,2000-06-08,discretionary_review,2823-2825 golden gate avenue,1167,44
+2000.216C,2000-06-15,conditional_use,510 - 520 Frederick Street,1263,6
+2000.473D,2000-06-15,discretionary_review,82-86 garden street,1079,13
+2000.323C,2000-06-22,conditional_use,545 Powell Street,284,1
+2000.427C,2000-06-22,conditional_use,2201 Van Ness Avenue,570,7
+1999.790C,2000-07-06,conditional_use,1628 Balboa Street,1560,23
+1999.817C,2000-07-06,conditional_use,990 Columbus Avenue,65,48
+2000.078G,2000-07-06,historic,580 Howard Street,3721,91
+2000.353DD,2000-07-06,discretionary_review,541 & 547 29th Street,6630,38;37
+1999.040CV,2000-07-13,conditional_use,1738 9th avenue,2041,31;32
+2000.238DDD,2000-07-27,discretionary_review,117 parker avenue,1064,3
+2000.637D,2000-07-27,discretionary_review,350 Collingwood Street,2751,6B
+1999.833D,2000-08-03,discretionary_review,1 la avanzada street,2724,3
+2000.603D,2000-08-03,discretionary_review,1 La Avanzada Street,2724,3
+2000.605D,2000-08-03,discretionary_review,1 La Avanzada Street,2724,3
+2000.606D,2000-08-03,discretionary_review,1 La Avanzada Street,2724,3
+2000.732D,2000-08-10,discretionary_review,3445 geary boulevard,1085,41
+1998.953D,2000-08-24,discretionary_review,557-4th Street,3776,119
+1999.584D,2000-08-24,discretionary_review,188 King Street,3794,4A
+2000.793D,2000-09-07,discretionary_review,4832 17th street,1287,11
+2000.427C,2000-09-14,conditional_use,2201 Van Ness Avenue,570,7
+2000.200D,2000-09-21,discretionary_review,2412 harrison street,,
+2000.959D,2000-10-19,discretionary_review,1420 DeHaro Street,4282A,34;35
+1999.684D,2000-10-26,discretionary_review,129 Randall Street,6663,38
+2000.573D,2000-10-26,discretionary_review,141 juanita way,2958,28
+2000.578D,2000-10-26,discretionary_review,1401 douglass street,6605,20
+1998.885D,2000-11-02,discretionary_review,128 King Street,3794,23
+2000.786D,2000-11-02,discretionary_review,2844 greenwich street,940,33
+2000.578D,2000-11-09,discretionary_review,1401 douglass street,6605,20
+2000.1029D,2000-11-16,discretionary_review,481 Arkansas Street,4068,12A
+2000.1135D,2000-11-16,discretionary_review,1 La Avanzada Street,2724,3
+2000.877D,2000-12-07,discretionary_review,240 16th Avenue,1418,37
+1997.379D,2000-12-14,discretionary_review,386 alabama/2625 16th street,3967,1
+2000.677C,2001-01-18,conditional_use,373 Broadway Street,164,18
+2000.1242D,2001-01-25,discretionary_review,2101 scott street,1003,56
+2000.1200D,2001-02-01,discretionary_review,4515 20th street,2749,49
+2000.428D,2001-02-01,discretionary_review,1615 Broderick Street,1053,2
+2001.0036D,2001-02-01,discretionary_review,1955 palou avenue,5330,37
+2000.654D,2001-02-08,discretionary_review,412 lombard street,62,10
+2000.877D,2001-02-08,discretionary_review,240 16th avenue,1418,37
+2000.1265D,2001-02-15,discretionary_review,282 upper terrace,2629,2I
+2000.964DDDD,2001-02-15,discretionary_review,250 sea cliff avenue,1307,1M
+1999.770DDDDD,2001-02-22,discretionary_review,567-569 sanchez street,3585,32
+2000.097DD,2001-02-22,discretionary_review,2210 43rd avenue,2307,41
+2000.1009D,2001-02-22,discretionary_review,2634 25th avenue,2472,44
+1999.770DDDDD,2001-03-01,discretionary_review,567-569 sanchez street,3585,32
+2000.1251C,2001-04-12,conditional_use,2990 24th Street,4206,40
+2000.1274DD,2001-04-19,discretionary_review,1851-31st avenue,2068,11
+2001.0220D,2001-04-19,discretionary_review,2625 23rd avenue,2473,3
+2000.046D,2001-04-26,discretionary_review,2147 29th avenue,2188,12
+2000.264CD,2001-04-26,discretionary_review,1087 mississippi street,4224,49
+2001.0192DD,2001-05-10,discretionary_review,240 san fernando way,3251,4A
+2001.0141D,2001-05-17,discretionary_review,1041 lake street,1371,43
+2000.360D,2001-05-24,discretionary_review,2311 19th Street,4076,18
+2001.0233D,2001-06-07,discretionary_review,2349 Franklin Street,569,2
+2000.138DV,2001-06-14,discretionary_review,4038 17th street,2623,11
+2000.863CV,2001-06-14,variance,2712 mission street,3643,3
+2001.0198D,2001-06-14,discretionary_review,25 Rico Way,52,439A
+2001.0498D,2001-06-14,discretionary_review,2339 green street,559,41
+2001.0042D,2001-06-21,discretionary_review,176 clipper street,,
+2001.0385DD,2001-06-21,discretionary_review,283 chenery street,,
+2001.0542D,2001-06-21,discretionary_review,290 union street,106,15
+2000.1267D,2001-06-28,discretionary_review,215 roosevelt way,2614,60
+2001.0261DDD,2001-07-12,discretionary_review,322 28th avenue and 326 28th avenue,1406,37;38
+2001.547D,2001-07-12,discretionary_review,655 32nd Avenue,1575,7A
+2001.0562D,2001-07-19,discretionary_review,1519-37th avenue,1883,5
+2001.0666D,2001-07-19,discretionary_review,2836-2838 washington street,979,13
+2001.0612D,2001-07-26,discretionary_review,124-126 7th avenue,1366,39
+2001.0200DDDDD,2001-08-02,discretionary_review,738 Duncan Street,6588,6A
+2000.0933D,2001-08-09,discretionary_review,517 hickory street,829,13A
+2001.0202CV,2001-08-09,variance,136-142 Taylor Street,340,14
+2001.0254D,2001-08-16,discretionary_review,3040 Steiner Street,534,50
+2001.0525DDD,2001-08-16,discretionary_review,1489-5th Avenue,1848,22
+2000.1279C,2001-08-23,conditional_use,522-524 clipper street,6545,9
+2001.0610D,2001-08-23,discretionary_review,1117 Judah Street,1837,48
+2000.272CX,2001-09-06,conditional_use,185 post street,310,18
+2001.0702D,2001-09-06,discretionary_review,2590 pine street,656,17
+2001.0123DD,2001-09-13,discretionary_review,2252 beach street,915,9C
+2001.0594DD,2001-09-13,discretionary_review,1009 guerrero street,3633,19
+2001.0596DDDDD,2001-10-11,discretionary_review,760 el camino del mar,1307,2C
+2001.0703D,2001-10-11,discretionary_review,1151 church street,3650,29
+2000.692CVD,2001-10-18,discretionary_review,2200 mission street,3589,1
+2001.0716D,2001-10-18,discretionary_review,1199 south van ness avenue,3638,25
+2001.0895D,2001-10-18,discretionary_review,3248 22nd Street,3616,9
+2001.0910D,2001-10-18,discretionary_review,1 palo alto drive,2724,3
+2001.0146V,2001-10-25,variance,626-29th Street,7536,9
+2001.0663D,2001-10-25,discretionary_review,761 3rd street,3794,5
+2001.0897D,2001-10-25,discretionary_review,747 3rd street,3794,5
+2000.0023D,2001-11-08,discretionary_review,1187 noe street,6537,28
+2001.0845D,2001-11-08,discretionary_review,2551-2557 mission street,3615,23
+2001.0761D,2001-11-15,discretionary_review,60 Agua Way,2959,20
+2001.0848DDDD,2001-11-15,discretionary_review,2115 broadway,580,18
+2001.0137CV,2001-12-06,variance,3294 mission street,6596,12
+2000.074EKXC,2001-12-13,downtown_project,77 van ness avenue,834,22
+2000.074EKXC,2001-12-13,conditional_use,77 van ness avenue,834,22
+2001.0483D,2001-12-13,discretionary_review,1863 newcomb avenue,5311,25
+2001.0957D,2001-12-20,discretionary_review,"14, 20, 26, 32, 38, 46, 50 & 62 arco way",3154,32;39;38;37;28;27;26;24
+2001.0925D,2002-01-10,discretionary_review,45 Gladys Street,5710,19
+2001.1026C,2002-01-24,conditional_use,1239 9th Avenue,1714,6
+2001.0695D,2002-02-07,discretionary_review,4706 25th street,6501,16
+2001.0765D,2002-02-07,discretionary_review,377 & 381 Liberty Street,3605,28;85
+2001.1053D,2002-02-07,discretionary_review,780-27th street,6583,14A
+2001.1102D,2002-02-21,discretionary_review,1323-41st avenue,1796,3
+2001.0921D,2002-02-28,discretionary_review,1358 47th avenue,1801,30
+2001.0973DDDDDD,2002-03-14,discretionary_review,2518 union street,945,8
+2001.1027CR,2002-04-04,conditional_use,3224-3252 Pierce Street,490,9;10;11;12;13
+2001.527D,2002-04-04,discretionary_review,155 ellington avenue,7043,3F
+2001.0114DD,2002-04-11,discretionary_review,293 downey street,1269,46
+2001.0982D,2002-04-11,discretionary_review,2887 washington street,1002,27
+2001.1088CD,2002-04-11,discretionary_review,1087 mississippi street,4224,49
+2001.1167D,2002-04-18,discretionary_review,919 elizabeth street,2828,38
+2001.0645D,2002-05-02,discretionary_review,839 dolores street,3618,76
+2001.0879D,2002-05-02,discretionary_review,425 collingwood street,2770,23
+2001.0894DD,2002-05-09,discretionary_review,22-24 annapolis terrace,1163,15
+2002.0189CD,2002-05-09,discretionary_review,843 South Van Ness Avenue,3594,22
+2002.0198D,2002-05-09,discretionary_review,2337-2339 green street,559,40;41
+2002.0321CD,2002-05-09,discretionary_review,3003/3005 23rd street,3640,1
+2002.0323CD,2002-05-09,discretionary_review,3007/3009 - 23rd street,3640,1
+2002.0323CD,2002-05-09,conditional_use,3007/3009 23rd street,3640,1
+2000.718CEKV,2002-05-16,variance,1630 California Street and 1529 Polk Street,643,3
+2000.790KEXCTZM,2002-05-23,downtown_project,888 Howard Street,3724,66
+2001.0513D,2002-05-23,discretionary_review,2667 37th avenue,2459,17
+2001.0645D,2002-05-23,discretionary_review,839 dolores street,3618,76
+2001.1050D,2002-05-23,discretionary_review,3271 18th street,3591,18
+2002.0187D,2002-05-23,discretionary_review,128 gambier street,5907,6
+2002.0321CD,2002-05-23,discretionary_review,3003/3005 23rd Street,3640,1
+2002.0323CD,2002-05-23,discretionary_review,3007/3009 23rd street,3640,1
+2001.0947D,2002-05-30,discretionary_review,355 Country Club Drive,7274,1
+2002.0314CV,2002-05-30,variance,4601 3rd street,5306,4;29
+2001.0494CDV,2002-06-06,discretionary_review,1475-79 Folsom Street,3520,30B;30C
+2002.0072D,2002-06-13,discretionary_review,1512 la playa,1894,39A
+2002.0259DDDDD,2002-06-13,discretionary_review,536 presidio avenue,1031,22
+2002.0556DD,2002-06-13,discretionary_review,2670 47th avenue,2450,22
+2001.1126CV,2002-06-27,conditional_use,965-985 geneva avenue & 852 paris street,6409,5;6;7;8;9;10
+2002.0151DEK,2002-06-27,discretionary_review,480 potrero avenue,3973,2C
+2002.0191D,2002-06-27,discretionary_review,292 ivy street,809,14
+2002.0702DDD,2002-09-17,discretionary_review,185-189 broad street,7113,23
+2002.0831DD,2002-09-17,discretionary_review,946-948 elizabeth street,2807,15
+2001.0551D,2002-09-26,discretionary_review,1782 quesada avenue,5327,27
+2001.1152D,2002-09-26,discretionary_review,2429 14th avenue,2411,4
+2002.0174,2002-09-26,discretionary_review,1515-18th avenue,1864,1E
+2002.0718DDDDD,2002-09-26,discretionary_review,594 48th avenue,1497,16M
+2002.0726D,2002-09-26,discretionary_review,2126 steiner street,635,12
+2002.0803DDDD,2002-09-26,discretionary_review,281-285 edgewood avenue,2641,42;43
+2002.0725DD,2002-10-03,discretionary_review,1170-1180 green street,122,12
+2001.1126CV,2002-10-10,conditional_use,965-985 geneva avenue & 852 paris street,6409,5;6;7;8;9;10
+2002.0452D,2002-10-10,discretionary_review,75 miraloma drive,2973,34
+2002.0213D,2002-10-17,discretionary_review,1462 34th avenue,1820,31
+2002.0575C,2002-10-24,conditional_use,3537-3561 19th Street,3596,104
+2002.0772DDD,2002-11-14,discretionary_review,438 21st Avenue,1524,32
+2002.0124CVR,2002-12-05,variance,2815 diamond street,6745,25A;26;27;28;29;63
+2001.1176D,2002-12-12,discretionary_review,2998 22nd Avenue,7205,7
+2002.0851D,2002-12-12,discretionary_review,52 Cervantes Boulevard,443A,7
+2002.1022D,2002-12-12,discretionary_review,21 Buena Vista East Avenue,1241,9A
+2002.0650D,2003-01-09,discretionary_review,3358 Cesar Chavez Street,6571,16
+2002.0650D,2003-01-16,discretionary_review,3358 cesar chavez street,6571,16
+2002.0687D,2003-02-06,discretionary_review,2368 vallejo street,558,17
+2002.0835DDDDD,2003-02-13,discretionary_review,2750 greenwich street,939,13
+2002.0839D,2003-02-13,discretionary_review,2616 Union Street,946,6
+2002.1001CD,2003-02-20,discretionary_review,2020 clement street,1412,17
+2002.1113D,2003-02-20,discretionary_review,2020 clement street,1412,17
+2002.1245DDDDD,2003-02-20,discretionary_review,662 28th street,6605,43
+2002.1246DDDDD,2003-02-20,discretionary_review,660 28th street,6605,43
+2002.0717DDDDD,2003-02-27,discretionary_review,653 duncan street,6604,35
+2002.0812KXCV,2003-02-27,variance,61-69 Clementina Street,3736,36;37
+2002.1192D,2003-02-27,discretionary_review,2431 Rivera Street,2315,25
+2002.0970D,2003-03-06,discretionary_review,128 King Street,3794,23
+1999.554CD,2003-03-13,conditional_use,601 king street,3800,1;2
+1999.554CD,2003-03-13,discretionary_review,601 King Street,3800,1;2
+2002.1284D,2003-03-20,discretionary_review,710 Edinburgh Street,6342,4
+2002.0682D,2003-03-27,discretionary_review,263 Dublin Street,6284,4I
+2002.0657C,2003-04-24,conditional_use,3725 buchanan street,445A,4
+2002.1065DD,2003-04-24,discretionary_review,1469 18th Street,4036,27
+2002.0446CEK,2003-05-01,variance,40-50 lansing street,3749,11
+2002.1065DD,2003-05-08,discretionary_review,1469 18th Street,4036,27
+2002.1298CV,2003-05-08,conditional_use,624 Laguna Street,807,12
+2003.0028XCV,2003-05-08,conditional_use,150 Powell Street,327,22
+2003.0028XCV,2003-05-08,large_project_authorization,150 Powell Street,327,22
+2003.0075DDDDD,2003-05-08,discretionary_review,139 randall street,6663,36
+2003.0193D,2003-05-08,discretionary_review,2146 45th avenue,2173,40
+2003.0312D,2003-05-08,discretionary_review,761 kansas street,4073,17
+2002.0430C,2003-05-15,conditional_use,378 10th Avenue,1441,35
+2002.1056D,2003-05-15,variance,1235 3rd Avenue,1747,8
+2002.1056DV,2003-05-15,discretionary_review,1235 3rd Avenue,1747,8
+2002.1110DDD,2003-05-15,discretionary_review,323 26th avenue,1407,3
+2002.1184DD,2003-05-15,discretionary_review,620 carolina street,4071,3
+2003.0139D,2003-05-15,discretionary_review,1835 19th Avenue,2056,7
+2002.0207C,2003-05-22,conditional_use,5894-5898 mission street,7143,33
+2002.1065DD,2003-05-22,discretionary_review,1469 18th street,4036,27
+2002.1297DDDDD,2003-05-22,discretionary_review,567 Sanchez Street,3585,32
+2003.0195D,2003-05-22,discretionary_review,1 Palo Alto Drive,2724,3
+2003.0293D,2003-06-05,discretionary_review,1525 Folsom Street,3521,53
+2003.0393DD,2003-06-12,discretionary_review,1336 18th avenue,1772,4H
+2002.0933DV,2003-06-19,discretionary_review,891 carolina street,4097,27
+2003.0293D,2003-06-19,discretionary_review,1525 Folsom Street,3521,53
+2003.0466C,2003-06-19,conditional_use,555 4th Street,3776,119
+2002.0207C,2003-06-26,conditional_use,5894-5898 mission street,7143,33
+2002.1297DDDDD,2003-06-26,discretionary_review,567 Sanchez Street,3585,32
+2003.0316D,2003-07-10,discretionary_review,529 21st Avenue,1564,4
+2002.0277C,2003-07-17,conditional_use,150 golden gate avenue,344,4
+2002.1171DV,2003-07-17,discretionary_review,2312 Webster Street,604,22
+2003.0195D,2003-07-17,discretionary_review,1 palo alto drive,2724,3
+2000.1090C,2003-07-24,conditional_use,300 Spear Street,3745,1
+2002.1268D,2003-07-31,discretionary_review,527 23rd avenue,1566,7
+2003.0344D,2003-07-31,discretionary_review,1222 revere avenue,4762,26
+2003.0471D,2003-07-31,discretionary_review,764 Pacheco Street,2123A,14
+2003.0090C,2003-08-21,conditional_use,3953 24th street,6508,32
+2003.0368D,2003-08-21,discretionary_review,646 lakeview avenue,7016,21
+2003.0585D,2003-08-21,discretionary_review,465 day street,6640,8
+2002.0207C,2003-08-28,conditional_use,5894-5898 Mission Street,7143,33
+2002.1268D,2003-09-11,discretionary_review,527 23rd avenue,1566,7
+2003.0110DD,2003-09-11,discretionary_review,1921 Palou Avenue,5330,42
+2003.0435DD,2003-09-11,discretionary_review,231 delano avenue,3211,17A
+2002.0939D,2003-09-25,discretionary_review,727-729 moraga street,2036A,6
+2003.0734D,2003-10-16,discretionary_review,1740 church street,6632,8
+2002.0658C,2003-11-06,conditional_use,735 7th Avenue,1650,36
+2002.0628EKCV,2003-11-13,conditional_use,1160 mission street,3702,37;38;56
+2002.0345D,2003-11-20,discretionary_review,1708 anza street,1536,15
+2002.1307V,2003-11-20,variance,474 magellan avenue,2926,14
+2003.0535EDV,2003-11-20,discretionary_review,937-939 Jackson Street,191,28
+2003.0753D,2003-11-20,discretionary_review,2371 44th avenue,2373,15
+2002.0605CV,2003-12-04,conditional_use,4614-4630 California Street,1368,49
+2002.1298EKCD,2003-12-18,variance,624 and 630-632 laguna street,807,12;13
+2003.0535EDV,2003-12-18,discretionary_review,937-939 Jackson Street,191,28
+2003.0940C,2004-01-15,conditional_use,1469 18th Street,4036,27
+2003.0110DD,2004-01-22,discretionary_review,1921 palou avenue,5330,42
+2003.0866D,2004-01-22,discretionary_review,42 beaumont avenue,1086,22
+2003.1166D,2004-01-22,discretionary_review,1130 Gillman Avenue,4938,5
+2003.1306D,2004-01-22,discretionary_review,594 48th avenue,1497,16M
+2004.0015D,2004-01-22,discretionary_review,1637 19th Street,4069,26
+2003.1082C,2004-02-05,conditional_use,1145 polk street,691,1
+2003.1256D,2004-02-12,discretionary_review,191-193 Lower Terrace,2627,32
+2003.1264D,2004-02-12,discretionary_review,3264 Lyon Street,925,28
+2003.1282D,2004-02-12,discretionary_review,609 Cortland Avenue,5667,17
+2003.0584EXKCMTZLU,2004-02-19,downtown_project,690 Market Street,311,6
+2001.1039EKBMXZ,2004-02-26,other,55 Ninth Street,3701,63
+2003.0535EDV,2004-02-26,discretionary_review,937-939 Jackson Street,191,28
+2003.1263D,2004-02-26,discretionary_review,80 Riverton Drive,7252,29
+2003.1281DD,2004-02-26,discretionary_review,1380 hampshire street,4275,11
+2003.1330D,2004-02-26,discretionary_review,1695 25th avenue,1918,21
+2003.0545D,2004-03-25,discretionary_review,505-507 Kirkham Street,1855,45
+2002.0677D,2004-04-01,discretionary_review,679 40th avenue,1583,20
+2003.0535EDV,2004-04-01,discretionary_review,937-939 Jackson Street,191,28
+2003.0741D,2004-04-01,discretionary_review,580 Oak Park Drive,2676,30
+2003.1231C,2004-04-01,conditional_use,1342 irving street,1736,18A
+2002.0914R,2004-04-08,other,675 townsend street,3799,7
+2003.1216D,2004-04-08,discretionary_review,122 Maynard Street,5894,40
+2003.0860D,2004-04-15,discretionary_review,357 Howth Street,7035,13
+2003.1316DD,2004-04-15,discretionary_review,168 29th street,6617,17
+2004.0067DD,2004-04-15,discretionary_review,5734-5736 california street,1379,19
+2003.0312D,2004-04-22,discretionary_review,309 Cortland Avenue,5667,17
+2003.0535EDDV,2004-04-22,variance,937-939 jackson street,191,28
+2003.1282D,2004-04-22,discretionary_review,309 cortland avenue,5667,17
+2002.0731D,2004-05-06,discretionary_review,3410 california street,1019,9
+2003.0091D,2004-05-06,discretionary_review,1478 12th avenue,1842,26
+2003.1216D,2004-05-13,discretionary_review,122 maynard street,5894,40
+2003.1255DD,2004-05-20,discretionary_review,2051-2057 green street,556,26
+2003.0304CV,2004-05-27,conditional_use,829 folsom street,3752,91
+2003.1048CTV,2004-05-27,variance,4800 third street,5322,45
+2003.0091D,2004-06-03,discretionary_review,1234 19th Avenue,1732,38
+2003.1267D,2004-06-03,discretionary_review,952 deharo street,4095,27
+2004.0071D,2004-06-10,discretionary_review,406 Mississippi Street,4065,1A
+2003.0741D,2004-06-24,discretionary_review,580 oak park drive,2676,30
+2004.0125DD,2004-06-24,discretionary_review,556 valley street,6611,18
+2004.0126DD,2004-06-24,discretionary_review,558 valley street,6611,18
+2003.0735C,2004-07-15,conditional_use,459-495 9th avenue,1535,10B;16;49;28;29
+2003.1196D,2004-07-15,discretionary_review,3871 19th street,3600,96
+2003.1285D,2004-07-15,discretionary_review,3340 baker street,923,25
+2003.1254D,2004-07-22,discretionary_review,170 st. germain avenue,2708,9
+2004.0299DDD,2004-07-22,discretionary_review,2011 9th avenue,2129,1P
+2003.1283D,2004-08-05,discretionary_review,2626 Balboa Street,1570,11A
+2004.0422D,2004-08-05,discretionary_review,500 divisadero street,1203,17A
+2004.0423D,2004-08-05,discretionary_review,378 20th Avenue,1451,27
+2004.0483C,2004-08-05,conditional_use,1220 polk street,669,11
+2004.0604D,2004-08-05,discretionary_review,375 Alabama Street,3966,2
+2003.1217D,2004-08-12,discretionary_review,342 21st avenue,1452,33
+2003.1226DV,2004-09-02,discretionary_review,266-270 14th Street,3531,20
+2004.0365DD,2004-09-02,discretionary_review,850 45th avenue,1687,24
+2004.0635D,2004-09-02,discretionary_review,3150 18th Street,3573,2;12
+2004.0761D,2004-09-02,discretionary_review,971 capp street,6518,17
+2004.0070V,2004-09-09,variance,23 eureka street,2649,48
+2004.0506D,2004-09-09,discretionary_review,464 30th Street,6639,20
+2004.0535D,2004-09-09,discretionary_review,1644 diamond street,7520,7
+2004.0535DD,2004-09-09,discretionary_review,2059 23rd avenue,2143,15
+2004.0677D,2004-09-09,discretionary_review,77 Bluxome Street,3786,19
+2004.0360DD,2004-09-23,discretionary_review,1422 45th avenue,1807,26
+2004.0387D,2004-09-23,discretionary_review,266 magellan avenue,2863,14
+2004.0635D,2004-09-23,discretionary_review,3150 18th street,3573,2;12
+2004.0182C,2004-10-07,conditional_use,1135 Evans Avenue,4602A,14
+2004.0755D,2004-10-07,discretionary_review,261 26th Avenue,1386,11
+2003.0262EK,2004-10-14,downtown_project,1401-1435 Market Street,3507,39
+2003.0262EKXCVMRTZ,2004-10-14,conditional_use,1401-1435 market street,3507,39
+2003.0270DD,2004-10-14,discretionary_review,695 arkansas street,4099,25F;26
+2004.0099D,2004-10-14,discretionary_review,2070 golden gate avenue,1150,19
+2003.0262EKXCVMRTZ,2004-10-21,conditional_use,1401-1435 Market Street,3507,39
+2004.0640DD,2004-10-21,discretionary_review,1272 42nd avenue,1709,26
+2004.0357D,2004-11-29,discretionary_review,477 harkness avenue,6178,47
+2004.0358D,2004-11-29,discretionary_review,477 harkness avenue,6178,47
+2004.1032DDDDDD,2004-11-29,discretionary_review,2428 bayshore boulevard,6249,3
+2004.0899D,2004-12-02,discretionary_review,1131 rivera street,2328,17A
+2004.1180D,2004-12-02,discretionary_review,852 chenery street,6732,66
+2004.1207DD,2004-12-02,discretionary_review,549 47th avenue,1497,12
+2004.0205EKCV,2004-12-16,variance,1218-1226 leavenworth street,220,23A
+2004.1223DD,2005-01-13,discretionary_review,369 harkness avenue,6177,46
+2004.1331D,2005-01-13,discretionary_review,3305 jennings street,4993,25
+2004.0361D,2005-01-27,discretionary_review,184 majestic avenue,7060,19
+2004.093D,2005-02-17,discretionary_review,371 missouri street,4037,17
+2004.1167DD,2005-02-17,discretionary_review,1310 Stanyan Street,2706,35
+2004.1274DD,2005-02-17,discretionary_review,1919 22nd street,4161,1
+2004.0885D,2005-02-24,discretionary_review,1517 irving street,1771,47
+2004.0904D,2005-02-24,discretionary_review,364 winding way,6479,12
+2004.1192DDDD,2005-02-24,discretionary_review,455 pennsylvania avenue,4063,3B
+2005.0046D,2005-02-24,discretionary_review,1935 pacific avenue,592,14
+2004.0458V,2005-03-03,variance,566 south van ness avenue,3570,5
+2004.1274DD,2005-03-03,discretionary_review,1919 22nd Street,4161,1
+2005.0021D,2005-03-03,discretionary_review,1 Palo Alto Drive,2724,3
+2004.1057D,2005-03-17,discretionary_review,1177 California Street,253A,123;124
+2005.0226DDDD,2005-04-28,discretionary_review,60 clarendon avenue,2688,23
+2003.1152DV,2005-05-05,variance,329 Bay Street,41,36
+2004.1212V,2005-05-12,variance,2839-41 mission street,6517,29
+2004.1342EXV,2005-05-12,variance,693 Sutter Street,297,9
+2005.0021D,2005-05-12,discretionary_review,1 palo alto drive,2724,3
+2005.0421D,2005-05-12,discretionary_review,39 diamond street,2648,32
+2004.0076C,2005-05-19,conditional_use,1350 Natoma Street,3548,89
+2004.0560D,2005-05-19,discretionary_review,251 28th avenue,1388,5
+2005.0214D,2005-05-19,discretionary_review,84 sycamore street / 50 clarion alley,3576,77
+2004.0095D,2005-05-26,discretionary_review,522 37th Avenue,1508,15
+2004.1132DV,2005-05-26,variance,3288 Folsom Street,5523,21
+2004.1132DV,2005-05-26,discretionary_review,3288 folsom street,5523,21
+2004.0560D,2005-06-02,discretionary_review,251 28th avenue,1388,5
+2004.1305D,2005-06-09,discretionary_review,2678 47th Avenue,2450,20
+2005.0175CV,2005-06-16,variance,146-148 21st avenue,1380,28
+2004.0798D,2005-06-23,discretionary_review,2070 30th avenue,2149,3M
+2005.0375D,2005-07-14,discretionary_review,1122 green street,122,6
+2005.0129CV,2005-07-21,variance,3640 Sacramento Street,1011,10
+2005.0380D,2005-07-21,discretionary_review,2733 lombard street,940,24
+2001.0062EDD,2005-07-28,discretionary_review,491 bayshore boulevard,5598,8;9;11;13;15;16;18;21;28
+2004.1266CDZ,2005-09-01,discretionary_review,323 14th Avenue,1446,54
+2005.0072D,2005-09-08,discretionary_review,179 sadowa street,7138,32
+2005.0073D,2005-09-08,discretionary_review,183 sadowa street,7138,32
+2004.0920EXV,2005-09-15,downtown_project,973 Market Street,3704,69
+2004.0633C,2005-09-22,conditional_use,268-272 McAllister Street,347,7
+2004.0811D,2005-10-20,discretionary_review,1070 sanchez street,3654,3
+2004.0196D,2005-10-27,discretionary_review,101 poppy lane,6713,56
+2004.0672ECV,2005-11-03,variance,2660 harrison street,3639,4A
+2004.1272DDV,2005-11-17,discretionary_review,600 kansas street,4029,1
+2004.1272DDV,2005-11-17,discretionary_review,600 kansas street,4029,1
+2004.1272DV,2005-11-17,discretionary_review,600 kansas street,4029,1
+2004.1272DV,2005-11-17,discretionary_review,600 kansas street,4029,1
+2005.0818XV,2005-12-08,variance,149 Fell Street,834,17
+2005.0565C,2006-01-05,conditional_use,2110 Clement Street,1411,9
+2005.0991C,2006-01-12,conditional_use,3011 steiner street,535,4A
+2005.1047D,2006-01-12,discretionary_review,739-12th avenue,1655,10
+2005.1052D,2006-01-19,discretionary_review,1 Palo Alto Drive,2724,3
+2004.0275DD,2006-01-26,discretionary_review,450 frederick street,1262,12
+2005.0480CV,2006-02-02,conditional_use,2814-2824 Jennings Street,4912,1
+2005.1052D,2006-02-16,discretionary_review,1 Palo Alto Drive,2724,3
+2005.1055C,2006-02-23,conditional_use,881 innes avenue,4654,13
+2005.1144D,2006-02-23,discretionary_review,9 de soto street,6929,11
+2006.0079D,2006-03-09,discretionary_review,626 rivera street,2201,3
+2005.0541XV,2006-03-16,variance,49 Kearny Street,310,2
+2006.0113D,2006-03-16,discretionary_review,2935 Pacific Avenue,976,27
+2006.0076D,2006-04-06,discretionary_review,538 laidley street,6728,12
+2005.1093D,2006-04-27,discretionary_review,2900 fulton street,1648,17
+2005.1203CV,2006-04-27,variance,427-472 diamond street,2768,13
+2005.1084C,2006-05-25,variance,1811 34th Avenue,2071,1
+2005.0337D,2006-06-01,discretionary_review,77 seneca avenue,6969,8B
+2006.0406D,2006-06-01,discretionary_review,455 27th street,6591,34
+2005.0089DDDDDDDDDDDE,2006-06-15,discretionary_review,2121-2123 leavenworth street,94,2
+2006.0523D,2006-07-13,discretionary_review,372-374 capp street,3590,48
+2006.0409D,2006-07-20,discretionary_review,1 belgrave avenue,2662,24
+2005.0659C,2006-08-03,conditional_use,85 Saint Elmo Way,3049,32
+2005.0781D,2006-08-03,discretionary_review,1467 clayton street,2712,4A
+2006.0833D,2006-09-14,discretionary_review,1 palo alto drive,2724,3
+2005.1090CV,2006-09-21,conditional_use,1362 & 1366 14th avenue,1768,8;15B
+2005.1143D,2006-10-05,discretionary_review,124 schwerin street,6301,5
+2006.0898D,2006-10-12,discretionary_review,461 chenery street,6718,22
+2006.0833D,2006-11-02,discretionary_review,1 Palo Alto Drive,2724,3
+2005.0817CD,2006-11-09,discretionary_review,473 haight street,859,38
+2006.0390DV,2006-11-09,discretionary_review,152 elsie street,20,5618
+2006.0833D,2006-12-14,discretionary_review,1 palo alto drive,2724,3
+2006.1333D,2007-01-11,discretionary_review,843 howard street,3733,82
+2006.0451ACV,2007-01-18,variance,250 Brannan Street,3774,25
+2006.0451ACV,2007-01-18,variance,250 Brannan Street,3774,25
+2006.1059D,2007-01-18,discretionary_review,528-530 stanyan street,1213,5
+2006.1085D,2007-01-18,discretionary_review,244 32nd avenue,1391,15
+2006.1085D,2007-01-18,discretionary_review,244 32nd avenue,1391,15
+2006.0897D,2007-02-01,discretionary_review,3300 clay street,997,3
+2006.1528D,2007-02-08,discretionary_review,2012-2014 powell street,63,18B
+2006.0923D,2007-02-15,discretionary_review,443 madrid street,6079,29
+2006.1219CV,2007-03-22,variance,610 fillmore street,821,18
+2006.1087C,2007-04-05,conditional_use,853-855 goettingen street,6154,12
+2006.1415D,2007-04-05,discretionary_review,2721 pierce street,560,6
+2007.0096D,2007-04-12,discretionary_review,542 kansas street,4010,10
+2005.0937D,2007-04-19,discretionary_review,736 valencia street,3588,5
+2006.1488DDDD,2007-04-26,discretionary_review,1911 funston avenue,2121A,50
+2006.0734C,2007-05-10,conditional_use,3192 16th street,,
+2006.0949DDDDDDD,2007-05-10,discretionary_review,376 eureka street,2749,17
+2006.1340D,2007-05-10,discretionary_review,2219 bryant street,4087,37
+2007.0041DD,2007-05-10,discretionary_review,1369 folsom street,3519,68
+2007.0125D,2007-05-10,discretionary_review,270 ocean avenue,3211,10A
+2007.0041DD,2007-05-17,discretionary_review,1369 folsom street,3519,68
+2005.0633V,2007-05-31,variance,113 pixley street,516,7
+2004.0588CV,2007-06-07,variance,255 7th street,37,126;156
+2005.1134DDDD,2007-06-07,discretionary_review,3424 jackson street,971,3B
+2007.0307D,2007-06-14,discretionary_review,2258 27th avenue,2323,21A
+2007.0115D,2007-06-21,discretionary_review,174 valencia street,3502,14
+2004.1245EKV,2007-06-28,large_project_authorization,300 Grant Avenue,287,13;14
+2005.1059DV,2007-07-26,variance,2986 22nd Street,3613,18B
+2006.0106CV,2007-08-02,variance,473 eucalyptus drive,7295,11
+2007.0306DD,2007-08-02,discretionary_review,9 Douglass Street,2623,47
+2007.0531D,2007-08-02,discretionary_review,230 11th street,3516,5
+2007.0164D,2007-08-09,discretionary_review,40 juanita way,2901B,10
+2007.0388C,2007-08-09,variance,2574 san bruno avenue,5981,11
+2007.0297D,2007-08-30,discretionary_review,700 valencia street,3588,1
+2007.0294D,2007-09-20,discretionary_review,607 haight street,861,35
+2004.1245EKV,2007-09-27,large_project_authorization,300 Grant Avenue,287,13;14
+2007.0595D,2007-09-27,discretionary_review,350 divisadero,1217,27
+2007.0722D,2007-10-04,discretionary_review,2348 9th avenue,2338,17
+2006.1413D,2007-10-11,discretionary_review,1845-1851 market street,3502,43
+2007.0631D,2007-10-11,discretionary_review,1545 ocean avenue,6936,11
+2007.0673D,2007-10-11,discretionary_review,194 church street,3537,16
+2007.0657D,2007-10-18,discretionary_review,958 geary street,693,12
+2007.0722D,2007-10-18,discretionary_review,2348 9th avenue,2338,17
+2004.1245EKVX,2007-10-25,large_project_authorization,300 grant avenue,287,13;14
+2005.0842D,2007-11-01,discretionary_review,1135-1139 green street,125,115;116;117
+2006.1355DDV,2007-11-08,variance,130 Ledyard Street,5398,2
+2006.1355DDV,2007-11-08,discretionary_review,130 ledyard street,5398,2
+2007.1210D,2007-11-15,discretionary_review,519 29th street,6630,43
+2006.1362D,2007-12-06,discretionary_review,76 laidley street,7538,17
+2007.0162D,2007-12-06,discretionary_review,2908 ulloa street,2395,41
+2007.1222D,2007-12-06,discretionary_review,848-850 bay street,26,15
+2006.0847D,2007-12-13,discretionary_review,2071 43rd avenue,2163,18
+2007.0448DDDV,2007-12-20,discretionary_review,456 urbano drive,6916,10
+2006.0689D,2008-01-24,discretionary_review,585 Texas Street,4102,52
+2006.0689D,2008-01-31,discretionary_review,585 texas street,4102,52
+2005.0336D,2008-02-07,discretionary_review,252 holyoke street,5976,6
+2007.0632D,2008-02-07,discretionary_review,442 haight street,849,15
+2007.1356D,2008-02-07,discretionary_review,526 9th avenue,1551,43
+2008.0068DD,2008-02-07,discretionary_review,252 holyoke street,5976,6
+2004.0914C,2008-02-14,other,793 South Van Ness Avenue,3591,24
+2007.0781D,2008-02-14,discretionary_review,14 Valencia Street,3503,3
+2007.1430D,2008-02-14,discretionary_review,101 arbor & 102 conrad streets,7553,47;48
+2007.1373D,2008-02-21,discretionary_review,169 delta street,6202,46
+2007.0475V,2008-02-28,variance,61-63 Alpine Terrace,1259,21
+2007.0781D,2008-02-28,discretionary_review,14 valencia street,3503,3
+2007.1193D,2008-02-28,discretionary_review,770 18th avenue,1660,28
+2007.1211D,2008-02-28,discretionary_review,1140 potrero avenue,4211,9
+2007.1393D,2008-02-28,discretionary_review,2655-2657 greenwich street,943,22
+2007.1432D,2008-03-06,discretionary_review,51 seal rock drive,1482,27
+2006.0799CEVZ,2008-03-13,variance,261 octavia street,839,29
+2007.0177D,2008-03-13,discretionary_review,626 paris street,6345,7
+2007.1039D,2008-03-13,discretionary_review,3326 santiago street,2305,22
+2007.0166DV,2008-03-27,discretionary_review,1355-1533 mcallister street,1180,23
+2007.0166DV,2008-03-27,variance,1355 1533 McAllister Street,1180,23
+2007.0973DDD,2008-03-27,discretionary_review,1420 montgomery street,85,37
+2007.1193D,2008-03-27,discretionary_review,770 18th avenue,1660,28
+2006.1519D,2008-05-01,variance,1413 noe street,6591,22A
+2008.0439DD,2008-05-01,discretionary_review,1413 noe street,6591,22A
+2007.1344V,2008-05-08,variance,1949 Oak Street,1226,28
+2004.1245EKV,2008-05-15,large_project_authorization,300 Grant Avenue,287,13;14
+2005.0298KEC,2008-05-15,variance,1285 sutter street,691,8
+2004.1245EVX,2008-06-12,variance,300 grant avenue,287,13;14
+2008.0376C,2008-06-26,variance,1599 haight street,1245,23
+2008.0623D,2008-07-17,discretionary_review,762 clayton street,1254,94
+2008.0474V,2008-07-24,variance,955 valencia street,,
+2007.0785VZ,2008-08-08,variance,483 bosworth street,6753,63
+2003.0845CV,2008-08-14,variance,201 leland avenue,6252,36
+2007.1422V,2008-08-14,variance,126 Guerrero Street,3534,5
+2008.1224DV,2008-09-11,variance,59 mirabel avenue,5517,27
+2007.1334AC,2008-10-02,variance,1011 tennessee street,4172,53
+2008.0501DDD,2008-10-16,discretionary_review,79 26th avenue,1305,8
+2007.1383CEKXCV,2008-11-13,variance,474 natoma street,3725,101
+2007.0603CU,2008-11-20,other,1001 potrero avenue,4154,1
+2008.0988CV,2008-11-20,variance,335 Oak Street,839,25
+2007.0684DV,2008-12-04,variance,260 ripley street,5550,53
+2006.0881ECVZ,2008-12-18,variance,420-430 29th Avenue,1460,14B;15
+2007.1439D,2008-12-18,variance,61 pond street,3564,55
+2007.1230ECV,2009-03-19,variance,49 Grace Street,3509,27
+2007.1250X,2009-03-19,variance,333 harrison street,3766,9
+2008.0940C,2009-03-26,conditional_use,2250 vallejo street,557,9
+2008.1161C,2009-03-26,conditional_use,99 west portal avenue,2979A,21A
+2008.0322V,2009-05-07,variance,2948-2950 Fillmore Street,540,17
+2008.1401C,2009-05-07,variance,995-999 Sutter Street,300,12
+2007.1464EKXC,2009-05-14,variance,1036 mission street,3703,79;80
+2006.1431ECV,2009-06-04,variance,1960-1998 market street,872,5;6;7
+2007.0129V,2009-06-04,variance,100 32nd avenue,1312,8
+2005.1106C,2009-06-25,conditional_use,2655 bush street,1052,24
+2008.0788C,2009-07-09,variance,50-52 Grenard Terrace,502,9
+2009.0422XV,2009-07-23,variance,149 fell street,834,17
+2009.0327D,2009-09-03,discretionary_review,905-907 diamond street,6539,26
+2009.0476CV,2009-09-03,variance,178 townsend street,3788,12
+2006.0825CVS,2009-09-17,variance,782-786 andover street,5825,7;8;9
+2008.0003DDDDDDD,2009-10-01,discretionary_review,176 randall street,6655,30
+2008.1379DDDDDV,2009-10-08,discretionary_review,448 pennsylvania avenue,4064,7
+2006.0431CEK,2009-12-10,variance,1080 sutter street,279,11
+2008.0673V,2009-12-10,variance,71 Granada Avenue,7016,4
+2009.0102DPV,2009-12-17,variance,1966 great highway,2086,7A

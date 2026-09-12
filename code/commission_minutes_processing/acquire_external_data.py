@@ -2213,6 +2213,21 @@ def write_readme(ctx: dict):
           "  `task1_summary.md`, `nsr_feasibility.md`, and `tessdata/` (the OCR language",
           "  data). The census is the source of condition text; the sample is kept for the",
           "  conditions memo it was written for.",
+          "- `legal/` — `build_exaction_panel.py fetch` and `audit_state_laws.py fetch`:",
+          "  every primary source the exaction and law claims quote (ordinance PDFs, the",
+          "  Board's lists, archived Planning Code sections, leginfo pages, fee registers),",
+          "  each with its extracted text, in `docs/` and indexed in `docs_index.csv`;",
+          "  `sf_ordinance_index.csv`, `planning_code_nodes.csv`, `legistar/`.",
+          "- `exactions/` — `build_exaction_panel.py build`: `exaction_projects.parquet`,",
+          "  `rate_table.csv`, `parcel_fee_areas.parquet`, `claims_checked.csv`, and the",
+          "  report's `crosscheck_conditions.csv`, `bunching_weeks.csv`, `notch_counts.csv`.",
+          "- `laws/` — `audit_state_laws.py`: `law_claims_checked.csv` and the quarterly",
+          "  docket, permit and record series.",
+          "- `clocks/` — `analyze_permit_content.py clocks` and `outcomes`: `clocks.parquet`,",
+          "  `clock_moments.csv`, `outcomes.csv`, `outcomes_units.parquet`.",
+          "- `zoning/parcel_envelope.parquet`, `zoning/envelope_sensitivity.csv` —",
+          "  `acquire_external_data.py envelope`.",
+          "- `cpc_packets/conditions_numeric.parquet` — `collect_conditions.py numbers`.",
           "",
           "## Staleness",
           "",
@@ -3510,6 +3525,298 @@ def _write_macros(ctx, it, cu, cl, zmeta, cu_reach):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════
+# stage: envelope — the feasible envelope, per parcel-year
+# ═══════════════════════════════════════════════════════════════════════════
+# The risk set needs a capacity measure ("could have filed" means something only against what
+# the zoning allowed), and the counterfactual needs a relaxable benchmark. Per parcel-year: the
+# height limit and bulk district (read from the height district's own name), the density rule
+# of the zoning district in force, the rear yard that bounds the footprint, and a derived
+# maximum unit count, with the state density bonus as a separate column. The rules are the
+# Planning Code's zoning control tables as American Legal served them in 2020--2021 (Wayback
+# captures); each is a claim with a quotation, checked like the exaction panel's. Rules are
+# held at those captures for every year: the zoning *district* in force varies by year in the
+# panel, the rule attached to a district does not, and the memo says so.
+ENV_CLAIMS = MEMO / "envelope_sources.csv"
+ENV_OUT = EXT / "zoning" / "parcel_envelope.parquet"
+ENV_TAB = TAB / "envelope_tables.tex"
+ENV_MACROS = TAB / "envelope_macros.tex"
+# (claim_id, Planning Code section, regex) --- read against the section's earliest capture
+ENV_SPECS = [
+    ("rh_density", "209.1", r"Residential Density, Dwelling Units \(6\) § 207 One unit per lot\. P up to one unit per lot\. "
+                            r"C up to one unit per 3,000 square feet of lot area, with no more than three units per lot\. "
+                            r"P up to two units per lot, if the second unit is 600 sq\. ft\. or less\..{0,120}?P up to two units per lot\. "
+                            r"C up to one unit per 1,500 square feet of lot area\. P up to three units per lot\."),
+    ("rh_columns", "209.1", r"Table 209\.1 ZONING CONTROL TABLE FOR RH DISTRICTS Zoning Category § References RH-1\(D\) RH-1 RH-1\(S\) RH-2 RH-3"),
+    ("rh_rear", "209.1", r"Rear Yard §§ 130 , 134 30% of lot depth, but in no case less than 15 feet\. 45% of lot depth or average of adjacent neighbors"),
+    ("rm_density", "209.2", r"Residential Density, Dwelling Units \(7\) § 207 3 units per lot or up to one unit per 800 square feet of lot area\. "
+                            r"3 units per lot or up to one unit per 600 square feet of lot area\. 3 units per lot or up to one unit per 400 square feet "
+                            r"of lot area\. 3 units per lot or up to one unit per 200 square feet of lot area\."),
+    ("rm_rear", "209.2", r"Rear Yard §§ 130 , 134 45% of lot depth or average of adjacent neighbors\. If averaged, no less than 25% of lot depth "
+                         r"or 15 feet, whichever is greater\. 25% of lot depth, but in no case less than 15 feet\."),
+    ("rc_density", "209.3", r"Residential Density, Dwelling Units \(7\) § 207 3 units per lot or up to one unit per 400 square feet of lot area\. "
+                            r"3 units per lot or up to one unit per 200 square feet of lot area\. No density limits in the Van Ness SUD"),
+    ("rc_rear", "209.3", r"Rear Yard §§ 130 , 134 Required at first residential level and above\. 25% of the lot depth, but in no case less than 15 feet\."),
+    ("rto_density", "209.4", r"Residential Density, Dwelling Units \(7\) § 207 P up to one unit per 600 square feet of lot area \(8\) \. C above, "
+                             r"per criteria of § 207 \(a\)\. No density limit\. Density is regulated by the permitted height and bulk"),
+    ("nc1_density", "710", r"Dwelling Unit Density §§ 102 , 207 1 unit per 800 square foot lot area, or the density permitted in the nearest R District, whichever is greater"),
+    ("nc2_density", "711", r"Dwelling Unit Density §§ 102 , 207 1 unit per 800 square foot lot area, or the density permitted in the nearest R District, whichever is greater"),
+    ("nc3_density", "712", r"Dwelling Unit Density §§ 102 , 207 1 unit per 600 square foot lot area, or the density permitted in the nearest R District, whichever is greater"),
+    ("ncs_density", "713", r"Dwelling Unit Density §§ 102 , 207 1 unit per 800 square feet lot area, or the density permitted in the nearest R District, whichever is greater"),
+    ("nct_density", "750", r"Housing density is limited not by lot area, but by the regulations on the built envelope of buildings"),
+    ("c2_density", "210.1", r"P at a density ratio not exceeding the number of dwelling units permitted in the nearest R District.{0,200}?"
+                            r"provided, that the maximum density ratio shall in no case be less than one unit for each 800 square feet of lot area"),
+    ("c3_density", "210.2", r"Residential Density, Dwelling Units \(7\) § 207 No density limit\. Density is regulated by the permitted height and bulk"),
+    ("pdr_np", "210.3", r"Residential Uses Dwelling Units § 102 NP NP NP NP"),
+    ("mug_density", "840", r"Dwelling Unit Density Limit §§ 124 , 207\.5 , 208 No density limit"),
+    ("mur_density", "841", r"Dwelling Unit Density Limit §§ 124 , 207\.5 , 208 No density limit"),
+    ("muo_density", "842", r"Dwelling Unit Density Limit §§ 124 , 207\.5 , 208 No density limit"),
+    ("umu_density", "843", r"Dwelling Unit Density Limit §§ 124 , 207\.5 , 208 No density limit"),
+    ("dtr_density", "827", r"Residential Density, Dwelling Units § 890\.88 \(a\) No Limit\."),
+    ("sbdtr_density", "829", r"Residential Density, Dwelling Units § 890\.88 \(a\) No Limit\."),
+    ("most_restrictive", "250", r"standards for height, bulk, floor area ratio, setbacks, yards, usable open space and dwelling unit density, the most restrictive of such requirements shall prevail"),
+]
+DBL_URL = "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=65915"
+DBL_RX = r"Percentage Low-Income Units Percentage Density Bonus 10 20 .{0,160}?24 50"
+# zoning code → (kind, parameter, rear-yard share, claims). kind: per_lot (units per lot),
+# per_area (square feet of lot area per unit, with a floor of three units where the table says
+# "3 units per lot or"), none (no density limit: the envelope decides), np (dwellings not
+# permitted). A code not here is unread: its density is left blank, not guessed.
+ENV_RULES = {
+    "RH-1(D)": ("per_lot", 1, .30, "rh_density rh_columns rh_rear"),
+    "RH-1": ("per_lot", 1, .30, "rh_density rh_columns rh_rear"),
+    "RH-1(S)": ("per_lot", 2, .30, "rh_density rh_columns rh_rear"),
+    "RH-2": ("per_lot", 2, .45, "rh_density rh_columns rh_rear"),
+    "RH-3": ("per_lot", 3, .45, "rh_density rh_columns rh_rear"),
+    "RM-1": ("per_area3", 800, .45, "rm_density rm_rear"), "RM-2": ("per_area3", 600, .45, "rm_density rm_rear"),
+    "RM-3": ("per_area3", 400, .25, "rm_density rm_rear"), "RM-4": ("per_area3", 200, .25, "rm_density rm_rear"),
+    "RC-3": ("per_area3", 400, .25, "rc_density rc_rear"), "RC-4": ("per_area3", 200, .25, "rc_density rc_rear"),
+    "RTO": ("per_area", 600, .25, "rto_density"), "RTO-M": ("none", None, .25, "rto_density"),
+    "RTO-Mission": ("none", None, .25, "rto_density"),
+    "NC-1": ("per_area", 800, .25, "nc1_density"), "NC-2": ("per_area", 800, .25, "nc2_density"),
+    "NC-3": ("per_area", 600, .25, "nc3_density"), "NC-S": ("per_area", 800, .25, "ncs_density"),
+    "C-2": ("per_area", 800, .25, "c2_density"),
+    "C-3-O": ("none", None, .25, "c3_density"), "C-3-O(SD)": ("none", None, .25, "c3_density"),
+    "C-3-G": ("none", None, .25, "c3_density"), "C-3-R": ("none", None, .25, "c3_density"),
+    "C-3-S": ("none", None, .25, "c3_density"),
+    "MUG": ("none", None, .25, "mug_density"), "MUR": ("none", None, .25, "mur_density"),
+    "MUO": ("none", None, .25, "muo_density"), "UMU": ("none", None, .25, "umu_density"),
+    "RH DTR": ("none", None, .25, "dtr_density"), "SB-DTR": ("none", None, .25, "sbdtr_density"),
+    "PDR-1-B": ("np", 0, None, "pdr_np"), "PDR-1-D": ("np", 0, None, "pdr_np"),
+    "PDR-1-G": ("np", 0, None, "pdr_np"), "PDR-2": ("np", 0, None, "pdr_np"),
+}
+# named NCT districts are form-based too (their names end in NCT); everything else --- named
+# NCDs, the redevelopment areas, SoMa's pre-2008 districts, M, P --- is unread
+NCT_NAME = re.compile(r"(?i)\bNCT\b|NCT-\d")
+ENV_FLOOR_FT = 10.0               # floor-to-floor height, feet (assumed)
+ENV_ALT = {"floor_ft": (9.0, 12.0), "rear_default": (.25, .35), "loss": (0.0, 0.15)}
+
+
+def _height_parts(h: str):
+    """(base height, second height, bulk letter) from a height and bulk district name:
+    '40-X' → (40, NaN, X); '65//85-R-4' → (65, 85, R); '80-130-F' → (80, 130, F). OS and the
+    redevelopment designations carry no number and give NaN."""
+    if not isinstance(h, str):
+        return np.nan, np.nan, ""
+    nums = [int(x) for x in re.findall(r"\d+", h.split("-R-")[0] if "-R-" in h else h)]
+    base = nums[0] if nums else np.nan
+    alt = nums[1] if len(nums) > 1 else np.nan
+    m = re.search(r"-([A-Z])(?:-\d)?$", h.strip())
+    return base, alt, (m.group(1) if m else "")
+
+
+def envelope_claims() -> pd.DataFrame:
+    import build_exaction_panel as bx
+    nodes = pd.read_csv(bx.CODE_NODES, dtype=str).fillna("").set_index("section")
+    rows = []
+    for cid, sec, rx in ENV_SPECS:
+        r = nodes.loc[sec]
+        url = bx.wayback(r.url, r.all_ts.split(";")[0])
+        m = re.search(rx, bx.source_text(url))
+        rows.append({"claim_id": cid, "section": sec, "source_url": url, "quote": m.group(0) if m else ""})
+        if not m:
+            print(f"  MISSING {cid}")
+    for cid, sec, rx in (("dbl_max50", "Gov. Code 65915(f)", DBL_RX),
+                         ("dbl_five", "Gov. Code 65915(i)", r'"Housing development," as used in this section, means a development project for five or more residential units')):
+        m = re.search(rx, bx.source_text(DBL_URL))
+        rows.append({"claim_id": cid, "section": sec, "source_url": DBL_URL, "quote": m.group(0) if m else ""})
+    c = pd.DataFrame(rows)
+    c["verified"] = [("yes" if q and bx.norm_text(q) in bx.source_text(u) else "no")
+                     for q, u in zip(c.quote, c.source_url)]
+    c.to_csv(ENV_CLAIMS, index=False)
+    return c
+
+
+def envelope_frame(floor_ft=ENV_FLOOR_FT, rear_add=0.0, loss=0.0, gpu=None) -> pd.DataFrame:
+    """The envelope for every parcel-year, under one set of assumptions."""
+    import build_exaction_panel as bx
+    pan = pd.read_parquet(EXT / "zoning" / "parcel_zoning_panel.parquet",
+                          columns=["blklot", "year", "zoning", "height"])
+    a = pd.read_csv(EXT / "assessor" / "assessor_secured_roll.csv.gz", dtype=str,
+                    usecols=["closed_roll_year", "parcel_number", "lot_area"])
+    a["lot_area"] = pd.to_numeric(a.lot_area, errors="coerce")
+    a = a[a.lot_area.gt(0)].sort_values("closed_roll_year")
+    lot = a.groupby("parcel_number").lot_area.last()
+    # A condominium's unit parcels carry no lot area and share one map lot: the envelope is a
+    # property of the map lot, so lot area is read there (the largest any of its parcels
+    # records) and totals count each map lot once.
+    par = pd.read_csv(EXT / "parcels" / "parcels_active_retired.csv.gz", dtype=str,
+                      usecols=["blklot", "mapblklot"]).drop_duplicates("blklot")
+    to_map = par.set_index("blklot").mapblklot
+    lot_map = pd.DataFrame({"map": to_map, "lot": to_map.index.map(lot)}).groupby("map").lot.max()
+    if gpu is None:
+        gpu = json.loads((bx.EXA / "build_meta.json").read_text())["gpu_med"]
+    hp = pd.DataFrame([_height_parts(h) for h in pan.height.unique()], index=pan.height.unique(),
+                      columns=["h_base", "h_alt", "bulk"])
+    e = pan.join(hp, on="height")
+    e["mapblklot"] = e.blklot.map(to_map).fillna(e.blklot)
+    e["lot_area"] = e.mapblklot.map(lot_map).where(lambda x: x.gt(0))
+    e["map_first"] = ~e.duplicated(["mapblklot", "year"])
+    rules = pd.DataFrame(ENV_RULES, index=["kind", "param", "rear", "claims"]).T
+    e = e.join(rules, on="zoning")
+    nct = e.kind.isna() & e.zoning.fillna("").str.contains(NCT_NAME)
+    e.loc[nct, ["kind", "rear", "claims"]] = ["none", .25, "nct_density"]
+    e["kind"] = e.kind.fillna("unread")
+    e["rear"] = (pd.to_numeric(e.rear, errors="coerce") + rear_add).where(e.kind.ne("np"))
+    param = pd.to_numeric(e.param, errors="coerce")
+    e["units_density"] = np.select(
+        [e.kind.eq("per_lot"), e.kind.eq("per_area3"), e.kind.eq("per_area"), e.kind.eq("np")],
+        [param, np.maximum(3, np.floor(e.lot_area / param)), np.floor(e.lot_area / param), 0], np.nan)
+    floors = np.floor(e.h_base / floor_ft).clip(lower=1)
+    gfa = e.lot_area * (1 - e.rear) * (1 - loss) * floors
+    e["units_form"] = np.floor(gfa / gpu)
+    floors_alt = np.floor(e.h_alt / floor_ft).clip(lower=1)
+    e["units_form_alt"] = np.floor(e.lot_area * (1 - e.rear) * (1 - loss) * floors_alt / gpu)
+    lim = e.kind.isin(["per_lot", "per_area3", "per_area"])
+    e["units_max"] = np.where(lim, np.fmin(e.units_density, e.units_form),
+                              np.where(e.kind.eq("none"), e.units_form, np.where(e.kind.eq("np"), 0, np.nan)))
+    e["binding"] = np.where(lim & e.units_density.le(e.units_form), "density",
+                            np.where(lim | e.kind.eq("none"), "envelope", ""))
+    # the state density bonus, as its own column: at most 50% over the density the zoning
+    # allows (dbl_max50); in a district with no density limit the bonus is taken on the
+    # envelope's count, which is this construction's assumption, not the statute's
+    # and only for a "housing development" of five or more units (dbl_five)
+    e["dbl_uplift"] = np.ceil(0.5 * e.units_max).where(e.kind.isin(["per_lot", "per_area3", "per_area", "none"]))
+    e.loc[e.units_max.lt(5), "dbl_uplift"] = 0
+    return e
+
+
+def envelope():
+    """Claims, the panel under the central assumptions, and the sensitivity grid."""
+    c = envelope_claims()
+    print(c.verified.value_counts().to_string())
+    e = envelope_frame()
+    keep = ["blklot", "mapblklot", "map_first", "year", "zoning", "height", "h_base", "h_alt", "bulk", "lot_area", "kind", "rear",
+            "units_density", "units_form", "units_form_alt", "units_max", "binding", "dbl_uplift", "claims"]
+    e[keep].to_parquet(ENV_OUT, index=False)
+    import build_exaction_panel as bx
+    meta = json.loads((bx.EXA / "build_meta.json").read_text())
+    q = meta["gpu_q"]
+    runs = [("central", {}), ("floor 9 ft", {"floor_ft": 9.0}), ("floor 12 ft", {"floor_ft": 12.0}),
+            ("unit 645 gsf (p25)", {"gpu": q[0]}), ("unit 1,086 gsf (p75)", {"gpu": q[1]}),
+            ("rear yards 10 points deeper", {"rear_add": .10}), ("15% more lost to setbacks", {"loss": .15})]
+    rows = []
+    for lab, kw in runs:
+        f = e if not kw else envelope_frame(**kw)
+        for y in (2008, 2016, int(f.year.max())):
+            g = f[f.year.eq(y) & f.map_first]
+            ok = g.units_max.notna()
+            rows.append({"run": lab, "year": y, "parcels": len(g), "priced": int(ok.sum()),
+                         "units_total": g.units_max.sum(), "units_median": g.loc[ok, "units_max"].median(),
+                         "density_binds": (g.binding.eq("density")).sum() / max(1, g.binding.ne("").sum()),
+                         "dbl_total": g.dbl_uplift.sum()})
+    sens = pd.DataFrame(rows)
+    sens.to_csv(EXT / "zoning" / "envelope_sensitivity.csv", index=False)
+    envelope_report(e, c, sens, meta)
+    print(f"{len(e):,} parcel-years → {ENV_OUT}")
+
+
+def envelope_report(e: pd.DataFrame, c: pd.DataFrame, sens: pd.DataFrame, meta: dict):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    ylast = int(e.year.max())
+    g = e[e.year.eq(ylast) & e.map_first]
+    M = {"envClaims": _n(len(c)), "envClaimsOk": _n(c.verified.eq("yes").sum()),
+         "envYearLast": str(ylast), "envParcels": _n(len(g)),
+         "envLot": _pct(g.lot_area.notna().mean()), "envHeight": _pct(g.h_base.notna().mean()),
+         "envRead": _pct(g.kind.ne("unread").mean()), "envPriced": _pct(g.units_max.notna().mean()),
+         "envFloor": f"{ENV_FLOOR_FT:.0f}", "envGpu": _n(meta["gpu_med"]),
+         "envDensityBinds": _pct((g.binding.eq("density")).sum() / max(1, g.binding.ne("").sum())),
+         "envUnitsTotal": _n(g.units_max.sum()), "envDblTotal": _n(g.dbl_uplift.sum())}
+    s = sens[sens.year.eq(ylast)].set_index("run")
+    caps = sorted({re.search(r"/web/(\d{4})", u).group(1) for u in c.source_url if "/web/" in u})
+    M.update(envReadFrom=caps[0], envReadTo=caps[-1], envYearA="2008", envYearB="2016",
+             envDblPct="50", envDblMin="5")
+    M["envSensLo"] = _n(s.units_total.min())
+    M["envSensHi"] = _n(s.units_total.max())
+    for y in (int(M["envYearA"]), int(M["envYearB"])):
+        M[f"envUnits{'Eight' if y == 2008 else 'Sixteen'}"] = _n(sens[(sens.run.eq("central")) & sens.year.eq(y)].units_total.iloc[0])
+    kinds = g.kind.value_counts()
+    for k, name in (("per_lot", "PerLot"), ("per_area3", "PerAreaThree"), ("per_area", "PerArea"),
+                    ("none", "None"), ("np", "Np"), ("unread", "Unread")):
+        M[f"envKind{name}"] = _pct(kinds.get(k, 0) / len(g))
+    L = ["% GENERATED BY acquire_external_data.py envelope --- do not edit by hand."]
+    L += [r"\begin{table}[htbp]\centering\small",
+          r"\caption{The density rules the envelope applies, by zoning district, with the claim each rests on "
+          r"(\texttt{envelope\_sources.csv}). \emph{Per lot}: units per lot; \emph{per area}: square feet of "
+          r"lot area per unit (with a floor of three units where the table says so); \emph{none}: no "
+          r"density limit, the envelope decides; \emph{NP}: dwellings not permitted. A district not listed is "
+          r"unread and its density left blank. Rear yards are the RH, RM and RC tables' (the RH and RM columns "
+          r"read from the tables' order); elsewhere 25\%, the RC table's figure, is assumed.}\label{tab:envrules}",
+          r"\resizebox{\textwidth}{!}{\begin{tabular}{lllrl}\toprule District & Rule & Parameter & Rear yard & Claims\\\midrule"]
+    for z, (k, p, r, cl) in ENV_RULES.items():
+        L.append(rf"{z} & {k.replace('_', ' ').replace('area3', 'area, min.~3')} & {'' if p is None else p} & "
+                 rf"{'' if r is None else f'{int(r * 100)}\\%'} & \texttt{{{cl.replace('_', chr(92) + '_')}}}\\")
+    L.append(rf"named NCT districts & none & & 25\% & \texttt{{nct\_density}}\\")
+    L += [r"\bottomrule\end{tabular}}\end{table}"]
+    L += [r"\begin{table}[htbp]\centering\small",
+          rf"\caption{{Sensitivity: the city's total maximum units (parcels whose rule was read and whose lot area "
+          rf"is known), the median parcel, and the share of density-limited parcels where the density rule rather "
+          rf"than the envelope binds, under each assumption; one row changes one assumption.}}\label{{tab:envsens}}",
+          r"\begin{tabular}{lrrrrr}\toprule Assumption & Year & Parcels priced & Total units & Median & Density binds (\%)\\\midrule"]
+    for r in sens.itertuples():
+        L.append(rf"{_tex(r.run)} & {r.year} & {_n(r.priced)} & {_n(r.units_total)} & {_n(r.units_median)} & {_pct(r.density_binds)}\\")
+    L += [r"\bottomrule\end{tabular}\end{table}"]
+    # one tables file; the memo's \envtable{<label>} places each where the text needs it
+    out, cur = [L[0]], []
+    for line in L[1:] + [r"\begin{table}"]:
+        if line.startswith(r"\begin{table}") and cur:
+            lab = re.search(r"\\label\{tab:(\w+)\}", "\n".join(cur)).group(1)
+            out += [rf"\ifnum\pdfstrcmp{{\envtab}}{{{lab}}}=0", *cur, r"\fi"]
+            cur = []
+        cur.append(line)
+    ENV_TAB.write_text("\n".join(out) + "\n")
+    ENV_MACROS.write_text("% GENERATED BY acquire_external_data.py envelope --- do not edit by hand.\n" +
+                          "\n".join(rf"\newcommand{{\{k}}}{{{v}}}" for k, v in sorted(M.items())) + "\n")
+    fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+    cen = sens[sens.run.eq("central")]
+    tot = e[e.map_first].groupby("year").units_max.sum()
+    ax[0].plot(tot.index, tot.values / 1e3, color="#2f6f4f", lw=2)
+    ax[0].set_ylabel("maximum units, thousands (read districts)")
+    ax[0].set_title("(a) The city's envelope, central assumptions, by panel year", fontsize=9)
+    gg = g[g.units_max.notna() & g.units_max.gt(0)]
+    ax[1].hist(np.log10(gg.units_max), bins=60, color="#5b7fa6")
+    ax[1].set_xlabel("maximum units per parcel (log10)")
+    ax[1].set_ylabel("parcels")
+    ax[1].set_title(f"(b) Distribution across parcels, {ylast}", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(FIG / "fig_envelope.pdf")
+    plt.close(fig)
+
+
+def _n(x) -> str:
+    return "---" if x is None or pd.isna(x) else f"{x:,.0f}".replace(",", "{,}")
+
+
+def _pct(x) -> str:
+    return "---" if x is None or pd.isna(x) else f"{100 * x:.0f}"
+
+
+def _tex(s) -> str:
+    return str(s).replace("%", r"\%").replace("&", r"\&").replace("_", r"\_")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -3525,6 +3832,7 @@ def main():
     y = sub.add_parser("sync", help="materialise Dropbox online-only files under demand/")
     y.add_argument("--root", help="subtree to materialise (default $MFHR_DATA_ROOT/demand)")
     sub.add_parser("report", help="joins, coverage, figures, tables, README")
+    sub.add_parser("envelope", help="the feasible envelope per parcel-year (claims, panel, sensitivity)")
     a = ap.parse_args()
     if a.cmd == "probe":
         probe()
@@ -3534,6 +3842,8 @@ def main():
         spatial(a.refresh)
     elif a.cmd == "sync":
         sync(Path(a.root).expanduser() if a.root else None)
+    elif a.cmd == "envelope":
+        envelope()
     else:
         report()
 

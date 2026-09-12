@@ -1,0 +1,497 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage[section]{placeins}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is read from the memo or artefact that owns it: the memos'
+% own generated macros files are input below, and build_chronicle.py writes the rest
+% (tables/chronicle_macros.tex) from the older memos' JSON artefacts, git history and the data.
+\input{tables/chronicle_macros}
+\input{../discretionary_review_patterns/tables/corpus_macros}
+\input{../conditions_of_approval/tables/condition_macros}
+\input{../predicting_delay/tables/delay_macros}
+\input{../data_acquisition/tables/acquisition_macros}
+\input{../data_acquisition/tables/envelope_macros}
+\input{../datasf_planning_catalogue/tables/datasf_catalogue_macros}
+\input{../conditions_content/tables/conditions_content_macros}
+\input{../permits_content/tables/permits_content_macros}
+\input{../clocks/tables/clocks_macros}
+\input{../clocks/tables/outcomes_macros}
+\input{../exactions/tables/exactions_macros}
+\input{../regulatory_timeline/tables/regulatory_timeline_macros}
+\newcommand{\chtable}[1]{\FloatBarrier\def\chtab{#1}\input{tables/chronicle_tables}}
+
+\title{The Market for Housing Regulation:\\
+\large what has been built, what it established, and what is open}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+A chronicle, not a paper: one document to reconstruct the project's state from, front to back.
+It lists every memo with what later work revised in it, walks through them in the order they
+were finished, inventories the data, states the model the project is building toward, maps each
+model object to the data that would identify it, and keeps the register of what is open.
+
+\medskip\noindent
+\textbf{\chMemos\ memos and \chPagesTotal\ pages rest on one dataset of \chItems\ decisions.}
+Every item the Planning Commission heard from \chItemFirst\ to \chItemLast\ with a case number is
+extracted into structured fields (a model at \chHaikuTest\% field accuracy on a frozen test half),
+dated to its hearing, and followed into DBI's permit record, the Planning Department's records,
+the Commission's own motions and conditions, the parcel map, prices, fees and the law.
+
+\medskip\noindent
+\textbf{Several headline claims did not survive later work, and the timeline records each.} The
+model case: ``no amount of work recovers condition content before 2010'' was a claim about two
+URL patterns; a census of every case found text for \condReachEarlyHtml\% and
+\condReachLateHtml\% of the conditioned items of the two pre-2010 eras --- little, not none.
+Others: the two linkage routes do overlap; two of the project's own join keys were wrong; most of
+the apparent slowness of Commission-linked permits is immortal time; the developer's clock on
+the DR track starts at the DBI filing.
+
+\medskip\noindent
+\textbf{$\tau$ is now measured in dollars; $\sigma$ is measured as dispersion, not yet as the
+model's primitive.} A new building of ten or more units owes a median \exPuMed\ per unit in
+fees and inclusionary obligation; the developer's clock has a coefficient of variation of
+\ckTotCvCu\ on the conditional-use track and \ckTotCvMin\ off the Commission. What blocks a first
+draft is identification: separating $\tau$ from $\sigma$, the deterred projects, and treating
+$\sigma$ as a parcel-level primitive (\S\ref{sec:chregister}).
+\end{abstract}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The question}\label{sec:chquestion}
+
+\textbf{The market for housing regulation.} A developer who wants to build in San Francisco
+buys, in effect, a permission from the city, and the price has two parts. One is deterministic
+and written down: fees, the inclusionary obligation, the template conditions every approval
+carries. The other is stochastic: how long the process takes and what the Commission will ask
+for. The project's premise is that the second part matters for what gets built, and where.
+
+\textbf{The real-options frame.} A parcel is an option to develop. Uncertainty over delay and
+conditions raises the value of waiting, so it raises the developer's filing threshold; and
+because the cost of waiting is paid on the project's whole value, the threshold rises by
+different amounts on different parcels. Variance in the regulatory process therefore does two
+things a deterministic cost of the same expected size does not: it deters filing, and it
+re-routes the filings that happen toward higher-value parcels.
+
+\textbf{How the evidence is assembled.} The Commission's minutes, scraped for
+\chItemFirst--\chItemLast, are parsed into agenda-item blocks; a deterministic stage dates each
+block to its hearing and derives the sitting's attributes; a language model with retrieved
+examples extracts each item's fields. From the item, four routes lead outward: to DBI's building
+permits (a permit number printed in the minutes, the Planning records' own permit field, or a
+parcel-and-date rule), to the Planning Department's records (case number), to the parcel map,
+assessor roll, prices and zoning (block and lot), and to the Commission's own motions, where the
+conditions of approval are written. The law --- fees, the inclusionary program, state statutes
+--- enters as quoted claims checked against their primary sources. Three standards run through
+all of it: extraction rules are frozen and hashed before they are validated, and in-sample and
+out-of-sample figures are reported apart; a machine--label disagreement is checked against the
+source before the machine is called wrong; and no number in a memo is typed by hand.
+
+\textbf{Two papers.} Paper~1 estimates the within-jurisdiction mechanism in San Francisco,
+where the Commission's record goes back to \chItemFirst\ and can be followed item by item. Paper~2
+takes the primitives estimated there to the fragmentation question across the Bay Area's
+jurisdictions. Everything in this chronicle serves Paper~1.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The memos, in order}\label{sec:chtimeline}
+
+Table~\ref{tab:chtimeline} lists every memo by the date it was first completed, the question
+it was asked, its answer in a sentence, and what later work revised or overturned in it. The
+dates are those git first recorded each memo (for the three written in this batch, the run
+log's); every memo has since been revised in place, and the revisions column is the point of the
+table.
+
+\chtable{timeline}
+
+\subsection*{Every supersession, collected}
+
+Table~\ref{tab:chsupersessions} collects every place where later work replaced a claim or a
+figure, including the brief's own premises that this batch checked. Most are corrections of the
+project's own instruments --- keys, parsers, scoring --- found when a number was checked against
+its source; the rest are claims that generalised beyond what had been measured.
+
+\chtable{supersessions}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{A walk through them}\label{sec:chwalk}
+
+Each subsection says what the memo asked, what it established, what it did not, and what it
+changed downstream. Detail is in the memos.
+
+\subsection{Meeting-level information (\chDateMeetingLevelInfo)}\label{sec:chmeetinglevelinfo}
+
+\textit{Asked.} The item needs two facts it does not carry: the day it was heard, and the
+character of the sitting. Both belong to the meeting. \textit{Established.} A deterministic date
+stage that never re-derives block boundaries and was right on every gold item in four frozen
+rounds; attribute fields in the mid-90s out of sample; a meeting table of \chMeetings\ sittings
+over \chMeetFirst--\chMeetLast. Scored today against all \chMeetScored\ hand-confirmed meetings,
+the attributes agree on \chMeetAcc\% of \chMeetValues\ values, \chMeetEarly\% for 1998--2001 and
+\chMeetLate\% from 2015. \textit{Not established.} The all-meetings figure is unadjudicated, and
+spot checks find hand labels that are wrong; two commissioners named Lee are left unresolved
+rather than guessed. \textit{Downstream.} The date is the join key to every other panel, and the hearing sequence
+of a case --- first hearing, continuances, final action --- is built from it; the meeting table
+also carries who sat, which the corpus memo's commissioner analysis uses. The method's rule that
+a corpus hole is drawn as a gap rather than interpolated became a standing rule of the project.
+
+\subsection{Item-level extraction (\chDateExtractionMethodComparison)}\label{sec:chextractionmethodcomparison}
+
+\textit{Asked.} Rules or a language model for the item fields? \textit{Established.} On a frozen
+test half of a \chGoldItems-item gold set, a small model with retrieved examples scores
+\chHaikuTest\% against the regular expressions' \chRegexTest\%; adjudicating the disagreements
+found that about half were label errors, so an accuracy measured against unadjudicated gold is a
+lower bound. \textit{Not established.} The modern era is thin in the gold set.
+\textit{Downstream.} The corpus pass that produced the item table, and the rule that segmentation
+stays deterministic while field semantics go to the model. Its storage layer (raw, interim and
+clean replies kept apart) is what later made a silent data loss recoverable. Two of its figures
+were corrected in the code review that followed (Table~\ref{tab:chsupersessions}).
+
+\subsection{The corpus memo (\chDateDiscretionaryReviewPatterns)}\label{sec:chdiscretionaryreviewpatterns}
+
+\textit{Asked.} What does the item-level dataset contain? \textit{Established.} Across
+\chItems\ items and \corpusUniverse\ cases: outright denial has nearly vanished while conditioning
+has more than tripled --- the Commission substituted a conditioning technology for a denial
+technology; repeat appearances are a large share of the docket and the upper tail of time from
+first to last hearing lengthened; discretionary review's share of the docket collapsed after the
+2013 reforms, as that memo dates them. \textit{Not established.} Any ex-ante measure of burden: the data records realised
+outcomes. \textit{Downstream.} It set the agenda: conditions (what is in them), linkage (what
+happens after), delay (how much is forecastable). Its closing section named four routes from
+realised outcomes to an ex-ante measure of burden; the real-options frame the later memos adopt
+is the one that took. Its distinct-parcel count is superseded and not yet regenerated.
+
+\subsection{Permit linkage (\chDatePermitLinkage)}\label{sec:chpermitlinkage}
+
+\textit{Asked.} How far can a decision be followed into DBI's permits? \textit{Established.} The
+printed permit number matches on \chPermitMatch\% of all \chPermitsDistinct\ distinct numbers the
+minutes print; the apparent collapse of the route after 2019 was a change in how the minutes
+print the number, not in the data. The route reaches discretionary reviews and almost no
+conditional uses; a parcel-and-date fallback narrows the candidates at \chParcelPrecision\
+precision and \chParcelRecall\ recall. Across DBI's rows, \chDbiCondTalk\ mention a Commission
+condition at all. \textit{Not established.} The fallback's precision outside discretionary review,
+where it was measured. \textit{Downstream.} The permit content memo keeps the fallback (T3) apart
+from the printed number (T1) and the Planning records' permit field (T2), and calls only the first
+two ``Commission-linked''. The negative result --- conditions are not in DBI --- sent the
+conditions work to the Commission's own documents. The check that caught the post-2019
+parsing failure, comparing the rate at which a thing is mentioned with the rate at which it is
+parsed, became a standard diagnostic.
+
+\subsection{Conditions of approval (\chDateConditionsOfApproval)}\label{sec:chconditionsofapproval}
+
+\textit{Asked.} The item table records that a project was conditioned, not how. Where is the
+content? \textit{Established.} Not in the minutes, not in DataSF, not in DBI; in the Commission
+packet's draft motion, whose Exhibit~A numbers and names each condition, addressable by case
+number from 2011. The conditions are templated, and a thirteen-category scheme reaches most
+impositions; staff's conditions mostly change a project's obligations, the Commission's
+amendments mostly change the building. \textit{Overturned.} Two claims. ``The two routes never
+cover the same item'' was about what the minutes print; the Planning records' permit field reaches
+\condBridgeCUPct\% of conditional-use items. And ``no amount of work recovers condition content
+before 2010'' generalised from two URL patterns: the census found \condReachEarlyHtml\% and
+\condReachLateHtml\% of the pre-2010 eras' conditioned items with text, against \condReachEarlyPdf\%
+for 2011--2014, and \condResPreTenNone\ of the \condResPreTen\ pre-2010 items without text are
+documents found at no address. \textit{Downstream.} The census, which replaced its sample with every case; its taxonomy
+remains unvalidated against hand coding.
+
+\subsection{Predicting delay (\chDatePredictingDelay)}\label{sec:chpredictingdelay}
+
+\textit{Asked.} How much of the time from a case's first hearing to its last can be forecast from
+what a developer sees on the day of the first? \textit{Established.} The level somewhat, the
+tail barely, and in-sample fit roughly halves out of sample; the staff recommendation is the most
+informative signal; the residual dispersion is large, and it is the first proxy for the cost of
+uncertainty. \textit{Not established.} Anything causal. \textit{Superseded.} Its clock starts at
+the first hearing; the data-acquisition memo's filing clocks and the clocks memo's distributions
+replace it as the measure of duration.
+
+\subsection{Data acquisition (\chDateDataAcquisition)}\label{sec:chdataacquisition}
+
+\textit{Asked.} Where are the denominator, the clock, the scale, the price and the fees the
+real-options frame needs? \textit{Established.} A defined risk set of \acqRiskParcels\ parcels and
+\acqRiskParcelYears\ parcel-years carrying \acqRiskEvents\ hearings (\acqRiskRate\ per ten
+thousand); a parcel join at \acqParcelJoin\% and a case join at \acqCaseAny\%; two filing clocks
+that differ by a median of \acqClockGapMed\ days; a price on every parcel-year (out-of-sample
+RMSE \acqPriceRmse\ in logs where imputed); fees that vary across sections within a year
+(\acqFeeWithin\% of the log-rate variance) rather than over years (\acqFeeAbsYear\%).
+\textit{Revised by itself.} Two conclusions reversed within days: the lettered-lot key and the
+two-digit year had been diagnosed as data problems and were our own keys. \textit{Revised later.}
+On the DR track the developer's clock starts at the DBI filing of the permit under review, a
+median \pcDrDiffMed\ days before the Planning record (a dated note, 2026-09-11). \textit{Extended.}
+The feasible envelope (\S\ref{sec:chbatch}).
+
+\subsection{DataSF catalogue (\chDateDatasfPlanningCatalogue)}\label{sec:chdatasfplanningcatalogue}
+
+\textit{Asked.} What does the portal hold under ``planning'' that the pipeline does not use?
+\textit{Established.} \catTotal\ assets; no dataset of Commission actions, published or not;
+\catPossibleNotCached\ assets flagged as possibly useful and not cached, of which the
+Planning Department's record-level review-time metrics and DBI's station routing are delay data
+nobody has measured against. \textit{Downstream.} None used yet; the review-time metrics are in the next steps.
+
+\subsection{The conditions census (\chDateConditionsContent)}\label{sec:chconditionscontent}
+
+\textit{Asked.} Replace the sample of twenty cases a year with every case and motion, and read
+what the conditions say. \textit{Established.} \ccProbed\ addresses probed, \ccProbeHits\
+documents found; condition text for \ccCondWithTextPct\% of the \ccCondItems\ conditioned items,
+the earliest heard in \ccEarliestItemYear. The conditions are a template with a thin
+project-specific layer, and what varies is numbers. The entitlement's term is written into the
+template: a \ccValidityModal-month validity on \ccValidityModalShare\% of the motions that state one.
+The parser was validated in frozen rounds; the third (this batch) scores \ccValInPrec\% precision
+and \ccValInRecall\% recall in sample and \ccValOutPrec\% out of sample on rows heard
+\ccValOutYearFrom--\ccValOutYearTo. \textit{Revised in this batch.} The document once read as the
+earliest motion for a case in the universe was two motions bound together (Motion
+\ccFixOldMotion, \ccFixOldDate, and a later one); every year-span resting on it moved.
+\textit{Downstream.} The records request, the numbers table, and the exactions memo's
+cross-check of the inclusionary schedule against the percentages the conditions print.
+
+\subsection{Permit content (\chDatePermitsContent)}\label{sec:chpermitscontent}
+
+\textit{Asked.} What is in DBI's table, and do the projects that reach the Commission differ from
+similar ones? \textit{Established.} \pcUniverseShare\% of permits are development-relevant, and
+\pcLinkedShare\% of those are Commission-linked. Linked projects are bigger and slower, but a
+permit linked through a hearing held while it was pending had to survive to the hearing; measured
+from the hearing on permits alive at it, about \pcLmSurviveDays\% of the within-cell gap in time
+survives in means and \pcLmMedSurvive\% in medians. The lower abandonment of linked permits does
+survive (\pcLinkedExit\% against \pcUnlinkedExit\% expired or withdrawn). \textit{Revised in this
+batch.} The landmark comparison replaced a claim that almost none of the gap survives; cost
+placeholders were dropped; the first-construction-document date was dropped as an outcome for
+coverage.
+
+\subsection{Clocks (\chDateClocks)}\label{sec:chclocks}
+
+\textit{Asked.} The full distribution of every duration, by track, parcel value, size, period and
+neighbourhood, with censoring handled. \textit{Established.} Kaplan--Meier medians of the
+developer's whole clock of \ckTotMedCu\ days (conditional use), \ckTotMedDr\ (DR), \ckTotMedLpa\
+(large projects) and \ckTotMedMin\ (ministerial); about a third of spells record no completion ten
+years on (\ckTotStenPctCu\% on the conditional-use track); the coefficient of variation does not
+fall consistently with parcel value. The outcome chain (added the same day): of housing projects
+entitled \ocMatureFrom--\ocMatureTo, \ocDoneCu\% of conditional uses and \ocDoneMin\% of ministerial
+permits record a completion. \textit{Not established.} $\sigma$ as the model defines it: a
+cross-sectional CV mixes ex-ante uncertainty with what the developer knew.
+
+\subsection{Exactions (\chDateExactions)}\label{sec:chexactions}
+
+\textit{Asked.} What inclusionary requirement and impact fees vested for each project?
+\textit{Established.} A version chain from 2002, every rate and vesting rule a quotation re-checked
+against its source (\exClaims\ claims); a median obligation of \exPuMed\ per unit for new
+buildings of ten or more units; bunching just below every inclusionary threshold (\exNineA\
+buildings of nine units against \exTenA\ of ten since Proposition~C). \textit{Not established.}
+The schedule agrees with the percentage the Commission's conditions print in \exCrossAgree\% of
+comparable cases; area-specific rates and the grandfathering deadline's application are open.
+
+\subsection{The regulatory timeline (\chDateRegulatoryTimeline)}\label{sec:chregulatorytimeline}
+
+\textit{Asked.} Which laws generate variation this data can measure? \textit{Established.}
+\rtLaws\ laws inventoried with quoted citations; \rtUsable\ usable, \rtNotMeasurable\ not
+measurable here; the opt-in pathways are elections, not assignments. The docket's residential
+conditional uses fell from \rtResCuPre\ a quarter to \rtResCuPost\ after the Housing Production
+ordinances, so docket series need an era split there. \textit{Not established.} Any effect.
+
+\subsection{The rest of this batch}\label{sec:chbatch}
+
+\paragraph{The feasible envelope} (a section of the data-acquisition memo). \textit{Asked.} The
+risk set models non-filing, and ``could have filed'' needs a capacity; the counterfactual needs
+a benchmark that can be relaxed. \textit{Established.} For every parcel-year: the height limit
+and bulk district read from the height district's name, the lot area read at the map lot so that
+a condominium's unit parcels share their building's lot, the density rule of the zoning district
+in force, the rear yard, and a maximum unit count, with the state density bonus apart. The rules
+are quotations from the zoning control tables and the Government Code, checked like the
+exaction claims. Under central assumptions the read districts allow \envUnitsTotal\ units in
+\envYearLast, and \envSensLo--\envSensHi\ across the sensitivity runs. \textit{Not established.}
+Rules before and after the reading of the tables it rests on; the named neighbourhood commercial
+districts. \textit{Downstream.} The risk set's capacity and the counterfactual's benchmark.
+
+\paragraph{The numbers inside the conditions} (a section of the conditions census).
+\textit{Asked.} The census found that conditions are a template and that numbers are what vary;
+extract them. \textit{Established.} \chRowsNumeric\ conditions with typed fields --- validity
+periods, operating hours, bicycle and parking counts, stated inclusionary percentages and unit
+counts, notice radii and periods, monitoring intervals, screening dimensions --- and their
+distributions over time. \textit{Downstream.} The exactions memo's cross-check of its schedule
+against the percentages the Commission's conditions print.
+
+\paragraph{The outcome chain} (a section of the clocks memo). \textit{Asked.} Conditional on
+entitlement, what share of approved projects and units is built, and how long does it take?
+\textit{Established.} Completion shares by track and parcel value for projects entitled
+\ocMatureFrom--\ocMatureTo; cumulative incidence of completion with exit as a competing event.
+\textit{Not established.} Units delivered are a lower bound: a completion recorded under another of
+a project's permit numbers is missed.
+
+\paragraph{The records request.} \textit{Asked.} Turn the census's pre-2010 residual into a
+request. \textit{Produced.} A draft letter to the Planning Department for the \chRrWith\
+conditioned items heard before 2010 whose motion number is known and the \chRrWithout\ whose is
+not, with a statement of everything already searched (\ccProbed\ addresses), and a separate set
+of questions for the Assessor-Recorder on recorded notices of special restrictions. Nothing has
+been sent.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{What the data say so far}\label{sec:chfindings}
+
+The substantive findings, collected from the memos that own them, each stated as the memo states
+it and each a description.
+
+\begin{itemize}
+\item \textbf{The Commission conditions rather than denies.} Outright denial has nearly vanished
+over the corpus while the share of items approved with conditions more than tripled (the corpus
+memo); \ccCondWithTextPct\% of the \ccCondItems\ conditioned items now have their condition text
+(the census).
+\item \textbf{The conditions are a template.} Most imposed conditions carry one of a few dozen
+headings; what varies is numbers. The entitlement's term is part of the template: a
+\ccValidityModal-month validity on \ccValidityModalShare\% of the motions that state one.
+\item \textbf{Delay is long, dispersed and hard to forecast.} From first filing to completion the
+Kaplan--Meier median is \ckTotMedCu\ days on the conditional-use track and \ckTotMedMin\ off the
+Commission, with coefficients of variation of \ckTotCvCu\ and \ckTotCvMin\ (the clocks memo);
+what a developer observes at the first hearing forecasts the level of hearing delay somewhat and
+its tail barely (the delay memo). About a third of spells record no completion ten years on.
+\item \textbf{Commission projects differ from similar ones mostly in what they survive.} Linked
+permits are bigger and slower, but most of the time difference is immortal time; their lower
+abandonment (\pcLinkedExit\% against \pcUnlinkedExit\%) survives the correction (the permit
+content memo).
+\item \textbf{Most entitled housing is built.} Of housing projects entitled
+\ocMatureFrom--\ocMatureTo, \ocDoneCu\% of conditional uses, \ocDoneDr\% of discretionary
+reviews and \ocDoneLpa\% of large project authorisations record a completion; \ocExitCu\%,
+\ocExitDr\% and \ocExitLpa\% exited (the outcome chain).
+\item \textbf{The written price is large and sits at thresholds.} A new building of ten or more
+units owes a median \exPuMed\ per unit, \exShareMed\% of DBI's valuation, mostly the
+inclusionary fee; new buildings are fewer just above each inclusionary threshold than just
+below it (the exactions memo).
+\item \textbf{The docket changed character after the Housing Production ordinances.} Residential
+conditional uses fell from \rtResCuPre\ to \rtResCuPost\ a quarter; SB~330's five-hearing cap does
+not show in the hearing counts (\rtOverFivePre\% of residential cases heard more than five times
+before, \rtOverFivePost\% after) (the regulatory timeline).
+\item \textbf{Fees vary across the city, not over time.} A year effect absorbs \acqFeeAbsYear\% of the
+variance in log fee rates; the variation is across sections and size bands (the acquisition memo).
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The data inventory}\label{sec:chinventory}
+
+Table~\ref{tab:chinventory} lists every table and panel the project has built or cached, its
+unit of observation and size, its years, its known defects and the memo that documents it.
+Everything lives under \texttt{\$MFHR\_DATA\_ROOT}, not in git.
+
+\chtable{inventory}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The model as currently specified}\label{sec:chmodel}
+
+The project is building toward a minimal model, deliberately narrower than the earlier
+\texttt{dr\_supply\_model} blueprint (a document this repository does not hold, so its contents are
+not summarised here):
+
+\begin{quote}
+One developer, one parcel, an option to file. The regulatory process imposes a deterministic cost
+$\tau$ (fees, inclusionary obligations, the template conditions) and a stochastic delay and
+outcome with variance $\sigma$. The exercise threshold depends on both, and the comparative
+statics differ across parcel value: $\tau$ shifts the threshold roughly uniformly in project value,
+$\sigma$ shifts it differentially. The counterfactual holds expected burden fixed and sets
+$\sigma$ to zero.
+\end{quote}
+
+\paragraph{What each piece of data does.} In this model the data play four parts. The
+exaction panel and the conditions census measure $\tau$: the dollars and the template obligations
+a project owes, fixed at dates the law states. The clocks and the outcome chain measure the
+distribution of delay and of outcomes that $\sigma$ summarises. The risk set, the price panel and
+the envelope give the parcels that could have filed, what they were worth, and how much they
+could hold --- the population on which the filing threshold is estimated. And the regulatory
+timeline and the exaction panel's version chain supply the changes in the rules that might move
+$\tau$ or $\sigma$ separately. The comparative statics the model delivers --- $\tau$ roughly
+uniform in project value, $\sigma$ differential --- are what make the parcel-value gradient of
+filing the central cross-sectional prediction, which is why every duration and obligation is
+reported by parcel value.
+
+\paragraph{Deferred.} To Paper~2 and to later drafts: strategic neighbours, endogenous supply of
+discretionary review, the Commission's best response, and endogenous zoning. None of these is in
+the model above, and none of the data built so far is organised around them.
+
+\paragraph{An assumption, not a finding.} $\sigma$ is currently treated as a parcel-level
+primitive estimated from a hazard. That is an assumption to be relaxed. The clocks memo measures
+cross-sectional dispersion within cells; whether that dispersion is uncertainty the developer
+faced, or heterogeneity the developer knew about, is not yet separated.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Which data object identifies which model object}\label{sec:chident}
+
+Table~\ref{tab:chident} maps each primitive to the moment that would identify it, the dataset
+that supplies the moment, and whether that dataset exists. The two rows where the answer is not
+yet ``yes'' are the ones the open register calls blocking.
+
+\chtable{ident}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{The open register}\label{sec:chregister}
+
+Every unresolved item, with what it needs --- data, a records request, a modelling decision or a
+literature check --- and whether it blocks a first presentable draft.
+
+\chtable{register}
+
+\paragraph{The three that block.} \emph{Deterred projects}: the risk set models non-filing on
+parcels with capacity (the envelope now supplies it), but the parcels whose owners would have
+filed absent the regulatory process are not observed, and the filing hazard is estimated on
+the parcels that did. \emph{Separating $\tau$ from $\sigma$}: the exactions memo and the
+regulatory timeline name variation in $\tau$ with $\sigma$ plausibly fixed (the inclusionary
+changes and their filing-date cutoffs) and variation in $\sigma$ (SB~330's hearing cap, the
+Housing Production ordinances); none is yet an estimate. \emph{$\sigma$ as a primitive}: as
+\S\ref{sec:chmodel} says.
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Next steps}\label{sec:chnext}
+
+In priority order, with a rough sense of scale.
+\begin{enumerate}
+\item \textbf{Write down the estimator for the filing hazard} on the risk set, with $\tau$ from the
+exaction panel, the envelope as capacity, and parcel value from the price panel; decide how
+$\sigma$ enters (a cell-level dispersion, or a latent parcel-level primitive). \emph{Weeks.}
+\item \textbf{Turn the inclusionary cutoffs into a first design}: the notch and the filing-date
+cutoffs, with the envelope held fixed. \emph{Days to a first cut; weeks to an estimate.}
+\item \textbf{Join the Priority Equity Geographies polygon} and cut the Housing Production
+ordinances' treated set. \emph{Days.}
+\item \textbf{Validate T3 linkage outside discretionary review} on a hand-checked sample. \emph{Days.}
+\item \textbf{Send the records request} (after editing) and the Assessor-Recorder questions.
+\emph{Days to send; months to answer.}
+\item \textbf{Close the exaction panel's gaps}: area-specific rates, TSF grandfathering,
+existing-use credits, the 2017 register. \emph{Days each.}
+\item \textbf{Use DataSF's review-time metrics and DBI's station routing} for the delay inside
+the permit. \emph{Weeks.}
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Established and not established}\label{sec:chest}
+
+\paragraph{Established.}
+\begin{enumerate}
+\item An item-level record of the Commission's decisions, \chItemFirst--\chItemLast, dated and
+followed into permits, records, motions, parcels, prices, fees and law.
+\item A dollar measure of $\tau$ from \exRegFirst\ and a distributional measure of the durations
+on every track.
+\item Which earlier claims were revised, and how (Table~\ref{tab:chtimeline}).
+\end{enumerate}
+
+\paragraph{Not established.}
+\begin{enumerate}
+\item $\sigma$ as the model defines it.
+\item Any separation of $\tau$ from $\sigma$, and any correction for deterred projects.
+\item Condition content before 2010 beyond the thin share now read.
+\end{enumerate}
+
+% ═══════════════════════════════════════════════════════════════════════════
+\section{Reproducing this}\label{sec:chrepro}
+
+\begin{verbatim}
+cd code/commission_minutes_processing
+python build_chronicle.py     # macros and tables for this memo
+\end{verbatim}
+It reads the other memos' generated macros files and tables, so each memo's own pipeline runs
+first (each memo's ``Reproducing this'' section gives its commands); the dates come from git and
+\texttt{run\_log.md}, the page counts from the compiled PDFs and the row counts from the data.
+
+\end{document}

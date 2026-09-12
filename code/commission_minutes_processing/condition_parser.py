@@ -40,6 +40,21 @@ Formats the rules were written against, oldest first --- each is why one rule ex
 
 Each modern condition ends "For information about compliance, contact ...". That line is
 moved into `compliance_contact`, never left in the body.
+
+Round 3 (2026-09-11, after the conditions memo showed bodies swallowing the next condition).
+Six boundary rules, each commented where it acts, each written against a failure found by a
+corpus-wide detector (a body containing the next condition's number, a frequent heading, or a
+letter's salutation) --- never against the gold labels, whose documents were not opened:
+
+  * a title page with a different motion number opens a new section, even when it follows a
+    run of pages whose running header reads as a title (`find_sections`);
+  * a letter ("Re:", "Dear ...") ends an Exhibit A (`is_new_document`);
+  * a numbered list inside one condition no longer makes a bold-named template "numbered", and
+    in such a template a numbered line opens a condition only when it carries a name;
+  * the numbering margin follows the page when a scan shifts it;
+  * in a numbered section, prose that opens with a name after a closed compliance line, or
+    straight after a section head, is a condition whose number the scan lost (`named_start`);
+  * a garbled footer near the foot of the page is dropped, not read as a section head.
 """
 from __future__ import annotations
 
@@ -252,6 +267,19 @@ def is_title_page(pg: dict) -> bool:
         any(_title_line(pg, l, ls[:i]) for i, l in enumerate(ls[:40]))
 
 
+def title_number(pg: dict) -> str:
+    """The instrument and number a title page's title lines carry ("motion 18915"), or "" for
+    a draft's placeholder. Read from every title line on the page, not only the first: the
+    2013 template opens with its "Subject to: (Select only if applicable)" box."""
+    ls = pg["lines"]
+    for i, l in enumerate(ls[:40]):
+        if _title_line(pg, l, ls[:i]):
+            m = TITLE_NO.match(l["t"])
+            if m:
+                return f"{m.group(1).lower()} {m.group(2)}"
+    return ""
+
+
 @dataclass
 class Section:
     start: int                      # index into the pages list
@@ -267,9 +295,24 @@ def find_sections(pages: list[dict]) -> list[Section]:
     Exhibit A, or to the end. A packet can hold several: two draft motions for one project,
     or an earlier adopted motion attached as an exhibit to a new one."""
     normalise_pages(pages)
-    starts = [i for i, pg in enumerate(pages) if has_text(pg) and is_title_page(pg)]
-    # a title block that spills onto a second page is one section, not two
-    starts = [s for k, s in enumerate(starts) if k == 0 or s - starts[k - 1] > 1]
+    raw = [i for i, pg in enumerate(pages) if has_text(pg) and is_title_page(pg)]
+    # A title block that spills onto a second page is one section, not two. But a page is not
+    # a continuation just because it follows a title page: the scanned 1990s motions repeat
+    # "CITY PLANNING COMMISSION / MOTION NO. 13693" as a running header on every page, so every
+    # page reads as a title page, and folding adjacent ones swallowed the next motion bound
+    # after it (Motion 18915 of 2013, filed under the 1994 motion's date --- round 3). Where
+    # both pages carry a title number, a different number is a new section and the same number
+    # is the same motion; only where one has none (a draft's "XXXXX") does adjacency decide.
+    keys = {s: title_number(pages[s]) for s in raw}
+    starts = []
+    for k, s in enumerate(raw):
+        if not starts:
+            starts.append(s)
+            continue
+        prev = keys[starts[-1]]
+        new = (keys[s] != prev) if (keys[s] and prev) else (s - raw[k - 1] > 1)
+        if new:
+            starts.append(s)
     secs = []
     for k, s in enumerate(starts):
         e = (starts[k + 1] - 1) if k + 1 < len(starts) else len(pages) - 1
@@ -370,12 +413,23 @@ def is_separator_page(pg: dict) -> bool:
 
 
 def is_new_document(pg: dict) -> bool:
-    """The first page of another document: a memo block (TO: and FROM: near the top) or a
-    known document title in the top quarter of the page."""
+    """The first page of another document: a memo block (TO: and FROM: near the top), a
+    known document title in the top quarter of the page, or a letter --- a "Re:" line or a
+    salutation in the upper part of the page. Packets bind public correspondence straight
+    after the draft motion with no "Exhibit B" between; without the letter rule the last
+    condition ran on into a neighbour's letter ("Lighting" read as stating a "107 year" period,
+    the age of the cottage the letter defends --- round 3)."""
     top = [l["t"].strip() for l in pg["lines"] if l["y"] < 0.3 * pg["h"]]
     memo = any(re.match(r"(?i)^to\s*:", t) for t in top) and \
         any(re.match(r"(?i)^from\s*:", t) for t in top)
-    return memo or any(NEW_DOC.match(t) for t in top[:8])
+    upper = [l["t"].strip() for l in pg["lines"] if l["y"] < 0.45 * pg["h"]]
+    letter = any(LETTER_OPEN.match(t) for t in upper)
+    return memo or letter or any(NEW_DOC.match(t) for t in top[:8])
+
+
+# "Re: 318 30th Avenue – Case No. ...", "Dear President Hillis and Members of the Commission:".
+# "Subject to:" (the 2013 template's fee box) has a word before its colon and does not match.
+LETTER_OPEN = re.compile(r"(?i)^re\s*:\s*\S|^dear\s+\S.{0,120}[:,]$")
 
 
 def is_next_exhibit(t: str) -> bool:
@@ -528,6 +582,12 @@ def strip_running(pages: list[dict], idx: list[int],
             low = l["y"] > 0.87 * pg["h"] and _letters_upper(l["t"]) > 0.8
             if low and (FOOTER.match(l["t"].strip()) or FOOTER_OCR.search(l["t"])):
                 continue
+            # ... and OCR garbles it past any pattern ("PL/WNING DEPARTMENT", "$AN FRANCISCO",
+            # "PLAl1iNING DEPI►R7MHNT"), which round 2 read as a section head that cut the
+            # condition above it in two. Near the foot of the page a short line that reads as a
+            # misspelling of the footer is the footer (round 3).
+            if l["y"] > 0.85 * pg["h"] and footer_like(l["t"]):
+                continue
             if l["y"] > 0.925 * pg["h"] and len(l["t"].split()) <= 3 and \
                     _letters_upper(l["t"]) > 0.8:
                 continue
@@ -554,6 +614,23 @@ HEADER_OPEN = re.compile(r"(?i)^\W{0,3}(?:(?:san\s+francisco\s+)?(?:city\s+)?pla
 HEADER_CUE = re.compile(r"(?i)^\W{0,3}(?:(?:san\s+francisco\s+)?(?:city\s+)?planning\s+commission\s+)?"
                         r"(?:moti\S{0,3}n\s+n[o0]\b|(?:case|record)\S{0,2}\s*n[o0]\b)")
 FOOTER_OCR = re.compile(r"(?i)^\s*(san\s+fran\w*|planning\s+dep\S*)\b.{0,12}$")
+FOOTER_WORDS = ("PLANNING DEPARTMENT", "SAN FRANCISCO", "SAN FRANCISCO PLANNING DEPARTMENT")
+# 0.72 keeps the worst garbling measured, "PLaNNWG DEPMTMEM" (0.74). The nearest real
+# heading measured, "PLANNING CODE AMENDMENTS", scores 0.74 as well, so the ratio alone cannot
+# separate them: that is why a numbered line is never a footer and the test runs only in the
+# bottom band of the page. An unnumbered all-capitals head of that kind orphaned at the foot
+# of a page would be lost; none was seen.
+FOOTER_RATIO = 0.72
+
+
+def footer_like(t: str) -> bool:
+    from difflib import SequenceMatcher
+    if NUM.match(t.strip()):
+        return False
+    s = re.sub(r"\s+", " ", re.sub(r"[^A-Za-z ]", "", t)).upper().strip()
+    if not s or len(s) > 36 or _letters_upper(t) < 0.7:
+        return False
+    return max(SequenceMatcher(None, s, w).ratio() for w in FOOTER_WORDS) >= FOOTER_RATIO
 
 
 class Counter_(dict):
@@ -682,6 +759,25 @@ def heading_from_text(t: str) -> str:
     return ""
 
 
+def named_start(t: str) -> tuple[str, str] | None:
+    """(name, text) for a line that opens a condition by its name alone --- "Transparency and
+    Fenestration. Pursuant to ..." --- or None. The name is read as `heading_from_text` reads
+    it, and prose must follow it on the line: an enumerated line, a compliance line or a bare
+    name is not this."""
+    if NUM.match(t) or LETTER.match(t) or PAREN.match(t) or COMPLIANCE.match(t):
+        return None
+    h = heading_from_text(t)
+    # A name does not open with a determiner or a subordinator: "This authorization is for
+    # conditional use to a Formula Retail Use (d.b.a." is Title Case enough for
+    # `heading_from_text` and is the AUTHORIZATION block's first sentence.
+    if not h or h.split()[0].lower().strip("'\"‘“") in SENTENCE_OPENERS:
+        return None
+    rest = t[len(h):].lstrip(" .:")
+    if len(rest.split()) < 4:
+        return None
+    return h, rest
+
+
 def _line_step(body: list[tuple]) -> float:
     """The typical distance between consecutive lines on a page: the median of the
     positive gaps under 30 points."""
@@ -781,14 +877,47 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
                if LETTER.match(l["t"]) and _at(l, lmg)}
     lm = min(l["x"] for _, l in body)
     step = _line_step(body)
-    # Numbered means an actual 1, 2, 3 at the numbering margin, not two stray digits.
-    if {1, 2, 3} <= nums and not num_parts:
+    # The numbering margin moves from page to page on printed-and-scanned motions (numbers at
+    # x 88 on one page, 96 on the next, the text beside them moving with them), so a number is
+    # also at the margin when it sits where the section's numbers usually sit relative to the
+    # page's own text margin. Round 2 asked only for the section-wide margin and read "10.
+    # Community Liaison" seven points to its right as the tail of condition 9 (round 3).
+    from collections import Counter
+    enum = (NUM, LETTER, PAREN)
+    tm = {}
+    for i in idx:
+        xs = [round(l["x"]) for ii, l in body if ii == i and not any(r.match(l["t"]) for r in enum)]
+        if len(xs) >= 5:
+            tm[i] = Counter(xs).most_common(1)[0][0]
+    offs = sorted(tm[i] - round(l["x"]) for i, l in body
+                  if i in tm and NUM.match(l["t"]) and _at(l, nm))
+    off = offs[len(offs) // 2] if offs else None
+
+    def at_num(i, l) -> bool:
+        if nm is None:
+            return False
+        if abs(round(l["x"]) - nm) <= 6:
+            return True
+        return off is not None and i in tm and abs(round(l["x"]) - (tm[i] - off)) <= 6
+
+    # Numbered means an actual 1, 2, 3 at the numbering margin, not two stray digits --- or,
+    # where OCR lost one of the first three ("L Validity." for "1. Validity."), a run of three
+    # consecutive numbers in a list of at least five.
+    run3 = len(num_lines) >= 5 and any({k, k + 1, k + 2} <= nums for k in nums)
+    # A numbered list inside one condition --- the transformer-vault preference schedule, "1.
+    # On-site, in a basement ..." to "7." --- is not the numbering of the conditions when the
+    # conditions themselves open with bold names and outnumber it. Round 2 let that list make
+    # the 2011--2014 template "numbered", and every condition under a section head was then
+    # read as one block (round 3).
+    bold_n = _bold_starts(body, lm) if has_bold else 0
+    bold_over = bold_n >= 5 and bold_n > len(num_lines)
+    if ({1, 2, 3} <= nums or run3) and not num_parts and not bold_over:
         style = "numbered"
     elif {1, 2} <= pnums and n_paren >= 3 and (lmg is None or pm > lmg + 6):
         style = "paren"
     elif {"A", "B", "C"} <= letters and _bold_starts(body, lm) < 3:
         style = "lettered"
-    elif {1, 2, 3} <= nums:
+    elif {1, 2, 3} <= nums and not bold_over:
         style = "numbered"
     else:
         style = "bold_heading" if has_bold else "unknown"
@@ -858,12 +987,12 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
             continue
         m = NUM.match(t)
         start = None
-        if style == "numbered" and not m and nm is not None and abs(round(l["x"]) - nm) <= 6:
+        if style == "numbered" and not m and at_num(i, l):
             fix = ocr_number(t, expected)
             if fix:
                 start = ("numbered", fix, OCR_NUM.sub("", t, 1).strip(), False)
                 expected = int(fix) + 1
-        if style == "numbered" and m and abs(round(l["x"]) - nm) <= 6:
+        if style == "numbered" and m and at_num(i, l):
             n = int(m.group(1))
             # The sequence may restart (a sub-list of 1, 2 under one heading, then 10 again)
             # or jump (16, then 20): a number above the highest yet, by a few, continues it.
@@ -925,6 +1054,16 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
                 section = NUM.sub("", t, 1).strip().rstrip(".:")
                 pending_head, cur, paren_under_letter = (pageno, section), None, False
                 continue
+        elif style == "bold_heading" and bold_over and m and at_num(i, l) and \
+                _numbered_name(l, t[m.end():]):
+            # The 2011--2014 template is bold-named, but its affordable-housing section numbers
+            # its conditions ("1. Requirement. Pursuant to ..."). A numbered line opens a
+            # condition there only when it carries a name, so the transformer-vault list ("1.
+            # On-site, in a basement area ...") stays inside the condition it belongs to.
+            n = int(m.group(1))
+            if n == expected or n == 1 or n in (expected + 1, expected + 2):
+                start = ("numbered", str(n), t[m.end():].strip(), n not in (expected, 1))
+                expected = n + 1
         elif style == "bold_heading" and l["x"] <= lm + 6 and not is_section_heading(l):
             bp = _bold_prefix(l["sp"])
             rest = t[len(bp):].lstrip() if t.startswith(bp) else ""
@@ -982,8 +1121,16 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
                     section = f"{section} {t}".rstrip(".:")
                     pending_head = (pending_head[0], section)
                     continue
-                open_row(pending_head[0], None, pending_head[1], t,
-                         "section_block" + ("+ocr" if ocr else ""), implicit=True)
+                ns = named_start(t) if style == "numbered" else None
+                if ns:
+                    # a numbered section's condition whose number the scan lost ("L
+                    # Validity." under PERFORMANCE): a condition under the head, not the head's
+                    # own block
+                    open_row(pageno, None, ns[0], ns[1], "named" + ("+ocr" if ocr else ""),
+                             gap=True)
+                else:
+                    open_row(pending_head[0], None, pending_head[1], t,
+                             "section_block" + ("+ocr" if ocr else ""), implicit=True)
                 pending_head = None
             continue
         if cur["in_compliance"]:
@@ -999,6 +1146,14 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
                 cur["compliance"].append(t)
                 continue
             cur["in_compliance"] = False
+            # A modern condition ends at its compliance line, so prose after a closed one that
+            # opens with a name is the next condition, whose number the scan lost ("Transparency
+            # and Fenestration. Pursuant to ..." after condition 5's contact line). Round 2 ran
+            # it into condition 5 ("Conformity with Current Law" then stated "60 percent").
+            ns = named_start(t) if style == "numbered" else None
+            if ns:
+                open_row(pageno, None, ns[0], ns[1], "named" + ("+ocr" if ocr else ""), gap=True)
+                continue
         # Two unnumbered paragraphs under the exhibit's own title ("Wherever 'Project
         # Sponsor' is used ..." and "This authorization is for ...") are two blocks; a
         # paragraph break is a line gap well over the section's line step, back at the margin.
@@ -1023,6 +1178,15 @@ def parse_section(pages: list[dict], sec: Section) -> list[dict]:
         r["style"] = style
         r["parse_confidence"] = _confidence(r, style, ocr)
     return out
+
+
+def _numbered_name(l: dict, rest: str) -> bool:
+    """Whether a numbered line names its condition: a bold run after the number, or a name
+    read from the text ("Requirement. Pursuant to ...")."""
+    bp = _bold_prefix(_after_number(l["sp"]))
+    if bp and re.search(r"[A-Za-z]{3}", bp) and not NUM.match(bp):
+        return True
+    return bool(heading_from_text(rest.strip()))
 
 
 def _after_number(sp: list) -> list:

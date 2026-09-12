@@ -1,0 +1,268 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is defined by audit_state_laws.py (`report') in the generated
+% files under tables/, or read from the permits memo's macros. Nothing is typed by hand.
+\input{tables/regulatory_timeline_macros}
+\input{../permits_content/tables/permits_content_macros}
+\newcommand{\rttable}[1]{\FloatBarrier\def\rttab{#1}\input{tables/regulatory_timeline_tables}}
+
+\title{The Regulatory Timeline:\\
+\large and what of it this data can measure}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This is an audit, not a causal memo. For each state law and San Francisco ordinance that
+plausibly bears on the project it asks what the law changed, what in the data would move if it
+worked as written, whether the treated set can be constructed, and what would confound a
+comparison. It reports no effect.
+
+\medskip\noindent
+\textbf{\rtLaws\ laws, every date and scope claim quoted from a primary source.} The inventory
+holds \rtCa\ California statutes and code sections and \rtSf\ San Francisco ordinances; its
+\rtClaims\ claims all verify against leginfo, the Board's ordinance lists and the enacted PDFs.
+One row, the 25-unit ordinance of July 2026 named in the brief, is unverified: none of the
+\rtSfTwentySix\ ordinances the Board lists for 2026, through Ordinance \rtSfLastOrd\ (effective
+\rtSfLastEff), matches it.
+
+\medskip\noindent
+\textbf{\rtUsable\ laws generate usable variation; \rtNotMeasurable\ are not measurable here.} The
+usable ones are SB~330's preliminary-application freeze and hearing cap, the inclusionary
+changes of Proposition~C, Ordinance~158-17 and Ordinance~201-23 (measured through the exaction
+panel), and the Housing Production ordinances (effective \rtEffHpTwoZeroTwoThree\ and
+\rtEffHpTwoZeroTwoFour) that removed hearings. Every opt-in pathway --- SB~35, SB~423, AB~2011,
+the density bonus, HOME-SF --- is a developer's choice bundled with labour and affordability
+conditions, and the permits memo found \pcMinisterialPermits\ such permits.
+
+\medskip\noindent
+\textbf{The docket's composition moved after those ordinances.} Residential conditional-use
+items fell from \rtResCuPre\ a quarter in \rtWinPre\ to \rtResCuPost\ in \rtWinPost, and residential
+discretionary reviews from \rtResDrPre\ to \rtResDrPost. Every series measured on the docket since
+then is measured on a different sample; the memos that use them need an era split there.
+
+\medskip\noindent
+\textbf{SB~330's five-hearing cap does not show in the hearing counts.} Of residential cases
+first heard in \rtHearWinPre, \rtOverFivePre\% were heard on more than five dates; of those
+first heard in \rtHearWinPost, \rtOverFivePost\%, before the later cases have finished.
+\end{abstract}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\section{What this memo is, and is not}\label{sec:rtintro}
+
+A referee will ask why the paper does not use SB~35, or SB~330, or the Housing Production
+ordinances. This memo is where the answer comes from. For each law it gives four things: what
+the law changed, in the law's own words; the observable that must move if the law was
+implemented at all (the mechanical first stage) and the one that moves only if people responded
+(the behavioural second stage); whether the projects the law reached can be identified in the
+data; and what else changed at the same time. It ends with a verdict per law and a shortlist.
+
+It does not estimate anything. Where a series appears to move, the memo says so and says what
+would have to be true for the movement to be the law's doing. No event-study coefficient,
+difference-in-differences or synthetic control appears here.
+
+\section{The model objects, and which rows to care about}\label{sec:rtcats}
+
+Each law is assigned to one primary category by the model object it moves, with secondary
+effects noted:
+\begin{enumerate}
+\item \textbf{Arrival of discretion} --- whether a project faces a hearing at all (ministerial
+pathways, removal of conditional-use requirements): \rtCatOne\ laws.
+\item \textbf{The delay distribution given discretion} --- statutory timelines, hearing caps,
+CEQA constraints: \rtCatTwo.
+\item \textbf{Stringency in dollars} --- inclusionary requirements, fees: \rtCatThree.
+\item \textbf{The option's term and vesting} --- the preliminary-application freeze, when fees
+vest: \rtCatFour.
+\item \textbf{The feasible envelope} --- density bonuses, upzoning, parking minimums, ADUs:
+\rtCatFive.
+\end{enumerate}
+Categories~1 and 2 are the potential identifying variation for the wedge: they change $\sigma$
+or whether it applies, not the envelope. Category~5 laws are controls. Category~3 is $\tau$ and
+is measured in the exactions memo.
+
+\section{Sources and how they were checked}\label{sec:rtsources}
+
+Each law's facts are claims in \texttt{law\_claims.csv}: the field, the value, the source URL
+and a quotation taken from the source's cached text by a regular expression; dates are read out
+of the quotation. \texttt{probe} re-reads every source; all \rtClaimsOk\ of \rtClaims\ claims
+verify. California statutes are quoted from leginfo's bill text (chapter, approval date, the
+Legislative Counsel's digest, sunset clauses) and code sections; San Francisco ordinances from
+the enacted PDFs and the Board's lists.
+
+\paragraph{Effective dates.} A San Francisco ordinance's effective date is the Board's list.
+For a California statute the Constitution sets the rule --- ``go into effect on January 1 next
+following a 90-day period from the date of enactment of the statute'' --- and this memo quotes it
+but does not compute from it, because what counts as the date of enactment is not sourced here.
+Instead, where a code section the bill added or amended still carries the bill's own history
+note, that note's date is used (\rtEffNotes\ statutes). In every such note the date is the
+January~1 after the year of the Governor's approval, including for SB~79, approved on
+\rtEnactedSbSevenNine\ and effective \rtEffSbSevenNine; the other \rtEffInferred\ statutes are given that date and marked as inferred
+($^i$ in Table~\ref{tab:rtinventory}). A bill that says it takes effect immediately takes effect
+on approval.
+
+\paragraph{Where the Board's record is now.} The Board's own ordinance lists moved from
+sfbos.org to sf.gov during 2026; the archived copy stops at Ordinance~52-26. Legistar's web API
+for San Francisco carries no matter after 2020. The 2026 list used here is sf.gov's.
+
+\paragraph{A correction to the brief.} The brief lists AB~1763 among the Housing Accountability
+Act amendments. Its title is ``Planning and zoning: density bonuses: affordable housing''; it is
+filed here under the density bonus (category~5).
+
+\rttable{rtinventory}
+
+\section{Measurability, law by law}\label{sec:rtentries}
+
+The entries follow the categories. ``In its own words'' is the verified quotation of the law's
+title or digest, and of its eligibility or operative provision where one was taken; the rest is
+this memo's reading of the data.
+
+\rttable{rtentries}
+
+\section{Summary and shortlist}\label{sec:rtsummary}
+
+\rttable{rtsummary}
+
+\paragraph{The shortlist.} The laws that come out usable are: \rtShortlist. SB~330 identifies
+two things --- a vesting change (the preliminary application fixes the standards and fees) and a
+cap on hearings --- both with a constructible first stage. The inclusionary changes are the
+cleanest stringency variation in the project and are measured, with their vesting rules, in the
+exactions memo. The Housing Production ordinances removed conditional-use and notice
+requirements for specified housing projects; their first stage is the docket itself
+(Section~\ref{sec:rtdiversion}), and the treated set needs the Priority Equity Geographies
+polygon joined to parcels, which is the next step.
+
+\paragraph{What the opt-in pathways cannot do.} SB~35, SB~423, AB~2011, SB~4, the density bonus
+and HOME-SF are elections. A project that uses one has chosen it, and has accepted the
+affordability and labour conditions that come with it; the choice is the outcome, not the
+assignment. The data can count the elections --- \rtPopSbThirtyFive; \rtPopSbFourTwoThree;
+\rtPopDbl; \rtPopHomesf --- and the permits memo found \pcMinisterialPermits\ ministerial permits
+in DBI. They are descriptive material.
+
+\section{The raw series}\label{sec:rtseries}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_first_stages.pdf}
+\caption{First stages, per quarter where the data counts them: faint, quarterly; bold,
+four-quarter mean; dotted lines, the laws' effective or operative dates. Records and permits run
+to the last complete quarter before retrieval. The last panel counts, for residential cases, the
+share heard on more than five distinct dates, by the year of the first hearing; recent years are
+right-censored.}\label{fig:rtfirst}
+\end{figure}
+
+Figure~\ref{fig:rtfirst} plots the first stages the data can see. They are descriptions.
+\begin{itemize}
+\item \textbf{SB~35 and SB~423.} Records naming either pathway are few until SB~423 and rise
+after it; \rtPopSbThirtyFive. That the rise follows SB~423 is consistent with the
+extension and its changes mattering, and equally with the Housing Element rezoning of the same
+period.
+\item \textbf{SB~330.} Preliminary applications appear after its effective date
+(\rtEffSbThreeThreeZero, inferred), rise, and fall back; \rtPopSbThreeThirty. The hearing counts do not fall: \rtOverFiveNPre\ of \rtCasesPre\ residential
+cases first heard in \rtHearWinPre\ were heard more than five times, and \rtOverFiveNPost\ of
+\rtCasesPost\ first heard in \rtHearWinPost. For the cap to be visible the count would have to be of
+the hearings SB~330 counts, on the projects it covers (those with a preliminary application),
+and neither is established; continuances are hearing dates here.
+\item \textbf{ADUs.} DBI's ADU permits rise before the state package and fall after it;
+\rtPopAdu. The state statutes do not produce a visible step against the local program already
+running.
+\item \textbf{Density bonus and HOME-SF.} Density-bonus mentions rise after HOME-SF's
+adoption (\rtEffHomesf) and stay; HOME-SF's own rise and then fall away.
+\end{itemize}
+
+\section{The diversion series}\label{sec:rtdiversion}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_diversion.pdf}
+\caption{(a) The Commission's docket by request type, per quarter, \rtFirstQ--\rtLastQ, with
+residential items (items whose description mentions dwelling units, housing or residential use)
+as a line. (b) Shares of conditional use, discretionary review and large project
+authorisations, and the share of development-relevant DBI permits that are Commission-linked, by
+filing quarter. Dotted lines: the category-1 laws.}\label{fig:rtdiversion}
+\end{figure}
+
+If a law diverts projects out of the discretionary track, the docket that remains changes
+character, and every time series measured on it --- in every memo --- is measured on a shifting
+sample. Figure~\ref{fig:rtdiversion} is that check.
+
+The docket averaged \rtItemsPre\ items a quarter in \rtWinPre\ and \rtItemsPost\ in \rtWinPost.
+Residential conditional uses went from \rtResCuPre\ to \rtResCuPost\ a quarter and residential
+discretionary reviews from \rtResDrPre\ to \rtResDrPost. The break follows Ordinance~248-23
+(effective \rtEffHpTwoZeroTwoThree) and Ordinance~53-24 (\rtEffHpTwoZeroTwoFour), which exempted
+specified housing projects from Section~311 notice and from the conditional-use requirement; it
+also coincides with the interest-rate cycle and the Housing Element rezoning. The permit-side share of
+development-relevant permits that are Commission-linked was \rtLinkedEarly\% in \rtLinkWinEarly\ and
+\rtLinkedLate\% in \rtLinkWinLate.
+
+The practical consequence: analyses on the hearing docket should be split at the Housing
+Production ordinances, and a comparison of hearing outcomes across that date compares different
+projects.
+
+\section{The 25-unit ordinance of July 2026}\label{sec:rtjuly}
+
+The permits memo drew a line at 25 units for ``the July 2026 ordinance'', a figure from the brief
+that memo did not check. It is checked here. The Board lists \rtSfTwentySix\ ordinances for
+2026, through Ordinance~\rtSfLastOrd\ (effective \rtSfLastEff); \rtSfMatch\ of their titles
+mention the inclusionary program or a 25-unit threshold. The ordinances touching housing in 2026
+are a transit-oriented alternative plan under SB~79 (Ordinance~82-26), special use districts, a
+tenant-protection ordinance and a definitions ordinance. Unless the ordinance meant is not an
+ordinance (a Commission resolution or a Planning Department bulletin), or is not yet on the
+list, the 25-unit line has no source; the row stays in the inventory, unverified. The 25-unit
+tier that the inclusionary program has had since Proposition~C (exactions memo) is a candidate for what
+was meant.
+
+\section{Established and not established}\label{sec:rtest}
+
+\paragraph{Established.}
+\begin{enumerate}
+\item The inventory: \rtLaws\ laws with chapters, approval dates, sunsets and the laws' own
+statements of what they do, every claim verified against a primary source.
+\item The classification: \rtCatOne\ laws move the arrival of discretion, \rtCatTwo\ the delay
+given discretion; \rtOptIn\ are opt-in pathways.
+\item The docket's residential conditional-use and discretionary-review items fell after the
+Housing Production ordinances.
+\item No 2026 ordinance on the Board's list, through Ordinance~\rtSfLastOrd, matches a 25-unit
+ordinance of July 2026.
+\end{enumerate}
+
+\paragraph{Not established.}
+\begin{enumerate}
+\item The effective dates of \rtEffInferred\ statutes (inferred from the pattern of the history
+notes, not read).
+\item Whether any law caused the movements the series show; this memo does not ask.
+\item The treated sets of the opt-in pathways, and eligibility under any of them.
+\item Whether SB~330's hearing cap binds: the hearings it counts are not identified.
+\item Which Priority Equity Geographies parcels the Housing Production exemptions excluded (the polygon is
+not yet joined).
+\end{enumerate}
+
+\section{Reproducing this}\label{sec:rtrepro}
+
+\begin{verbatim}
+cd code/commission_minutes_processing
+python audit_state_laws.py fetch     # every cited source; sf.gov's 2026 list
+python audit_state_laws.py claims    # law_claims.csv
+python audit_state_laws.py probe     # verify every quotation
+python audit_state_laws.py build     # inventory, populations, series
+python audit_state_laws.py report    # tables, figures, macros
+\end{verbatim}
+Outputs: \texttt{law\_inventory.csv} and \texttt{law\_claims.csv} beside this memo;
+\texttt{\$MFHR\_DATA\_ROOT/external/laws/} (the checked claims and the quarterly series). The
+source cache is \texttt{build\_exaction\_panel.py}'s, under \texttt{external/legal/}.
+
+\end{document}

@@ -10,6 +10,11 @@
 % Every number in this document --- prose included --- is defined by
 % acquire_external_data.py in these two generated files. Nothing is typed by hand.
 \input{tables/acquisition_macros}
+\input{tables/envelope_macros}
+\newcommand{\envtable}[1]{\def\envtab{#1}\input{tables/envelope_tables}}
+% The DR developer's clock (the 2026-09-11 note in Section 4) is measured in the permits memo;
+% its figures are read from that memo's generated macros rather than recomputed or retyped here.
+\input{../permits_content/tables/permits_content_macros}
 
 \title{Locating the Next Tranche:\\
 \large A denominator, a clock, a scale, a price and a fee schedule for the
@@ -486,6 +491,30 @@ that hearing. The cost is \acqClockEntCov\% coverage against \acqClockAnyCov\%, 
 cheap, and the benefit is that the measure means one thing. The any-record clock is kept in
 the panel beside it, so the choice is testable rather than baked in.
 
+\paragraph{Note (2026-09-11): on the DR track neither clock is the developer's.} Both clocks
+above start at a Planning record, and for a discretionary review that record is the DR request
+--- filed by a neighbour against a permit that is already pending --- not the developer's
+filing. The ``\acqLagDR\ days'' this memo gives for discretionary review is therefore the
+neighbour's clock, and the sentence above that reads it as a DR being ``heard quickly'' says
+something about how fast a request reaches a hearing, not about how long the developer has
+waited. The permits memo measures the developer's clock instead: from the DBI filing of the
+permit the review is about to the first DR hearing, a median \pcDrDbiMed\ days on \pcDrDbiN\ of
+\pcDrCases\ DR cases (90th percentile \pcDrDbiPninety); on the \pcDrBothN\ cases with both, it is
+a median \pcDrDiffMed\ days longer than the Planning-record clock. \textbf{Going forward the
+project uses one clock per track:}
+\begin{itemize}
+\item \emph{Conditional use, large project authorisation, variance and other applications the
+developer files with Planning:} the entitlement clock above, from the earliest entitlement
+record to the first hearing.
+\item \emph{Discretionary review:} the developer's clock, from the DBI filing of the permit the
+review concerns (reached through a permit number printed in the minutes or the Planning
+records' permit field) to the first DR hearing. The Planning-record clock is kept beside it as
+the neighbour's clock. On \pcDrNegPct\% of cases the permit postdates the DR record; the permits
+memo sorts them by cause and keeps them.
+\item \emph{Ministerial or by-right permits}, which have no hearing: DBI filing to issuance.
+\end{itemize}
+The comparison of clocks across tracks in the clocks memo uses these definitions.
+
 \paragraph{Where the long tail comes from.} It is not noise and it is not mis-dating.
 Median filing-to-hearing time rises monotonically with how many records share the stem: from
 \acqClockTailLow\ days for the \acqClockOneRec\ cases with a single record to
@@ -835,6 +864,68 @@ parcel-year panel. The inclusionary \emph{requirement percentages} under \S415 -
 from the in-lieu fee --- and their amendment history are legislative and are not in the
 register; that remains open.
 
+\section{The feasible envelope}
+\label{sec:envelope}
+
+\emph{Added 2026-09-11 (next-phase brief, Part~5).} The risk set models non-filing, and ``could
+have filed'' means something only against a capacity; the counterfactual's re-routing claim is a
+statement against an unconstrained benchmark, and a benchmark needs an envelope that can be
+relaxed. The parcel-year panel now carries one
+(\texttt{\$MFHR\_DATA\_ROOT/}\allowbreak\texttt{external/zoning/parcel\_envelope.parquet}), built by
+\texttt{acquire\_external\_data.py envelope}. It is not needed to estimate the wedge and is
+built now to sit.
+
+\paragraph{What each parcel-year carries.} The height limit and bulk district, read from the
+height and bulk district's own name (\texttt{40-X} is forty feet in bulk district X; a name with
+two numbers, such as the Family Zoning Plan's \texttt{40//65-R-4}, gives a base and an
+alternative height, kept apart); the lot area, from the assessor's roll, read at the map lot so
+that a condominium's unit parcels share their building's lot and are counted once; the density
+rule of the zoning district in force that year; the rear yard the district requires; and three
+unit counts --- the density limit, the envelope's count, and the smaller of the two. The state
+density bonus is a separate column. Table~\ref{tab:envrules} gives the rules and the claim each
+rests on: \envClaimsOk\ of \envClaims\ quotations from the zoning control tables and the
+Government Code verify against their sources (\texttt{envelope\_sources.csv}).
+
+\paragraph{The derivation, and its assumptions.} The envelope's count is the lot area less the
+rear yard, times the floors the height limit allows at \envFloor\ feet floor to floor, divided
+by \envGpu\ gross square feet per unit --- the median of the Planning Department's project
+records of ten or more units, as the exactions memo measures it. Where the zoning table sets a density, the
+maximum is the smaller of the two counts, since the Code says the most restrictive standard
+prevails; where it sets none, the envelope decides. The density bonus is \envDblPct\ percent of that
+maximum, the statutory ceiling, and only where the maximum reaches \envDblMin\ units, the
+statute's threshold for a housing development; in a district with no density limit the bonus is taken on
+the envelope's count, which is this construction's assumption, not the statute's. The rules are
+the tables as American Legal served them in \envReadFrom--\envReadTo; a district's rule is held at that reading for
+every year, so the panel's variation over time is the districts and heights in force, not
+amendments to the tables.
+
+\paragraph{Coverage.} In \envYearLast\ the panel has \envParcels\ map lots; the lot area is
+known on \envLot\%, the height on \envHeight\%, and the zoning district's rule is read on
+\envRead\%. \envKindPerLot\% of map lots are in districts that set units per lot, \envKindPerAreaThree\%
+and \envKindPerArea\% in districts that set lot area per unit, \envKindNone\% in districts with
+no density limit, and \envKindUnread\% in districts not read --- the named neighbourhood
+commercial districts (\texttt{NCD} in the polygon years), the redevelopment areas, the public
+district and the old SoMa districts --- whose density is left blank.
+
+\envtable{envrules}
+
+\paragraph{Results, and how much they move.} Under the central assumptions the read
+districts allow \envUnitsTotal\ units in \envYearLast, against \envUnitsSixteen\ in \envYearB\ and
+\envUnitsEight\ in \envYearA; the density rule, not the envelope, binds on \envDensityBinds\% of the
+map lots where both apply. Table~\ref{tab:envsens} changes one assumption at a time: across
+those runs the \envYearLast\ total runs from \envSensLo\ to \envSensHi. The count is gross ---
+it does not subtract what is already built --- and it ignores exposure, open space beyond the
+rear yard, and the height reductions the RH table imposes on dwellings; each of these lowers it.
+
+\envtable{envsens}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_envelope.pdf}
+\caption{(a) The city's maximum units under the central assumptions, by panel year, over the
+districts whose rule is read. (b) The distribution across map lots in the last year.}
+\label{fig:envelope}
+\end{figure}
+
 \section{The hand pass}
 \label{sec:handpass}
 
@@ -872,7 +963,9 @@ restrictions, one of which costs \acqRiskCondoLost\ real hearings.
 against the hearing year, with zero century ambiguity. \emph{This resolves the previous
 version of this item, which put the pre-2002 era beyond reach.}
 \item Filing to first hearing is measurable on two clocks that differ by a median of
-\acqClockGapMed\ days; the paper uses the entitlement clock, and the long tail is explained by
+\acqClockGapMed\ days; the paper uses the entitlement clock for applications the developer files
+with Planning and, on the DR track, the developer's clock from the DBI permit filing (a median
+\pcDrDiffMed\ days longer; note of 2026-09-11 in \S\ref{sec:clocks}); the long tail is explained by
 the number of records under the stem rather than by mis-dating.
 \item The \texttt{building\_permits} bridge reaches \acqBridgeCU\% of conditional-use items and
 \acqEitherRoute\% of the docket by some route. The conditions memo's non-overlap claim
@@ -883,6 +976,9 @@ and imputed on the rest at an out-of-sample RMSE of \acqPriceRmse\ in logs, flag
 they identify cross-sectionally; a year effect absorbs \acqFeeAbsYear\%.
 \item \acqHandTopPct\% of the block-matched, lot-unmatched residual is the parcel layer's
 coverage, not an extraction error.
+\item A feasible envelope exists per parcel-year: height, bulk, lot area, the density rule of
+the district in force, and a maximum unit count, on \envPriced\% of map lots in \envYearLast,
+with the density bonus apart.
 \end{enumerate}
 
 \textbf{Not established.}
@@ -901,6 +997,8 @@ The imputation fixes coverage, not endogeneity.
 \item Whether the permit a conditional use reaches through the bridge is the permit the
 hearing was about.
 \item Anything about fee levels before \acqFeeFirst.
+\item The envelope's rules before and after the \envReadFrom--\envReadTo\ reading of the zoning tables, and the
+density of the named neighbourhood commercial districts.
 \item Anything causal.
 \end{enumerate}
 
@@ -1013,6 +1111,7 @@ python acquire_external_data.py fetch --only polygons   # the GeoJSON layers
 python acquire_external_data.py spatial          # point-in-polygon -> the panel
 python acquire_external_data.py spatial --refresh
 python acquire_external_data.py report           # joins, figures, tables, README
+python acquire_external_data.py envelope         # the feasible envelope
 \end{verbatim}
 
 \texttt{sync} materialises every online-only file under
@@ -1034,6 +1133,10 @@ parcel key, and caches the result, so \texttt{report} does not re-read two gigab
 and a per-layer coverage file beside it; it is the one stage that needs
 \texttt{geopandas}, and it takes a few minutes. \texttt{report} additionally writes the
 imputed price panel and \texttt{handpass\_sample.csv} next to this memo.
+
+The DR developer's clock in the note of 2026-09-11 is written by
+\texttt{analyze\_permit\_content.py report} into the permits memo's macros, which this memo
+reads; run that first.
 
 \texttt{report} regenerates the four figures, \texttt{tables/acquisition\_tables.tex},
 \texttt{tables/acquisition\_macros.tex}, and \texttt{external/README.md}, which records per

@@ -1,0 +1,423 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[section]{placeins}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+\sloppy
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Every number in this document is defined by build_exaction_panel.py (`report') in the
+% generated files under tables/: \ex... for the measurements, \cl{<claim_id>} for the value
+% of a verified legal claim. Nothing is typed by hand. The tables are one file, and
+% \extable{<label>} places each where the text needs it.
+\input{tables/exactions_macros}
+\newcommand{\extable}[1]{\FloatBarrier\def\extab{#1}\input{tables/exactions_tables}}
+
+\title{Exactions:\\
+\large the inclusionary requirement and impact fees that vested for each project}
+\author{Dan Post}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The model's deterministic cost $\tau$ has a dollar-denominated part that the law writes down:
+the inclusionary housing requirement and the development impact fees. This memo assembles the
+version history of both from primary sources --- the enacted ordinances, the codified Planning
+Code as its publisher served it, the Board's own lists of effective dates, and the city's fee
+registers from \exRegFirst\ to \exRegLast\ --- and builds the panel the brief asks for: for each residential
+project, the requirement that vested for it and its dollar value.
+
+\medskip\noindent
+\textbf{Every legal fact in the panel is a quotation that a script re-checks.} The schedule
+rests on \exClaims\ claims --- \exLegalClaims\ about the law and \exRegisterClaims\ register
+rates --- each naming its source and quoting it verbatim; all \exClaimsVerified\ are found in
+their sources' text. The inclusionary program has had \exVersions\ versions since
+\cl{inc2002_effective} (Table~\ref{tab:exversions}). What vests has changed as well: the share was fixed by the first
+application until 2013 and by the complete environmental application from 2016; the impact-fee
+rate was the one in force when the fee was paid until \cl{fee_193_effective}, and is the one in
+force at approval since.
+
+\medskip\noindent
+\textbf{A new building of ten or more units owes about \exPuMed\ per unit.} Across the
+\exPriced\ such buildings priced in full (impact fees vested \exRegFirst--\exRegLast, 100\%
+affordable projects excluded), the median obligation is \exPuMed\ per unit (interquartile range
+\exPuLo--\exPuHi), \exShareMed\% of DBI's valuation (\exShareLo--\exShareHi\%), and the
+inclusionary fee is \exInclShare\% of it. Commission-linked projects owe about what unlinked ones
+do: \exPuMedLinked\ against \exPuMedNot\ per unit.
+
+\medskip\noindent
+\textbf{New buildings bunch just below the inclusionary threshold, in every version.} Among
+buildings filed since \cl{inc2016_effective}, \exNineA\ have nine units and \exTenA\ have ten;
+\exTwentyFourA\ have 24 and \exTwentyFiveA\ have 25. When the threshold was five units,
+\exFourSix\ buildings had four and \exFiveSix\ had five. The step at ten units is worth
+\exStepTen\ at \exStepYear\ rates. These are counts, not an elasticity.
+
+\medskip\noindent
+\textbf{The schedule agrees with the percentage the Commission's conditions print in
+\exCrossAgree\% of the \exCrossN\ cases where the two can be compared} --- \exCrossSix\% for the
+2006 version, \exCrossGf\% for the 2016 grandfathered tiers. The disagreements locate what is
+not yet established: area-specific requirements, and how the 2016 grandfathering deadline was
+applied.
+\end{abstract}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\section{What this memo is for}\label{sec:exintro}
+
+The model separates a deterministic cost $\tau$ from uncertainty $\sigma$. Part of $\tau$ is
+written into the Planning Code in dollars and percentages: what a residential project must give
+up in affordable units or pay in fees. The brief's Part~1 asks for a panel giving, for any
+parcel, application date, tenure, unit-count tier and fee area, the obligation that vested ---
+the inclusionary requirement on, off, or as a fee, and each impact fee --- with every version
+sourced; for the vesting rule at the complete or preliminary application; for a density-bonus
+flag; and for four uses of it: the rate history, the distribution of obligations over the
+development universe and the Commission-linked projects, filing around rate changes, and the
+ten-unit notch.
+
+The panel is stored factored rather than as the full cross product: a schedule (version by date,
+tier and tenure), a register rate table (fee by year), a parcel-to-fee-area table, and one row
+per actual project with the obligation that vested for it (Section~\ref{sec:expanel}). The
+function \texttt{inclusionary\_terms} expands the first three for any parcel, date, tenure and
+tier.
+
+\section{Sources and the standard of proof}\label{sec:exsources}
+
+A legal fact enters the panel only as a row of \texttt{exaction\_sources.csv}: the claim, its
+value, the source URL, and a quotation taken from the source's cached text by a regular
+expression, so that the quotation is verbatim by construction. \texttt{probe} re-reads every
+source and checks that every quotation is in it; a claim that fails is carried and marked, not
+dropped. All \exClaimsVerified\ of the \exClaims\ claims pass. The legal claims are listed in
+Table~\ref{tab:exclaims}.
+
+\paragraph{Where the text layer lies.} The enacted ordinances are scanned. Struck and inserted
+text both survive in the text layer, and the struck figure is often garbled; a quotation of an
+amended percentage can therefore carry both. Where the text layer garbles a figure the claim was
+read on the rendered page, and its note says so --- for example, Ordinance~201-23's pipeline fee
+share of \cl{a415_fee164}\% for projects of ten or more units, where the page shows ``25''
+struck and ``10'' inserted.
+
+\paragraph{The sources.} The enacted ordinance PDFs (37-02, 213-06, 219-06, 62-13, 76-16,
+158-17, 193-23 and 201-23); the Board's per-year ordinance lists, which carry effective dates
+from 2011; Legistar's record where the lists do not; the codified Planning Code as American
+Legal Publishing served it, through Wayback Machine captures of 2020--2022; the state sources on
+leginfo; and the city's Development Impact Fee Registers. The registers for 2019--2026 are the
+copies \texttt{acquire\_external\_data.py} downloaded; the \exRegisters\ in all run from
+\exRegFirst\ to \exRegLast, the earlier ones posted by DBI and Planning and recovered from the
+Wayback Machine. No register for 2017 was found under any of the three sites' URL patterns.
+
+\paragraph{A correction to the source cache.} On 2026-09-11 the archive answered a request for
+the 2019 register's capture with the 2020 register. The fetcher now refuses a capture other than
+the one cited, and the 2019--2026 registers are read from the copies downloaded on 2026-09-08.
+
+\section{The versions of the inclusionary program}\label{sec:exversions}
+
+\extable{exversions}
+
+Table~\ref{tab:exversions} is the chain. The 2002 program (Ordinance~37-02, effective
+\cl{inc2002_effective}) applied to projects of \cl{inc2002_threshold} or more units filed from
+\cl{inc2002_apply}: \cl{inc2002_onsite_10}\% on site, \cl{inc2002_onsite_12}\% for conditional
+uses and PUDs, and an in-lieu fee equal to the off-site unit count times an affordability gap.
+In 2006 Ordinance~213-06 lowered the threshold to five units for projects whose first
+application came on or after \cl{inc2006_5to9}, and Ordinance~219-06 raised the shares to
+\cl{inc2006_onsite_15}\% on site and \cl{inc2006_offsite_20}\% off site. Ordinance~62-13
+(effective \cl{inc2013_effective}) cut the on-site share to \cl{inc2013_table_onsite12}\% and
+put the threshold back to ten for five-to-nine-unit projects without a first construction
+document by \cl{inc2013_threshold10}. Proposition~C, approved by the voters on \cl{propc2016}, amended Charter Section~16.110 to let
+the city change the requirement by ordinance; Ordinance~76-16 (\cl{inc2016_effective}), whose
+new percentages took effect only with that amendment, split the requirement at 25 units --- \cl{inc2016_fee33}\% as a fee
+above it --- and grandfathered projects with a complete environmental evaluation application
+(EEA) filed from \cl{cod_4153_25plus} to \cl{cod_4153_pre2016} at intermediate rates, if
+approved by \cl{cod_4153_deadline}. Ordinance~158-17 (\cl{inc2017_effective}) set the
+tenure-specific rates in force until 2023 and an on-site share that rises every January~1 with
+the EEA year. Ordinance~201-23 (\cl{inc2023_effective}) added two temporary regimes --- relief
+on request for the pipeline approved before \cl{a415_pipeline}, and lower rates for projects
+approved in the three years after it that obtain a first construction document within the
+deadline its Section~415B sets --- and a new
+schedule operative \cl{o201_operative} unless the city amends it first.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_exaction_rates.pdf}
+\caption{(a) The inclusionary share that vests, by application date, for a project approved
+\exMedLag\ years later (the panel's median lag), from \texttt{inclusionary\_terms}; grey lines
+mark the ordinances' effective dates. (b) The register rates of the main residential impact
+fees; 2017 is a gap, not a line.}\label{fig:exrates}
+\end{figure}
+
+\section{Vesting: when each part is fixed}\label{sec:exvesting}
+
+\extable{exvesting}
+
+\paragraph{The share, 2002--2013: the first application.} Ordinance~219-06 says the prior
+requirements apply to a project with a first site or building permit before its effective date;
+Ordinance~62-13's own summary table keys the 2006 percentages to ``all projects that submitted
+a first application on or after July 18, 2006'' and says the implementing ordinances prevail
+over the table. The panel follows the table, and the conditions agree with it: of the
+\exCrossSixN\ cases the schedule places under the 2006 version, \exCrossSix\% print a percentage
+it assigns, and \exCrossTwo\% of the \exCrossTwoN\ under the 2002 version --- most of them filed
+before July 2006 and approved years later at the 2002 rate. The same table dates the 2006
+amendments' operation to \cl{inc2006_sep9}, which is also Legistar's passage date plus the
+standard \cl{ord_effective_30days} (\exEffSixInferred).
+
+\paragraph{The share, from 2016: the complete EEA.} The codified Sections~415.5 and 415.6 fix
+the fee and the on-site percentage by ``the date that the project sponsor has submitted a
+complete Environmental Evaluation application'', and the escalating on-site share is read at
+that date. Two approval-date rules cut across it: the 2016 grandfathering lapses for a project
+not approved by \cl{cod_4153_deadline}, and any vested requirement lapses without a site or
+building permit within \cl{cod_4155_30months} of approval. The law is silent on one window: a
+project filed after \cl{cod_4153_pre2016} and approved before \cl{inc2017_effective} must
+comply with ``Sections 415.5, 415.6 and 415.7, as applicable''. The panel applies the version in
+force at approval.
+
+\paragraph{The fee in dollars: at payment.} The inclusionary fee is the vested share priced at
+the rate in force when it is paid, at the first construction document; the fee is expressly
+outside the 2023 approval-date freeze. Until the 2018 register the rate is an affordability gap
+per unit by bedroom count; from 2019 it is a rate per gross square foot of residential floor
+area times the share.
+
+\paragraph{Impact fees: at payment, then at approval.} Every register from \exPaySentenceFirst\ to
+\exPaySentenceLast\ says in its introduction that the adjusted rates ``apply to development impact fees paid on or after the effective date of any
+such fee adjustments, regardless of the date of permit filing''; the sentence is gone from the register of
+\exPaySentenceAbsent. Ordinance~193-23 (effective \cl{fee_193_effective}) fixed the types and
+rates at Final Approval. From 2020 a housing project
+with a complete SB~330 preliminary application is subject only to the standards in force when
+it was filed, fees included, except for automatic index adjustments; the panel flags the
+\exSbThreeThirty\ projects whose planning records mark SB~330 and does not re-date them.
+
+\paragraph{Options, not assignments.} The 2023 pipeline relief is a modification the sponsor
+requests (\exPipe\ projects are eligible); the 2023--26 rates apply only if the first
+construction document follows approval within the deadline Section~415B sets. The panel carries the first beside the vested requirement and applies the
+second where the permit dates show the condition met.
+
+\section{The dollar rates}\label{sec:exrates}
+
+\extable{exregisters}
+
+Table~\ref{tab:exregisters} gives the residential rates. The area fees are charged only from
+the date each took effect --- the Eastern Neighborhoods fee from \cl{area_en_start}, Market and
+Octavia's from \cl{area_mo421_start}, Rincon Hill's from \cl{area_rh_start}, Central SoMa's from
+\cl{area_cs_start} --- on the parcels today's fee-area layer places in them. The Transportation
+Sustainability Fee applies to projects of \cl{tsf_threshold} or more units from \cl{tsf_created}, the
+residential child-care fee from \cl{cc_created}. The jobs-housing linkage fee is a commercial
+fee and is not charged to housing. For the 2017 rate year the panel uses the geometric mean of
+the 2016 and 2018 rates and flags the projects priced with it.
+
+\section{The panel}\label{sec:expanel}
+
+The frame is every DBI new-construction permit (types 1 and 2) in the permits memo's
+development-relevant universe that adds at least one unit and was filed from
+\cl{inc2002_apply}, with a Commission case collapsed to its principal permit: \exProjects\
+projects, \exLinked\ of them Commission-linked, \exBig\ of ten or more units. The
+\exAlterations\ alterations that add units are set aside: after screening out revisions and
+equipment permits they are still as often shoring and fire-main permits for a new building,
+carrying its unit count, as they are conversions.
+
+\extable{excoverage}
+
+\paragraph{Dates.} The application date is the earliest environmental or project application
+record of the case, else of any planning record that lists the permit, else the DBI filing
+(\exDbiApp\% of projects, flagged). An environmental record's open date can precede its
+acceptance as complete, so the EEA date is approximate. Approval is the Commission's approving
+action, else DBI's approval or issuance; a project not yet approved is held to the version in
+force at retrieval.
+
+\paragraph{Floor area.} A project's residential floor area comes from its PRJ record where one
+is linked and plausible for its unit count; otherwise it is the unit count times the median of
+\exGpu\ gross square feet per unit across \exGpuN\ PRJ records of ten or more units
+(interquartile range \exGpuLo--\exGpuHi). \exAssumedGfa\% of projects use the assumption. It is
+an assumption, and it scales every per-square-foot fee.
+
+\paragraph{Tenure, affordability, density bonus.} Tenure matters only above 25 units under
+158-17 and for the Central SoMa fee. It is known for the projects MOHCD monitors and read from
+descriptions for a few more; elsewhere the panel carries both and reports rental as the lower
+bound. Projects that are 100\% affordable (Housing Production, MOHCD, or the description) are
+outside the program and out of the distributions. The density-bonus flag is set by the pipeline
+dataset's state density-bonus field or a mention in the permit, planning-record or minutes text;
+the fee applies to bonus units, so the flag marks a project whose unit count includes them, and
+its obligation --- like those of the UMU and SB~330 projects --- is marked uncertain in the panel
+(\texttt{obligation\_uncertain}).
+
+\paragraph{What is not modelled.} Area-specific inclusionary requirements --- Section~419 in the
+UMU districts, special use districts, and the other areas Ordinance~201-23 lists --- replace the
+citywide shares --- on \exUmu\ projects in UMU parcels alone; the panel keeps the citywide figures
+and flags them. Credits for existing uses are not taken, so impact fees are gross. The TSF's own
+grandfathering of earlier-filed projects is not modelled. The Van Ness and Market fee, charged
+on floor area above a floor-area-ratio threshold, needs the FAR.
+
+\section{The obligation}\label{sec:exobligation}
+
+\extable{exobligation}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_exaction_obligation.pdf}
+\caption{(a) Obligation per unit for new buildings of ten or more units, by the year the
+impact fees vested; points are projects, lines yearly medians. (b) The obligation as a share of
+DBI's valuation. Lower bound (rental rates where tenure matters).}\label{fig:exobligation}
+\end{figure}
+
+Table~\ref{tab:exobligation} and Figure~\ref{fig:exobligation} give the distribution for new
+buildings of ten or more units priced in full. The median per unit rose from \exPuMedA\ for fees
+vested in 2011--15 to \exPuMedB\ in 2016--19 and was \exPuMedC\ and \exPuMedD\ after. The
+inclusionary fee is most of it. Where tenure matters, the gap between the rental and ownership
+figures is \exTenureGapMed\ per unit at the median.
+
+Three cautions. The inclusionary requirement is priced at its fee, the price at which a sponsor
+may buy out of building the units; a sponsor who builds on site chose to, so the fee bounds the
+requirement's cost to that sponsor from above. The valuation is DBI's declared cost, which the
+permits memo found understated, so the share of cost is an upper bound in the same direction.
+And the impact fees are gross of credits.
+
+\paragraph{Commission-linked and not.} The two groups owe similar amounts per unit
+(\exPuMedLinked\ and \exPuMedNot\ at the median) and similar shares of valuation (\exShareMedLinked\%
+and \exShareMedNot\%). Nothing here conditions on the project's size, place or year; the
+comparison is a description.
+
+\section{The schedule against the Commission's conditions}\label{sec:excross}
+
+\extable{excross}
+
+The conditions memo's numeric extraction reads the inclusionary percentage printed in a case's
+conditions of approval. Where the case is in the panel the two can be compared
+(Table~\ref{tab:excross}): \exCrossN\ cases (\exCrossRows\ condition rows), of which
+\exCrossAgree\% print a percentage the schedule assigns the case, and \exCrossAgreeTwo\% of the
+\exCrossNtwo\ outside the UMU districts and not wholly affordable.
+
+The disagreements are informative. Under the grandfathered and lapsed versions agreement is low
+(\exCrossGf\% of \exCrossGfN, \exCrossLapsed\% of \exCrossLapsedN): several projects approved
+after \cl{cod_4153_deadline} print the grandfathered \cl{cod_4153_on135} or \cl{cod_4153_on145}
+percent, which the text of Section~415.3 says they had lost, and some print the tier of the following year, which an EEA
+accepted later than its record opened would explain. Some approvals in the months before
+Ordinance~62-13 took effect already print its \cl{inc2013_table_onsite12} percent; Proposition~C of
+\cl{propc2012}, which Ordinance~76-16 cites as codified in Charter Section~16.110, is a
+candidate explanation whose terms were not read here. And the UMU and plan-area cases print
+the area rates the panel does not model. The first two are the schedule's open questions; the
+conditions are the Commission's statement of what it imposed, so they are evidence about how the
+rules were applied, not errors to be corrected.
+
+\section{Filing around rate changes}\label{sec:exbunching}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_exaction_bunching.pdf}
+\caption{(a) Environmental and project applications opened per week around January~1, averaged
+over the years in which the on-site share rose on that date and over earlier years in which it
+did not. (b) Around the 2016 grandfathering cutoff.}\label{fig:exbunching}
+\end{figure}
+
+From 2018 the on-site share rose each January~1 and was fixed by the EEA date, so a sponsor
+ready to file had a reason to file in December. In the four weeks before those January~1st
+\exBunchEscPre\ applications opened and in the four weeks after \exBunchEscPost\ (ratio
+\exBunchEscRatio); in the same weeks of \exBunchNoPre\ against \exBunchNoPost\ in years without
+an escalation (\exBunchNoRatio). Among PRJ records stating ten or more units the counts are
+\exBunchTenPre\ and \exBunchTenPost. Around the 2016 cutoff, \exCutPre\ and \exCutPost. There is
+no visible bunching.
+
+This is a description. To be an estimate it needs the counterfactual weekly count --- the
+holiday weeks are low every year, which is why the no-escalation years are shown --- a subset
+of applications for which the escalation binds (projects of ten or more units, which the
+records identify only from 2018), and the size of the step, which is \cl{cod_4156_esc_small} to \cl{cod_4156_esc_large1}
+percentage points of the units. An EEA's open date is the record's creation, not its acceptance as complete, and the
+two can differ by weeks.
+
+\section{The ten-unit notch}\label{sec:exnotch}
+
+\extable{exnotch}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\textwidth]{figures/fig_exaction_notch.pdf}
+\caption{New buildings by unit count, by the version in force when they were filed; red lines
+mark the inclusionary threshold (and from 2016 the 25-unit tier), the dashed line the TSF's.}
+\label{fig:exnotch}
+\end{figure}
+
+A building of ten units owes the inclusionary requirement on all ten; one of nine owes nothing.
+At \exStepYear\ rates the fee on a ten-unit building of median floor area is \exStepTen\
+(\exStepTenPerUnit\ a unit). From 2016 the fee share rises at 25 units, which is worth
+\exStepTwentyFive\ on a 25-unit rental building (\exStepTwentyFiveB\ under the 2023--26 rates),
+and the TSF begins above 20 units (\exStepTsf\ on a 21-unit building).
+
+In every version the count drops at the threshold (Table~\ref{tab:exnotch},
+Figure~\ref{fig:exnotch}). Since 2016, \exNineA\ new buildings have nine units and \exTenA\ have
+ten; \exTwentyFourA\ have 24 and \exTwentyFiveA\ have 25; \exTwentyA\ have 20 and \exTwentyOneA\
+have 21. From 2006 to 2013, when the threshold was five, \exFourSix\ had four and \exFiveSix\
+five, and nine and ten units were \exNineSix\ and \exTenSix. The counts are small and the
+unit-count distribution falls with size anyway; what makes the pattern notable is that the drop
+moves with the threshold. An estimate would compare the mass just below each threshold with a
+smooth counterfactual fitted away from it, with the zoning envelope held fixed --- the parcel's
+permitted density caps the unit count too, which is Part~5's panel.
+
+\section{Established and not established}\label{sec:exest}
+
+\paragraph{Established.}
+\begin{enumerate}
+\item The version chain of the inclusionary program from 2002 through the schedule operative
+\cl{o201_operative}, every percentage and date quoted from the enacted ordinance, the codified
+section or the Board's list, all \exClaimsVerified\ claims verified against their sources.
+\item The residential impact-fee rates for every register year \exRegFirst--\exRegLast\ except
+2017, quoted from the registers.
+\item What vests when: the share by first application (2002--2013) and complete EEA (2016--);
+the inclusionary fee in dollars at payment; impact fees at payment until \cl{fee_193_effective}
+and at Final Approval since.
+\item A new building of ten or more units priced in full owes a median \exPuMed\ per unit, most
+of it the inclusionary fee, and Commission-linked projects owe about what others do.
+\item New buildings are fewer just above each inclusionary threshold than just below it, and
+the drop moves with the threshold.
+\end{enumerate}
+
+\paragraph{Not established.}
+\begin{enumerate}
+\item How the 2016 grandfathering deadline and the tier dates were applied: conditions of
+projects approved after \cl{cod_4153_deadline} print grandfathered rates.
+\item Which version bound a project filed between \cl{cod_4153_pre2016} and
+\cl{inc2017_effective} and approved after the latter; the panel's rule (the version at
+approval) is an assumption.
+\item Area-specific requirements (UMU, special use districts) and the TSF's grandfathering;
+credits for existing uses; the 2017 rates; dollar rates before \exRegFirst.
+\item Floor area for the projects without a PRJ record, and tenure for most projects.
+\item Any behavioural response: the bunching and notch sections are counts.
+\end{enumerate}
+
+\section{What remains}\label{sec:exremains}
+
+\begin{itemize}
+\item Source the area-specific requirements (Section~419's UMU tiers, Section~415.3(d) and the
+special use districts) and model them.
+\item Find the 2017 register and the pre-2011 registers (DBI posted them; the archive holds some
+from 2011).
+\item Resolve the grandfathering questions from MOHCD's published tables and the Planning
+Department's inclusionary affidavits.
+\item Take the TSF's grandfathering rules and existing-use credits from the codified sections.
+\item Estimate the notch and the filing response, with the envelope from Part~5.
+\end{itemize}
+
+\section{Reproducing this}\label{sec:exrepro}
+
+\begin{verbatim}
+cd code/commission_minutes_processing
+python build_exaction_panel.py fetch     # ordinance lists; every cited source
+python build_exaction_panel.py claims    # write exaction_sources.csv
+python build_exaction_panel.py probe     # verify every quotation
+python build_exaction_panel.py build     # the project panel
+python build_exaction_panel.py report    # tables, figures, macros
+\end{verbatim}
+Outputs: \texttt{\$MFHR\_DATA\_ROOT/external/exactions/} (\texttt{exaction\_projects.parquet},
+\texttt{rate\_table.csv}, \texttt{parcel\_fee\_areas.parquet}, \texttt{claims\_checked.csv},
+\texttt{crosscheck\_conditions.csv}, \texttt{bunching\_weeks.csv}, \texttt{notch\_counts.csv});
+the sources and their text under \texttt{external/legal/}. The build reads the permit table and
+linkage of \texttt{analyze\_permit\_content.py} and the planning records and fee-area join of
+\texttt{acquire\_external\_data.py}.
+
+\clearpage
+\appendix
+\section{The legal claims}\label{sec:exclaims}
+\extable{exclaims}
+
+\end{document}
